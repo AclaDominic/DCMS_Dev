@@ -1,0 +1,429 @@
+/* Patient Layout Styles */
+body {
+  --navbar-height: 70px;
+}
+
+/* Remove old patient-main styles as we're using responsive Bootstrap layout now */
+.hover-lift {
+  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.hover-lift:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Ensure proper spacing for mobile devices */
+@media (max-width: 768px) {
+  .container-fluid {
+    padding-left: 15px;
+    padding-right: 15px;
+  }
+}
+
+/* Better screen width utilization */
+@media (min-width: 1200px) {
+  .container-fluid {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+}
+
+@media (min-width: 1400px) {
+  .container-fluid {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+}
+
+@media (min-width: 1600px) {
+  .container-fluid {
+    padding-left: 2.5rem;
+    padding-right: 2.5rem;
+  }
+}
+
+/* Ensure full width utilization for all patient pages */
+.patient-layout-main {
+  width: 100%;
+  max-width: none;
+}
+
+/* Enhanced responsive design for cards and content */
+@media (min-width: 768px) {
+  .card {
+    width: 100%;
+    max-width: none;
+  }
+}
+
+/* Better table responsiveness */
+.table-responsive {
+  width: 100%;
+}
+
+/* Ensure tables utilize full width */
+.table {
+  width: 100%;
+  table-layout: auto;
+}
+
+/* Better column distribution for appointment tables */
+@media (min-width: 1200px) {
+  .table th,
+  .table td {
+    padding: 0.75rem 1rem;
+  }
+}
+
+@media (min-width: 1400px) {
+  .table th,
+  .table td {
+    padding: 0.75rem 1.25rem;
+  }
+}
+
+/* Ensure forms and inputs utilize available space */
+.form-control,
+.form-select {
+  width: 100%;
+}
+
+/* Enhanced button responsiveness */
+.btn {
+  min-width: auto;
+}
+
+@media (max-width: 576px) {
+  .btn {
+    width: 100%;
+  }
+}
+
+/* Ensure mobile cards utilize full width */
+@media (max-width: 991px) {
+  .card {
+    margin-left: 0;
+    margin-right: 0;
+  }
+}
+
+/* Better spacing for mobile devices */
+@media (max-width: 768px) {
+  .container-fluid {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+}
+
+/* Ensure cards utilize available width better */
+.card {
+  width: 100%;
+  max-width: none;
+  margin-left: 0;
+  margin-right: 0;
+}
+
+/* Force full width for patient page cards */
+.patient-page-card {
+  width: 100% !important;
+  max-width: none !important;
+}
+
+/* Override any Bootstrap container constraints for patient pages */
+.patient-layout .container-fluid {
+  max-width: none !important;
+  width: 100% !important;
+}
+
+/* Ensure patient pages utilize full viewport width */
+.patient-layout {
+  width: 100vw;
+  max-width: none;
+}
+
+/* Smooth transitions for card interactions */
+.card {
+  transition: box-shadow 0.15s ease-in-out, transform 0.15s ease-in-out;
+}
+
+.card:hover {
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075) !important;
+  transform: translateY(-2px);
+}
+
+/* Enhanced form styling */
+.form-control:focus,
+.form-select:focus {
+  border-color: #0d6efd;
+  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+}
+
+/* Button enhancements */
+.btn {
+  transition: all 0.15s ease-in-out;
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+}
+
+.btn-lg {
+  font-weight: 500;
+  letter-spacing: 0.025em;
+}
+
+/* Alert styling improvements */
+.alert {
+  border-radius: 0.5rem;
+}
+
+.alert-info {
+  background-color: rgba(13, 202, 240, 0.1);
+  border-color: rgba(13, 202, 240, 0.2);
+  color: #055160;
+}
+
+.alert-success {
+  background-color: rgba(25, 135, 84, 0.1);
+  border-color: rgba(25, 135, 84, 0.2);
+  color: #0a3622;
+}
+
+.alert-warning {
+  background-color: rgba(255, 193, 7, 0.1);
+  border-color: rgba(255, 193, 7, 0.2);
+  color: #664d03;
+}
+
+.alert-danger {
+  background-color: rgba(220, 53, 69, 0.1);
+  border-color: rgba(220, 53, 69, 0.2);
+  color: #58151c;
+}
+
+/* Card header gradients */
+.bg-gradient {
+  background: linear-gradient(135deg, #0d6efd 0%, #0056b3 100%) !important;
+}
+
+/* Icon styling */
+.bi {
+  vertical-align: -0.125em;
+}
+
+/* Custom spacing utilities */
+.py-5 {
+  padding-top: 3rem !important;
+  padding-bottom: 3rem !important;
+}
+
+/* Responsive text sizing */
+@media (max-width: 576px) {
+  .fs-5 {
+    font-size: 1rem !important;
+  }
+  
+  .h3 {
+    font-size: 1.5rem !important;
+  }
+  
+  .h4 {
+    font-size: 1.25rem !important;
+  }
+  
+  .h5 {
+    font-size: 1.1rem !important;
+  }
+}
+
+/* Loading states */
+.spinner-border-sm {
+  width: 1rem;
+  height: 1rem;
+}
+
+/* Focus states for accessibility */
+.btn:focus,
+.form-control:focus,
+.form-select:focus {
+  outline: 2px solid #0d6efd;
+  outline-offset: 2px;
+}
+
+/* Mobile Navigation Styles */
+.mobile-nav-horizontal {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: auto;
+  flex-shrink: 0;
+  min-width: 0;
+}
+
+.mobile-nav-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  text-decoration: none;
+  color: #6c757d;
+  transition: all 0.2s ease-in-out;
+  border: none;
+  background: none;
+  padding: 0;
+}
+
+.mobile-nav-item:hover {
+  background-color: #f8f9fa;
+  color: #0d6efd;
+  transform: translateY(-1px);
+}
+
+.mobile-nav-item.active {
+  background-color: #0d6efd;
+  color: white;
+}
+
+.mobile-nav-item.btn-outline-danger:hover {
+  background-color: #dc3545;
+  color: white;
+  border-color: #dc3545;
+}
+
+/* NotificationBell specific styles for mobile */
+.mobile-nav-horizontal .btn {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  border: 1px solid #dee2e6;
+  background-color: #f8f9fa;
+  color: #6c757d;
+  transition: all 0.2s ease-in-out;
+}
+
+.mobile-nav-horizontal .btn:hover {
+  background-color: #e9ecef;
+  color: #495057;
+  transform: translateY(-1px);
+}
+
+.mobile-nav-horizontal .btn:focus {
+  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+}
+
+.mobile-nav-horizontal .btn .badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  font-size: 0.6rem;
+  padding: 0.2em 0.4em;
+}
+
+/* Ensure proper spacing for mobile navbar */
+@media (max-width: 991.98px) {
+  .navbar {
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
+  
+  .navbar-brand {
+    font-size: 0.9rem;
+    max-width: 60%;
+  }
+  
+  .mobile-nav-horizontal {
+    gap: 0.25rem;
+  }
+  
+  .mobile-nav-item {
+    width: 36px;
+    height: 36px;
+  }
+  
+  .mobile-nav-horizontal .btn {
+    width: 36px;
+    height: 36px;
+  }
+  
+  /* Ensure navbar content doesn't overflow */
+  .navbar .d-flex {
+    min-width: 0;
+  }
+}
+
+/* Extra small screens (iPhone SE, etc.) */
+@media (max-width: 576px) {
+  .mobile-nav-horizontal {
+    gap: 0.15rem;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .mobile-nav-item {
+    width: 30px;
+    height: 30px;
+    flex-shrink: 0;
+  }
+  
+  .mobile-nav-horizontal .btn {
+    width: 30px;
+    height: 30px;
+  }
+  
+  .mobile-nav-item i {
+    font-size: 0.9rem !important;
+  }
+  
+  .navbar-brand {
+    font-size: 0.8rem;
+  }
+  
+  .navbar-brand img {
+    height: 24px !important;
+    width: 24px !important;
+  }
+}
+
+/* Very small screens (iPhone SE portrait) */
+@media (max-width: 375px) {
+  .mobile-nav-horizontal {
+    gap: 0.1rem;
+  }
+  
+  .mobile-nav-item {
+    width: 28px;
+    height: 28px;
+  }
+  
+  .mobile-nav-horizontal .btn {
+    width: 28px;
+    height: 28px;
+  }
+  
+  .mobile-nav-item i {
+    font-size: 0.8rem !important;
+  }
+  
+  .navbar {
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+  }
+  
+  .navbar-brand {
+    font-size: 0.75rem;
+  }
+  
+  .navbar-brand img {
+    height: 22px !important;
+    width: 22px !important;
+    margin-right: 4px !important;
+  }
+}

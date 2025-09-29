@@ -1,0 +1,235 @@
+/* ===============================
+   Kreative Dental – Landing Page
+   Fullscreen + Responsive
+   Theme: #00b4d8 → #0077b6
+   =============================== */
+:root{
+  --brand: #00b4d8;
+  --brand-dark: #0077b6;
+  --ink: #0f172a;
+  --muted: #667085;
+  --header-h: 64px;          /* tweak if your header is taller */
+}
+
+/* Make the page fill the viewport and avoid horizontal scroll */
+.landing-page{
+  min-height: 100dvh;        /* mobile-safe */
+  width: 100vw;
+  overflow-x: hidden;
+  color: var(--ink);
+  scroll-behavior: smooth;
+  background:
+    radial-gradient(1200px 500px at 10% -10%, rgba(0,180,216,.14), transparent 60%),
+    radial-gradient(900px 500px at 110% 0%, rgba(0,119,182,.12), transparent 60%),
+    linear-gradient(180deg, #ffffff, #f6f9fc);
+}
+
+/* ---------- Header (sticky, edge-to-edge) ---------- */
+.site-header{
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  width: 100%;
+  min-height: var(--header-h);
+  background: rgba(255,255,255,.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-bottom: 1px solid rgba(2,6,23,.06);
+}
+
+/* Logo + brand */
+.site-logo{
+  width: 40px; height: 40px; object-fit: contain;
+  filter: drop-shadow(0 6px 14px rgba(0,119,182,.25));
+}
+.logo-text{
+  font-weight: 800; letter-spacing: .2px;
+  color: var(--brand-dark); font-size: 1.1rem;
+}
+
+/* Nav */
+.nav-list{
+  display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;
+   list-style: none;
+  padding-left: 0;
+  margin: 0;
+}
+.nav-list .nav-link{
+  color: #334155; font-weight: 600; text-decoration: none;
+  padding: .5rem .75rem; border-radius: .5rem; transition: all .2s ease;
+  
+}
+.nav-list .nav-link:hover{
+  color: var(--brand-dark);
+  background: rgba(0,119,182,.08);
+}
+.nav-list .btn.btn-primary{
+  background: linear-gradient(135deg, var(--brand), var(--brand-dark));
+  border: none; box-shadow: 0 8px 22px rgba(0,119,182,.28);
+}
+
+/* ---------- Hero (fullscreen section) ---------- */
+.hero-section{
+  min-height: calc(100dvh - var(--header-h)); /* fill remaining viewport below header */
+  display: flex; align-items: center;
+  position: relative;
+  background:
+    radial-gradient(1200px 600px at -10% -20%, rgba(255,255,255,.18), transparent 60%),
+    linear-gradient(to right, var(--brand), var(--brand-dark));
+}
+.hero-section::after{
+  content:""; position:absolute; inset:0;
+  background: radial-gradient(1200px 500px at 120% 120%, rgba(0,0,0,.12), transparent 55%);
+  pointer-events:none;
+}
+
+/* Hero typography scales with viewport */
+.hero-title{
+  font-weight: 900; line-height: 1.15; letter-spacing: .2px;
+  text-shadow: 0 2px 18px rgba(2,6,23,.15);
+  font-size: clamp(1.8rem, 1.2rem + 2.5vw, 3.2rem);
+}
+.hero-subtitle{
+  opacity: .95; font-weight: 500;
+  font-size: clamp(1rem, .9rem + .4vw, 1.25rem);
+}
+.hero-buttons .btn{
+  border-radius: 12px; padding: .8rem 1.3rem; font-weight: 700;
+}
+.hero-buttons .btn-light{ color: var(--brand-dark); }
+.hero-buttons .btn-outline-light{ border-width: 2px; }
+
+/* ---------- Features ---------- */
+.features-section{ background: #fff; }
+.feature-box{
+  background: #ffffff; border: 1px solid rgba(2,6,23,.06);
+  transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+}
+.feature-box:hover{
+  transform: translateY(-4px);
+  border-color: rgba(0,119,182,.25);
+  box-shadow: 0 16px 36px rgba(2,6,23,.08);
+}
+
+/* ---------- About ---------- */
+.about-section{
+  background: linear-gradient(135deg, var(--brand), var(--brand-dark));
+  color: #fff; position: relative; overflow: hidden;
+}
+.about-section::before{
+  content:""; position:absolute; inset:-2px;
+  background:
+    radial-gradient(600px 220px at 20% -10%, rgba(255,255,255,.18), transparent 60%),
+    radial-gradient(600px 220px at 120% 110%, rgba(255,255,255,.16), transparent 60%);
+  filter: blur(8px); z-index: 0;
+}
+.about-section > .container{ position: relative; z-index: 1; }
+
+/* ---------- Contact ---------- */
+.contact-section .btn{ border-radius: 12px; font-weight: 700; }
+.facebook-btn{
+  border-width: 2px;
+  transition: transform .15s ease, background .15s ease, color .15s ease;
+}
+.facebook-btn:hover{ transform: translateY(-2px); background: var(--brand-dark); color: #fff; }
+
+/* ---------- Footer ---------- */
+footer{ background: linear-gradient(180deg, #0b3651, #0a2a3f); color: #fff; }
+
+/* ---------- Services & Promos Section ---------- */
+.services-promos-section{
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+}
+.service-card{
+  transition: transform .2s ease, box-shadow .2s ease;
+  border-radius: 12px;
+  overflow: hidden;
+  position: relative; /* Ensure proper positioning */
+}
+.service-card:hover{
+  transform: translateY(-4px);
+  box-shadow: 0 12px 28px rgba(0,119,182,.15) !important;
+}
+.service-card .card-body{
+  padding: 1.5rem;
+}
+.service-card .badge{
+  font-size: 0.75rem;
+  padding: 0.4rem 0.6rem;
+}
+
+/* ---------- Hide any unwanted elements ---------- */
+.service-card::before,
+.service-card::after {
+  display: none !important;
+}
+
+/* ---------- Ensure no counter values are shown ---------- */
+.service-card {
+  counter-reset: none;
+}
+
+.service-card * {
+  counter-increment: none;
+}
+
+.service-card *::before,
+.service-card *::after {
+  content: none !important;
+}
+
+/* ---------- Skeleton Loading Animations ---------- */
+.placeholder-glow .placeholder {
+  animation: placeholder-glow 2s ease-in-out infinite alternate;
+}
+
+@keyframes placeholder-glow {
+  50% {
+    opacity: 0.2;
+  }
+}
+
+/* ---------- Progressive Loading Animation ---------- */
+.service-card {
+  animation: fadeInUp 0.6s ease-out;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ---------- Loading More Indicator ---------- */
+.loading-more {
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* ---------- Utilities ---------- */
+.shadow-soft{ box-shadow: 0 12px 28px rgba(2,6,23,.08); }
+
+/* ---------- Responsiveness ---------- */
+@media (max-width: 992px){
+  .nav-list{ gap: .5rem !important; }
+}
+
+@media (max-width: 576px){
+  .site-header .container{ padding-inline: .75rem; }
+  .logo-text{ display: none; } /* compact header on small screens */
+  .hero-section{ min-height: calc(100dvh - var(--header-h)); }
+  .hero-buttons .btn{ width: 100%; max-width: 360px; margin-bottom: .5rem; }
+}

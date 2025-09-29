@@ -1,0 +1,176 @@
+/* ========= Register Page — Aqua → Deep Blue Theme ========= */
+:root{
+  --brand: #00b4d8;        /* aqua */
+  --brand-dark: #0077b6;   /* deep blue */
+  --ink: #0f172a;          /* slate-900 */
+  --muted: #6b7280;        /* gray */
+  --ring: rgba(0,180,216,.22);
+}
+
+/* Layout shell */
+.auth-container{
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  gap: clamp(20px, 3vw, 40px);
+  min-height: clamp(560px, 85vh, 880px);
+  padding: clamp(16px, 3vw, 32px);
+  border-radius: 20px;
+
+  /* Your brand gradient */
+  background: linear-gradient(to right, var(--brand), var(--brand-dark));
+  color: #fff;
+  
+  /* Full width utilization */
+  width: 100%;
+  max-width: none;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+/* Left side (brand panel) */
+.auth-left{
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:flex-start;
+
+  background: rgba(255,255,255,0.10);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border: 1px solid rgba(255,255,255,0.22);
+  border-radius: 20px;
+
+  padding: clamp(16px, 2.5vw, 32px);
+  position: relative;
+  overflow: hidden;
+}
+
+.auth-left::after{
+  content:"";
+  position:absolute; inset:-2px;
+  background:
+    radial-gradient(520px 220px at 15% -10%, rgba(255,255,255,.18), transparent 60%),
+    radial-gradient(520px 220px at 120% 110%, rgba(255,255,255,.16), transparent 60%);
+  filter: blur(8px);
+  z-index:-1;
+  border-radius:inherit;
+}
+
+.auth-logo{
+  width:64px; height:64px; object-fit:contain;
+  filter: drop-shadow(0 10px 22px rgba(0,0,0,.22));
+  margin-bottom: 10px;
+}
+
+.auth-title{
+  margin: 6px 0 6px;
+  font-weight: 800;
+  font-size: clamp(1.4rem, 1.1rem + 1.2vw, 2rem);
+}
+
+.auth-description{
+  margin: 0;
+  color: rgba(255,255,255,.92);
+  line-height: 1.6;
+}
+
+/* Right side (form card) */
+.auth-right{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+.auth-right .card{
+  width: min(560px, 100%);
+  border-radius: 20px;
+  border: 1px solid rgba(15,23,42,.08);
+  background: #fff;
+  box-shadow: 0 22px 40px rgba(0,0,0,.12);
+  animation: fadeUp .45s ease-out both;
+}
+
+@keyframes fadeUp{
+  from{ opacity:0; transform: translateY(10px); }
+  to  { opacity:1; transform: translateY(0); }
+}
+
+/* Headings inside the card */
+.auth-right h3{
+  font-weight: 800;
+  color: var(--brand-dark);
+}
+
+/* Form controls */
+.form-label{
+  font-weight: 600;
+  color: #334155;
+}
+
+.form-control{
+  border-radius: 12px;
+  border: 1px solid #cbd5e1;
+  padding: 12px 14px;
+  transition: box-shadow .2s ease, border-color .2s ease;
+}
+
+.form-control:focus{
+  border-color: var(--brand);
+  box-shadow: 0 0 0 .25rem var(--ring);
+}
+
+/* Error states stick with Bootstrap classes */
+.is-invalid{
+  border-color: #dc3545 !important;
+}
+
+/* Primary button */
+.btn.btn-primary{
+  background: linear-gradient(to right, var(--brand), var(--brand-dark));
+  border: none;
+  border-radius: 12px;
+  padding: 12px 16px;
+  font-weight: 700;
+  letter-spacing: .2px;
+  box-shadow: 0 10px 26px rgba(0,119,182,.25);
+  transition: transform .15s ease, filter .15s ease;
+}
+
+.btn.btn-primary:hover{
+  transform: translateY(-1px);
+  filter: brightness(.98);
+}
+
+/* “Already have an account?” link */
+.text-primary{
+  color: var(--brand-dark) !important;
+  font-weight: 700;
+}
+
+.text-primary:hover{
+  text-decoration: underline;
+}
+
+/* Info alert tone to match palette */
+.alert-info{
+  color: #084c61;
+  background-color: #e0f7ff;
+  border-color: #b3ecff;
+}
+
+/* Responsive */
+@media (min-width: 1600px){
+  .auth-container{
+    max-width: 1400px;               /* Reasonable max width for very wide screens */
+  }
+}
+
+@media (max-width: 992px){
+  .auth-container{ grid-template-columns: 1fr; }
+  .auth-left, .auth-right .card{ border-radius: 16px; }
+}
+
+@media (max-width: 576px){
+  .auth-container{ padding: 12px; border-radius: 12px; }
+  .auth-logo{ width:56px; height:56px; }
+}

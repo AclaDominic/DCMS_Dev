@@ -1,0 +1,321 @@
+/* System Logs Page - Full Width Layout */
+.system-logs-page {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  min-height: 100vh;
+}
+
+.system-logs-page .container-fluid {
+  width: 100% !important;
+  max-width: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+.system-logs-page .card {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  border-radius: 0 !important;
+  min-height: 100vh;
+}
+
+.system-logs-page .card-body {
+  width: 100% !important;
+  max-width: none !important;
+}
+
+/* Table Full Width */
+.system-logs-page .table-responsive {
+  width: 100% !important;
+  max-width: none !important;
+}
+
+.system-logs-page .table {
+  width: 100% !important;
+  max-width: none !important;
+  table-layout: fixed;
+}
+
+.system-logs-page .table th,
+.system-logs-page .table td {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .system-logs-page .card-body {
+    padding: 1rem !important;
+  }
+  
+  .system-logs-page .table th,
+  .system-logs-page .table td {
+    padding: 0.5rem 0.75rem !important;
+    font-size: 0.875rem;
+  }
+}
+
+/* Context Popup Card - Anchor-aware Popup */
+.context-popup-card {
+  position: fixed;
+  width: 400px;
+  max-height: 80vh;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  animation: slideInFromRight 0.3s ease-out;
+  border: 1px solid #e9ecef;
+  overflow: hidden;
+  outline: none;
+}
+
+.context-popup-header {
+  background: linear-gradient(135deg, #007bff, #0056b3);
+  color: white;
+  padding: 0.75rem 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  cursor: move;
+}
+
+.context-popup-title {
+  display: flex;
+  align-items: center;
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.context-popup-controls {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.context-popup-minimize,
+.context-popup-close {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 0.8rem;
+  padding: 0.25rem;
+  border-radius: 4px;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease;
+  cursor: pointer;
+}
+
+.context-popup-minimize:hover,
+.context-popup-close:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.context-popup-body {
+  padding: 1rem;
+  overflow-y: auto;
+  flex: 1;
+  max-height: calc(80vh - 120px);
+}
+
+.context-popup-alert {
+  background-color: #d4edda;
+  color: #155724;
+  padding: 0.5rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  margin-bottom: 0.75rem;
+  display: flex;
+  align-items: center;
+  animation: fadeIn 0.3s ease-in;
+}
+
+.context-popup-content {
+  font-size: 0.85rem;
+}
+
+.context-popup-info {
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.context-popup-data {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.context-popup-data .row {
+  margin-bottom: 0.5rem;
+}
+
+.context-popup-data .col-md-4 {
+  flex: 0 0 100%;
+  max-width: 100%;
+}
+
+.context-popup-data .col-md-8 {
+  flex: 0 0 100%;
+  max-width: 100%;
+}
+
+.context-popup-data .form-label {
+  font-size: 0.75rem;
+  margin-bottom: 0.25rem;
+}
+
+.context-popup-data .bg-white {
+  padding: 0.5rem !important;
+  font-size: 0.8rem;
+}
+
+.context-popup-footer {
+  padding: 0.75rem 1rem;
+  background-color: #f8f9fa;
+  border-top: 1px solid #e9ecef;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.context-popup-btn {
+  padding: 0.375rem 0.75rem;
+  font-size: 0.8rem;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  transition: all 0.2s ease;
+}
+
+.context-popup-btn-secondary {
+  background-color: #6c757d;
+  color: white;
+}
+
+.context-popup-btn-secondary:hover {
+  background-color: #5a6268;
+}
+
+.context-popup-btn-primary {
+  background-color: #007bff;
+  color: white;
+}
+
+.context-popup-btn-primary:hover {
+  background-color: #0056b3;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideInFromRight {
+  from {
+    opacity: 0;
+    transform: translateX(100%) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+/* Responsive Popup Card */
+@media (max-width: 768px) {
+  .context-popup-card {
+    width: calc(100vw - 40px);
+    right: 20px;
+    left: 20px;
+    max-width: 400px;
+    margin: 0 auto;
+  }
+  
+  .context-popup-header {
+    padding: 0.5rem 0.75rem;
+  }
+  
+  .context-popup-title {
+    font-size: 0.8rem;
+  }
+  
+  .context-popup-body {
+    padding: 0.75rem;
+  }
+  
+  .context-popup-footer {
+    padding: 0.5rem 0.75rem;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+  
+  .context-popup-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .context-popup-card {
+    width: calc(100vw - 20px);
+    right: 10px;
+    left: 10px;
+    top: 10px;
+  }
+}
+
+/* Ensure popup stays on top of everything */
+.context-popup-card {
+  z-index: 9999 !important;
+}
+
+/* Prevent body scroll when popup is open */
+body.modal-open {
+  overflow: hidden;
+}
+
+/* Enhanced table responsiveness */
+@media (max-width: 1200px) {
+  .system-logs-page .table th:nth-child(6),
+  .system-logs-page .table td:nth-child(6) {
+    max-width: 200px;
+  }
+}
+
+@media (max-width: 992px) {
+  .system-logs-page .table th:nth-child(5),
+  .system-logs-page .table td:nth-child(5),
+  .system-logs-page .table th:nth-child(6),
+  .system-logs-page .table td:nth-child(6) {
+    max-width: 150px;
+  }
+}
+
+@media (max-width: 768px) {
+  .system-logs-page .table th:nth-child(2),
+  .system-logs-page .table td:nth-child(2),
+  .system-logs-page .table th:nth-child(3),
+  .system-logs-page .table td:nth-child(3),
+  .system-logs-page .table th:nth-child(4),
+  .system-logs-page .table td:nth-child(4) {
+    max-width: 100px;
+  }
+}

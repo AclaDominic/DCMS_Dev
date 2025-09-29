@@ -1,0 +1,315 @@
+/* Shell */
+.admin-shell{
+  display: flex;
+  min-height: 100vh;
+  position: relative;
+  background: #0b1520; /* subtle dark edge outside sidebar for contrast */
+}
+
+/* Sidebar */
+.sidebar{
+  width: 260px;
+  min-height: 100vh;
+  position: sticky;
+  top: 0;
+  left: 0;
+  background: #121a23 !important; /* deeper than default .bg-dark */
+  color: #fff;
+  transition: width 0.3s ease-in-out, transform 0.3s ease-in-out;
+  z-index: 1040;
+  display: flex;
+  flex-direction: column;
+  will-change: width, transform;
+}
+
+.sidebar-header{
+  padding: .9rem .9rem;
+  background: #0f1821;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+}
+
+/* Scroll area for nav items */
+.nav-scroller{
+  padding: .5rem .25rem 1rem .25rem;
+  overflow-y: auto;
+  flex: 1;
+}
+
+/* Nav links */
+.sidebar .nav-link{
+  color: rgba(255,255,255,.9);
+  border-radius: .6rem;
+  padding: .55rem .75rem;
+  margin: .15rem .5rem;
+  display: flex;
+  align-items: center;
+  gap: .65rem;
+  transition: background .15s ease, color .15s ease;
+  text-decoration: none;
+}
+
+.sidebar .nav-link:hover{
+  background: rgba(255,255,255,.08);
+  color: #fff;
+}
+
+.sidebar .nav-link.active{
+  background: linear-gradient(135deg, #00b4d8, #0077b6);
+  color: #fff;
+  box-shadow: 0 6px 16px rgba(0, 119, 182, .25);
+}
+
+.sidebar .icon{
+  width: 1.5rem;
+  text-align: center;
+}
+/* Keep the right side (content) white like before */
+.content-area{
+  flex: 1;
+  min-width: 0;
+  background: #ffffff;            /* ← white background */
+  color: #0f172a;                 /* dark text for readability */
+  display: flex;
+  flex-direction: column;
+  transition: none;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+/* Ensure full width utilization for admin pages */
+.content-area .container-fluid {
+  max-width: none !important;
+  width: 100% !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
+/* Ensure main content expands to full width */
+.content-area main {
+  width: 100% !important;
+  max-width: none !important;
+}
+
+/* Admin Goals Page - Force full width utilization */
+.admin-goals-page {
+  width: 100% !important;
+  max-width: none !important;
+  padding: 1rem !important;
+  margin: 0 !important;
+}
+
+.admin-goals-page .card {
+  width: 100% !important;
+  max-width: none !important;
+}
+
+/* Promo Archive Page - Full screen utilization like Analytics Dashboard */
+.promo-archive-page {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.promo-archive-page .card {
+  width: 100% !important;
+  max-width: none !important;
+}
+
+.promo-archive-page .table {
+  width: 100% !important;
+}
+
+.promo-archive-page .table th,
+.promo-archive-page .table td {
+  white-space: nowrap;
+}
+
+/* Override any container constraints */
+.content-area main .promo-archive-page {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Service Discounts Page - Full screen utilization like Analytics Dashboard */
+.service-discounts-page {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  contain: layout style paint;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+.service-discounts-page .card {
+  width: 100% !important;
+  max-width: none !important;
+}
+
+.service-discounts-page .table {
+  width: 100% !important;
+}
+
+.service-discounts-page .table th,
+.service-discounts-page .table td {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+  transition: none;
+  transform: translateZ(0);
+}
+
+/* Override any container constraints for service discounts */
+.content-area main .service-discounts-page {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Fix modal z-index issues */
+.service-discounts-page .modal {
+  z-index: 1055 !important;
+}
+
+.service-discounts-page .modal-backdrop {
+  z-index: 1050 !important;
+}
+
+/* Prevent body scroll issues when modal is open */
+body.modal-open {
+  overflow: hidden !important;
+  padding-right: 0 !important;
+}
+
+/* Prevent scrollbar width compensation */
+html {
+  scrollbar-gutter: stable;
+}
+
+/* Ensure content area maintains width when modal opens */
+.content-area {
+  width: 100% !important;
+  max-width: none !important;
+}
+
+/* Ensure modal doesn't affect page width */
+.service-discounts-page .modal {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Responsive adjustments for smaller screens */
+@media (max-width: 768px) {
+  .promo-archive-page {
+    padding: 1rem !important;
+  }
+  
+  .promo-archive-page .table th,
+  .promo-archive-page .table td {
+    padding: 0.5rem 0.75rem !important;
+    font-size: 0.875rem;
+  }
+
+  .service-discounts-page {
+    padding: 1rem !important;
+  }
+  
+  .service-discounts-page .table th,
+  .service-discounts-page .table td {
+    padding: 0.5rem 0.75rem !important;
+    font-size: 0.875rem;
+    white-space: nowrap;
+  }
+  
+  .service-discounts-page .btn-group {
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+  
+  .service-discounts-page .btn-group .btn {
+    width: 100%;
+    margin: 0;
+  }
+}
+
+/* Light topbar to match white content */
+.topbar{
+  height: 56px;
+  background: #ffffff;            /* ← white */
+  border-bottom: 1px solid #fff;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  padding: .5rem .75rem;
+}
+
+/* Ensure the bell never overlaps awkwardly */
+.topbar .notifications-bell,
+.topbar .notification-bell,
+.topbar [class*="NotificationBell"]{
+  position: static !important;
+  z-index: auto !important;
+}
+
+/* Optional: make toggle button fit the light topbar (or keep your gradient) */
+.toggle-btn{
+  border: 1px solid #fff;
+  background: #0f172a;
+  color: #fff;
+}
+
+/* Overlay for mobile when sidebar is open */
+.sidebar-overlay{
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .2s ease;
+  z-index: 1030;
+}
+
+.sidebar-open .sidebar-overlay{
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* --------- Responsive behaviors --------- */
+
+/* Mobile: slide-in/out sidebar */
+@media (max-width: 991.98px){
+  .sidebar{
+    position: fixed;
+    transform: translateX(-100%);
+  }
+  .sidebar-open .sidebar{
+    transform: translateX(0);
+  }
+}
+
+/* Desktop: collapse to icon rail when closed */
+@media (min-width: 992px){
+  .admin-shell.sidebar-closed .sidebar{
+    width: 76px;
+  }
+  .admin-shell.sidebar-closed .sidebar .label{
+    display: none;
+  }
+  .admin-shell.sidebar-closed .sidebar .nav-link{
+    justify-content: center;
+  }
+  .admin-shell.sidebar-closed .sidebar .nav-item.mt-2.small,
+  .admin-shell.sidebar-closed .sidebar .nav-item.mt-2.small + .nav-item{
+    /* group headers hidden when collapsed */
+    display: none;
+  }
+}
