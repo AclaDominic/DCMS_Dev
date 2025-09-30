@@ -315,14 +315,18 @@ function VisitTrackerManager() {
           <div className="modal-dialog">
             <div className="modal-content">
               <div className="modal-header">
-                <h5 className="modal-title">Reject Visit</h5>
+                <h5 className="modal-title">
+                  {rejectReason === "inquiry_only" ? "Mark as Inquiry" : "Reject Visit"}
+                </h5>
                 <button
                   className="btn-close"
                   onClick={() => setShowRejectModal(false)}
                 ></button>
               </div>
               <div className="modal-body">
-                <label className="form-label">Reason for rejection:</label>
+                <label className="form-label">
+                  {rejectReason === "inquiry_only" ? "Reason for inquiry:" : "Reason for rejection:"}
+                </label>
                 <select
                   className="form-select"
                   value={rejectReason}
@@ -332,6 +336,7 @@ function VisitTrackerManager() {
                   <option value="human_error">Human Error</option>
                   <option value="left">Patient Left</option>
                   <option value="line_too_long">Line Too Long</option>
+                  <option value="inquiry_only">Inquiry Only</option>
                 </select>
                 {rejectReason === "line_too_long" && (
                   <div className="form-check mt-2">
@@ -368,7 +373,7 @@ function VisitTrackerManager() {
                     await fetchVisits();
                   }}
                 >
-                  Confirm Reject
+                  {rejectReason === "inquiry_only" ? "Mark as Inquiry" : "Confirm Reject"}
                 </button>
               </div>
             </div>

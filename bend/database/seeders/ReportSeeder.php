@@ -38,7 +38,7 @@ class ReportSeeder extends Seeder
         PatientVisit::whereBetween('start_time', [$startOfMonth, $endOfMonth])->delete();
 
         $numDays = (int) $startOfMonth->diffInDays($endOfMonth) + 1;
-        $statuses = ['pending', 'completed', 'rejected'];
+        $statuses = ['pending', 'completed', 'rejected', 'inquiry'];
 
         $visitRows = [];
         $appointmentRows = [];
@@ -72,8 +72,7 @@ class ReportSeeder extends Seeder
 
             for ($i = 0; $i < $visitsToday; $i++) {
                 $patientId = $patients[array_rand($patients)];
-                $hasService = random_int(0, 9) !== 0; // ~10% unspecified service
-                $serviceId = $hasService ? $services[array_rand($services)] : null;
+                $serviceId = $services[array_rand($services)]; // Always assign a service
 
                 // Find available time slot that respects capacity
                 $availableSlot = $this->findAvailableSlot($slotUsage, $capacity, $grid);
@@ -83,11 +82,27 @@ class ReportSeeder extends Seeder
                 }
                 
                 $startAt = (clone $day)->setTime($availableSlot['hour'], $availableSlot['minute'], 0);
-                $status = $statuses[array_rand($statuses)];
+                // Ensure reasonable distribution of statuses
+                $statusRoll = random_int(1, 100);
+                if ($statusRoll <= 8) {
+                    $status = 'inquiry'; // 8% inquiries
+                } elseif ($statusRoll <= 13) {
+                    $status = 'rejected'; // 5% rejected
+                } elseif ($statusRoll <= 23) {
+                    $status = 'pending'; // 10% pending
+                } else {
+                    $status = 'completed'; // 77% completed
+                }
 
                 $endAt = null;
                 if ($status !== 'pending') {
                     $endAt = (clone $startAt)->addMinutes(random_int(20, 120));
+                }
+                
+                // Add appropriate note for inquiry status
+                $note = null;
+                if ($status === 'inquiry') {
+                    $note = 'Inquiry only: Patient inquired about services but did not proceed with treatment';
                 }
                 
                 $timeSlot = sprintf('%02d:%02d-%02d:%02d', 
@@ -104,7 +119,7 @@ class ReportSeeder extends Seeder
                     'start_time' => $startAt->toDateTimeString(),
                     'end_time' => $endAt?->toDateTimeString(),
                     'status' => $status,
-                    'note' => null,
+                    'note' => $note,
                     'created_at' => $startAt->toDateTimeString(),
                     'updated_at' => $endAt?->toDateTimeString() ?? $startAt->toDateTimeString(),
                 ];

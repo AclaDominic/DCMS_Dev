@@ -20,7 +20,7 @@ return new class extends Migration {
             $table->timestamp('start_time')->nullable(); // recorded upon visit creation
             $table->timestamp('end_time')->nullable();   // recorded on completion or rejection
 
-            $table->enum('status', ['pending', 'completed', 'rejected'])->default('pending');
+            $table->enum('status', ['pending', 'completed', 'rejected', 'inquiry'])->default('pending');
 
             $table->text('note')->nullable(); // optional: reason for rejection or notes
 

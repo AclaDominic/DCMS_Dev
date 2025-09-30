@@ -243,7 +243,7 @@ class AnalyticsSeeder extends Seeder
                     'start_time' => $startTime->toDateTimeString(),
                     'end_time' => $endTime->toDateTimeString(),
                     'status' => $status,
-                    'note' => $this->generateVisitNote(),
+                    'note' => $this->generateVisitNote($status),
                     'created_at' => $startTime->toDateTimeString(),
                     'updated_at' => $endTime->toDateTimeString(),
                 ];
@@ -423,10 +423,11 @@ class AnalyticsSeeder extends Seeder
 
     private function getVisitStatus(Carbon $day): string
     {
-        // 85% completed, 10% pending, 5% rejected
+        // 77% completed, 10% pending, 8% inquiry, 5% rejected
         $rand = rand(1, 100);
-        if ($rand <= 85) return 'completed';
-        if ($rand <= 95) return 'pending';
+        if ($rand <= 77) return 'completed';
+        if ($rand <= 87) return 'pending';
+        if ($rand <= 95) return 'inquiry';
         return 'rejected';
     }
 
@@ -458,8 +459,30 @@ class AnalyticsSeeder extends Seeder
         return 'unpaid';
     }
 
-    private function generateVisitNote(): ?string
+    private function generateVisitNote(string $status): ?string
     {
+        if ($status === 'inquiry') {
+            $inquiryNotes = [
+                'Inquiry only: Patient inquired about services but did not proceed with treatment',
+                'Inquiry only: Patient asked about pricing and treatment options',
+                'Inquiry only: Patient inquired about available services',
+                'Inquiry only: Patient requested information only',
+                'Inquiry only: Patient consulted but did not book treatment',
+            ];
+            return $inquiryNotes[array_rand($inquiryNotes)];
+        }
+        
+        if ($status === 'rejected') {
+            $rejectedNotes = [
+                'Rejected: Patient left without treatment',
+                'Rejected: Human error',
+                'Rejected: Line too long',
+                'Rejected: Patient cancelled',
+            ];
+            return $rejectedNotes[array_rand($rejectedNotes)];
+        }
+        
+        // Default notes for completed/pending visits
         $notes = [
             'Regular checkup completed',
             'Treatment successful',

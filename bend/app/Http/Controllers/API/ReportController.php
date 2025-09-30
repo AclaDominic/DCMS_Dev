@@ -33,6 +33,9 @@ class ReportController extends Controller
 
         // Totals
         $totalVisits = (clone $base)->count();
+        
+        // Count inquiries (visits with status 'inquiry')
+        $totalInquiries = (clone $base)->where('v.status', 'inquiry')->count();
 
         // By day
         $byDayRows = (clone $base)
@@ -75,6 +78,7 @@ class ReportController extends Controller
             'month' => $start->format('Y-m'),
             'totals' => [
                 'visits' => $totalVisits,
+                'inquiries' => $totalInquiries,
             ],
             'by_day' => $byDayRows,
             'by_hour' => $byHourRows->map(function ($r) {

@@ -341,19 +341,22 @@ class PatientVisitController extends Controller
             return response()->json(['message' => 'Only pending visits can be processed.'], 422);
         }
 
+        $reason = $request->input('reason');
+        $status = $reason === 'inquiry_only' ? 'inquiry' : 'rejected';
+
         $visit->update([
             'end_time' => now(),
-            'status' => 'rejected',
+            'status' => $status,
             'note' => $this->buildRejectionNote($request),
-
         ]);
 
-        return response()->json(['message' => 'Visit rejected.']);
+        $message = $status === 'inquiry' ? 'Visit marked as inquiry only.' : 'Visit rejected.';
+        return response()->json(['message' => $message]);
     }
 
     private function buildRejectionNote(Request $request)
     {
-        $reason = $request->input('reason'); // 'human_error', 'left', 'line_too_long'
+        $reason = $request->input('reason'); // 'human_error', 'left', 'line_too_long', 'inquiry_only'
         $offered = $request->input('offered_appointment'); // true or false
 
         if ($reason === 'line_too_long') {
@@ -363,6 +366,7 @@ class PatientVisitController extends Controller
         return match ($reason) {
             'human_error' => 'Rejected: Human error',
             'left' => 'Rejected: Patient left',
+            'inquiry_only' => 'Inquiry only: Patient inquired about services but did not proceed with treatment',
             default => 'Rejected: Unknown reason'
         };
     }
