@@ -83,7 +83,7 @@ function AdminLayout() {
           </li>
           <li className="nav-item">
             <NavLink to="/admin/dentists" className={({ isActive }) => "nav-link" + (isActive ? " active" : "")}>
-              <span className="icon">🧑‍⚕️</span>
+              <span className="icon">🧑</span>
               <span className="label">Dentists</span>
             </NavLink>
           </li>

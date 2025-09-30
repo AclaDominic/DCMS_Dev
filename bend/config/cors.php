@@ -23,7 +23,11 @@ return [
         'http://127.0.0.1:5173',
         'http://127.0.0.1:8000',
         'https://it-42-capstone.vercel.app',
+<<<<<<< HEAD
         'https://963d3ecb0261.ngrok-free.app',
+=======
+        'https://postomental-miley-rangier.ngrok-free.dev ',
+>>>>>>> 0dcc689ddb00449c2a7762b6c801f271898c5417
     ],
 
     'allowed_origins_patterns' => [],
