@@ -126,35 +126,83 @@ function LandingPage() {
           </p>
         </div>
       </section>
+{/* Contact Section */}
+<section id="contact" className="contact-section py-5 bg-light">
+  <div className="container text-center">
+    <h2 className="mb-4 fw-bold">Contact Us</h2>
+    <p className="lead text-muted mb-5">
+      We’d love to hear from you! Reach out through any of the options below.
+    </p>
 
-            {/* Contact Section */}
-      <section id="contact" className="contact-section py-5">
-        <div className="container text-center">
-          <h2 className="mb-4">Contact Us</h2>
-          <p className="mb-2">📍 123 Dental Street, Cabuyao City</p>
-          <p className="mb-2">📞 +63 912 345 6789</p>
-          <p className="mb-3">✉️ kreativeclinic@gmail.com</p>
-
-          {/* Contact Buttons */}
-          <div className="d-flex justify-content-center gap-3 mt-3">
-            <a href="mailto:kreativeclinic@email.com" className="btn btn-primary">
-              Send Email
-            </a>
-            {/* Facebook Placeholder */}
-            <a
-              href="#"
-              className="btn btn-outline-primary facebook-btn"
-              title="Visit our Facebook Page"
-            >
-              <i className="bi bi-facebook me-2"></i> Facebook
-            </a>
-          </div>
+    {/* Contact Info */}
+    <div className="row justify-content-center mb-4">
+      <div className="col-md-4 mb-3">
+        <div className="p-4 bg-white shadow-sm rounded h-100">
+          <i className="bi bi-geo-alt-fill fs-2 text-danger"></i>
+          <h5 className="mt-2">Location</h5>
+          <p className="mb-0">Cabuyao | Calamba</p>
         </div>
-      </section>
+      </div>
+      <div className="col-md-4 mb-3">
+        <div className="p-4 bg-white shadow-sm rounded h-100">
+          <i className="bi bi-telephone-fill fs-2 text-success"></i>
+          <h5 className="mt-2">Call Us</h5>
+          <p className="mb-0">0927 759 2845</p>
+        </div>
+      </div>
+      <div className="col-md-4 mb-3">
+        <div className="p-4 bg-white shadow-sm rounded h-100">
+          <i className="bi bi-envelope-fill fs-2 text-primary"></i>
+          <h5 className="mt-2">Email</h5>
+          <p className="mb-0">kreativedent@gmail.com</p>
+        </div>
+      </div>
+    </div>
+
+    {/* Social / Action Buttons */}
+    <div className="d-flex justify-content-center gap-3 flex-wrap mt-4">
+      <a href="mailto:kreativedent@gmail.com" className="btn btn-primary">
+        <i className="bi bi-envelope-fill me-2"></i> Email
+      </a>
+      <a
+        href="https://www.facebook.com/kreativedent"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="btn btn-outline-primary"
+      >
+        <i className="bi bi-facebook me-2"></i> Facebook
+      </a>
+      <a
+        href="https://www.instagram.com/kreativedental/"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="btn btn-outline-danger"
+      >
+        <i className="bi bi-instagram me-2"></i> Instagram
+      </a>
+      <a
+        href="https://www.tiktok.com/@kreativedental"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="btn btn-dark"
+      >
+        <i className="bi bi-tiktok me-2"></i> TikTok
+      </a>
+      <a
+        href="https://www.google.com/maps/dir/14.2721246,121.1544842/14.2540966,121.1284223/@14.2667727,121.1189606,14z/data=!3m1!4b1!4m4!4m3!1m1!4e1!1m0?entry=ttu&g_ep=EgoyMDI1MDkyNC4wIKXMDSoASAFQAw%3D%3D"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="btn btn-success"
+      >
+        <i className="bi bi-geo-alt-fill me-2"></i> Get Directions
+      </a>
+    </div>
+  </div>
+</section>
 
 
       {/* Footer */}
-      <footer className="text-center py-3 bg-dark text-white">
+      <footer className="text-center py-3 bg-primary text-white">
         <p className="mb-0">&copy; {new Date().getFullYear()} Kreative Dental Clinic. All Rights Reserved.</p>
       </footer>
     </div>

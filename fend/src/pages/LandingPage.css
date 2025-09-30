@@ -134,7 +134,7 @@
 .facebook-btn:hover{ transform: translateY(-2px); background: var(--brand-dark); color: #fff; }
 
 /* ---------- Footer ---------- */
-footer{ background: linear-gradient(180deg, #0b3651, #0a2a3f); color: #fff; }
+footer{  background: linear-gradient(135deg, var(--brand), var(--brand-dark)); }
 
 /* ---------- Services & Promos Section ---------- */
 .services-promos-section{

@@ -24,7 +24,7 @@ return [
         'http://127.0.0.1:8000',
         'https://it-42-capstone.vercel.app',
         'https://963d3ecb0261.ngrok-free.app',
-        'https://unparadoxal-seasonably-oren.ngrok-free.dev',
+        'https://postomental-miley-rangier.ngrok-free.de',
     ],
 
     'allowed_origins_patterns' => [],
