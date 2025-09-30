@@ -44,22 +44,25 @@ function LandingPage() {
 <header className="site-header shadow-sm">
   <div className="container d-flex justify-content-between align-items-center py-3">
     {/* Logo + Text */}
-   <div className="d-flex align-items-center">
-  <img src={kreativeLogo} alt="Kreative Dental Logo" className="site-logo me-2" />
-  <span className="logo-text">Kreative Dental Clinic</span>
-</div>
-
+    <div className="d-flex align-items-center">
+      <img
+        src={kreativeLogo}
+        alt="Kreative Dental Logo"
+        className="site-logo me-2"
+      />
+      <span className="logo-text">Kreative Dental Clinic</span>
+    </div>
 
     <nav>
       <ul className="nav-list d-flex gap-3 mb-0">
         <li><a href="#home" className="nav-link">Home</a></li>
         <li><a href="#about" className="nav-link">About</a></li>
         <li><a href="#contact" className="nav-link">Contact</a></li>
-        
       </ul>
     </nav>
   </div>
 </header>
+
 
 
       {/* Hero Section */}
