@@ -7,7 +7,6 @@ import "./ServiceDiscountManager.css";
 export default function ServiceDiscountManager() {
   const [services, setServices] = useState([]);
   const [selectedService, setSelectedService] = useState(null);
-  const [promos, setPromos] = useState([]);
   const [form, setForm] = useState({
     start_date: "",
     end_date: "",
@@ -24,6 +23,9 @@ export default function ServiceDiscountManager() {
   const [isCreatingNew, setIsCreatingNew] = useState(false);
   const [overviewPromos, setOverviewPromos] = useState([]);
   const [overviewLoading, setOverviewLoading] = useState(false);
+  const [showLaunchConfirm, setShowLaunchConfirm] = useState(false);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [actionPromo, setActionPromo] = useState(null);
 
   useEffect(() => {
     const loadData = async () => {
@@ -62,23 +64,6 @@ export default function ServiceDiscountManager() {
     }
   };
 
-  const loadPromos = async (serviceId) => {
-    try {
-      setSelectedService(serviceId);
-      const res = await api.get(`/api/services/${serviceId}/discounts`);
-
-      setPromos(res.data.promos || []);
-      if (res.data.cleanup_count > 0) {
-        setCleanupMessage(
-          `${res.data.cleanup_count} expired promo(s) marked as done.`
-        );
-        setTimeout(() => setCleanupMessage(null), 5000); // Hide after 5 seconds
-      }
-    } catch (err) {
-      console.error("Failed to load promos", err);
-      setPromos([]);
-    }
-  };
 
   const handleChange = (e) =>
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -110,11 +95,11 @@ export default function ServiceDiscountManager() {
         setEditingPromoId(null);
       }
 
-      // Reset form and reload promos
+      // Reset form and reload overview only
       setForm({ start_date: "", end_date: "", discounted_price: "" });
       setEditMode(false);
-      await loadPromos(selectedService);
-      await loadOverviewPromos();
+      setSelectedService(null); // Clear selected service
+      await loadOverviewPromos(); // Only reload overview
     } catch (err) {
       if (err.response?.status === 422) {
         const message = err.response.data.message;
@@ -137,29 +122,7 @@ export default function ServiceDiscountManager() {
     }
   };
 
-  const launchPromo = async (id) => {
-    if (window.confirm("Are you sure you want to launch this promo? This action cannot be undone easily.")) {
-      try {
-        await api.post(`/api/discounts/${id}/launch`);
-        await loadPromos(selectedService);
-      } catch (err) {
-        console.error("Failed to launch promo", err);
-        alert("Failed to launch promo: " + (err.response?.data?.message || "Unknown error"));
-      }
-    }
-  };
 
-  const cancelPromo = async (id) => {
-    if (window.confirm("Are you sure you want to cancel this promo? This action cannot be undone.")) {
-      try {
-        await api.post(`/api/discounts/${id}/cancel`);
-        await loadPromos(selectedService);
-      } catch (err) {
-        console.error("Failed to cancel promo", err);
-        alert("Failed to cancel promo: " + (err.response?.data?.message || "Unknown error"));
-      }
-    }
-  };
   const selected = useMemo(() => 
     services.find((s) => s.id === Number(selectedService)), 
     [services, selectedService]
@@ -178,7 +141,7 @@ export default function ServiceDiscountManager() {
     setEditingPromo(null);
     setEditingPromoId(null);
     setShowEditModal(true);
-    await loadPromos(serviceId);
+    // Don't change table view - keep showing overview
   }, []);
 
   const openEditModal = useCallback((promo) => {
@@ -195,32 +158,65 @@ export default function ServiceDiscountManager() {
     setEditingPromo(null);
     setEditingPromoId(null);
     setIsCreatingNew(false);
+    setSelectedService(null); // Clear selected service when closing modal
     // Restore body scroll
     document.body.style.overflow = '';
   }, []);
 
-  const launchOverviewPromo = async (id) => {
-    if (window.confirm("Are you sure you want to launch this promo? This action cannot be undone easily.")) {
-      try {
-        await api.post(`/api/discounts/${id}/launch`);
-        await loadOverviewPromos();
-      } catch (err) {
-        console.error("Failed to launch promo", err);
-        alert("Failed to launch promo: " + (err.response?.data?.message || "Unknown error"));
-      }
+  const openLaunchConfirm = (promo) => {
+    setActionPromo(promo);
+    setShowLaunchConfirm(true);
+    document.body.style.overflow = 'hidden';
+  };
+
+  const confirmLaunchPromo = async () => {
+    if (!actionPromo) return;
+    
+    try {
+      await api.post(`/api/discounts/${actionPromo.id}/launch`);
+      await loadOverviewPromos();
+      setShowLaunchConfirm(false);
+      setActionPromo(null);
+    } catch (err) {
+      console.error("Failed to launch promo", err);
+      alert("Failed to launch promo: " + (err.response?.data?.message || "Unknown error"));
+    } finally {
+      document.body.style.overflow = '';
     }
   };
 
-  const cancelOverviewPromo = async (id) => {
-    if (window.confirm("Are you sure you want to cancel this promo? This action cannot be undone.")) {
-      try {
-        await api.post(`/api/discounts/${id}/cancel`);
-        await loadOverviewPromos();
-      } catch (err) {
-        console.error("Failed to cancel promo", err);
-        alert("Failed to cancel promo: " + (err.response?.data?.message || "Unknown error"));
-      }
+  const cancelLaunchConfirm = () => {
+    setShowLaunchConfirm(false);
+    setActionPromo(null);
+    document.body.style.overflow = '';
+  };
+
+  const openCancelConfirm = (promo) => {
+    setActionPromo(promo);
+    setShowCancelConfirm(true);
+    document.body.style.overflow = 'hidden';
+  };
+
+  const confirmCancelPromo = async () => {
+    if (!actionPromo) return;
+    
+    try {
+      await api.post(`/api/discounts/${actionPromo.id}/cancel`);
+      await loadOverviewPromos();
+      setShowCancelConfirm(false);
+      setActionPromo(null);
+    } catch (err) {
+      console.error("Failed to cancel promo", err);
+      alert("Failed to cancel promo: " + (err.response?.data?.message || "Unknown error"));
+    } finally {
+      document.body.style.overflow = '';
     }
+  };
+
+  const cancelCancelConfirm = () => {
+    setShowCancelConfirm(false);
+    setActionPromo(null);
+    document.body.style.overflow = '';
   };
 
   const editOverviewPromo = (promo) => {
@@ -297,112 +293,7 @@ export default function ServiceDiscountManager() {
         </div>
       </div>
 
-      {selectedService ? (
-        <>
-          {/* Service info section */}
-          <div className="alert alert-info mb-4">
-            <div className="row align-items-center">
-              <div className="col-12 col-md-8">
-                <h6 className="mb-1">
-                  <i className="bi bi-gear me-2"></i>
-                  Managing promos for: <strong>{selected?.name}</strong>
-                </h6>
-                {selected?.category && (
-                  <p className="mb-0 text-muted">
-                    <i className="bi bi-tag me-1"></i>
-                    Category: <strong>{selected.category}</strong>
-                  </p>
-                )}
-              </div>
-              <div className="col-12 col-md-4 text-md-end mt-2 mt-md-0">
-                {selected?.is_excluded_from_analytics && (
-                  <span className="badge bg-secondary">
-                    <i className="bi bi-lock me-1"></i>
-                    Excluded from analytics
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div className="table-responsive">
-            <table className="table table-bordered table-hover mb-0">
-              <thead className="table-light">
-                <tr>
-                  <th style={{ minWidth: '120px' }}>Start Date</th>
-                  <th style={{ minWidth: '120px' }}>End Date</th>
-                  <th style={{ minWidth: '140px' }}>Discounted Price</th>
-                  <th style={{ minWidth: '100px' }}>Status</th>
-                  <th style={{ minWidth: '120px' }}>Activated Date</th>
-                  <th className="text-center" style={{ minWidth: '150px' }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {promos.length > 0 ? (
-                  promos.map((promo) => (
-                    <tr key={promo.id}>
-                      <td>{promo.start_date}</td>
-                      <td>{promo.end_date}</td>
-                      <td>₱{Number(promo.discounted_price).toFixed(2)}</td>
-                      <td>{renderStatusBadge(promo.status)}</td>
-                      <td>{promo.activated_at?.split("T")[0] || "-"}</td>
-                      <td className="text-center">
-                        {promo.status === "planned" && (
-                          <div className="btn-group" role="group">
-                            <button
-                              className="btn btn-sm btn-success"
-                              onClick={() => launchPromo(promo.id)}
-                              title="Launch this promo"
-                            >
-                              <i className="bi bi-play-fill"></i>
-                            </button>
-                            <button
-                              className="btn btn-sm btn-warning"
-                              onClick={() => cancelPromo(promo.id)}
-                              title="Cancel this promo"
-                            >
-                              <i className="bi bi-x-circle"></i>
-                            </button>
-                            <button
-                              className="btn btn-sm btn-info"
-                              onClick={() => openEditModal(promo)}
-                              title="Edit this promo"
-                            >
-                              <i className="bi bi-pencil"></i>
-                            </button>
-                          </div>
-                        )}
-                        {promo.status === "launched" && isCancelable(promo) && (
-                          <button
-                            className="btn btn-sm btn-warning"
-                            onClick={() => cancelPromo(promo.id)}
-                            title="Cancel this promo"
-                          >
-                            <i className="bi bi-x-circle me-1"></i>
-                            Cancel
-                          </button>
-                        )}
-                        {promo.status === "launched" && !isCancelable(promo) && (
-                          <span className="text-muted small">
-                            <i className="bi bi-check-circle text-success"></i> Active
-                          </span>
-                        )}
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan="6" className="text-center text-muted py-3">
-                      <i className="bi bi-info-circle me-1"></i>
-                      No promos available.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </>
-      ) : (
+      {/* Always show overview table */}
         <div className="mt-4">
           <div className="d-flex align-items-center mb-4">
             <h5 className="mb-0 me-3">
@@ -444,14 +335,14 @@ export default function ServiceDiscountManager() {
                           <div className="btn-group" role="group">
                             <button
                               className="btn btn-sm btn-success"
-                              onClick={() => launchOverviewPromo(promo.id)}
+                              onClick={() => openLaunchConfirm(promo)}
                               title="Launch this promo"
                             >
                               <i className="bi bi-play-fill"></i>
                             </button>
                             <button
                               className="btn btn-sm btn-warning"
-                              onClick={() => cancelOverviewPromo(promo.id)}
+                              onClick={() => openCancelConfirm(promo)}
                               title="Cancel this promo"
                             >
                               <i className="bi bi-x-circle"></i>
@@ -465,7 +356,17 @@ export default function ServiceDiscountManager() {
                             </button>
                           </div>
                         )}
-                        {promo.status === "launched" && (
+                        {promo.status === "launched" && isCancelable(promo) && (
+                          <button
+                            className="btn btn-sm btn-warning"
+                            onClick={() => openCancelConfirm(promo)}
+                            title="Cancel this promo"
+                          >
+                            <i className="bi bi-x-circle me-1"></i>
+                            Cancel
+                          </button>
+                        )}
+                        {promo.status === "launched" && !isCancelable(promo) && (
                           <span className="text-muted small">
                             <i className="bi bi-check-circle text-success"></i> Active
                           </span>
@@ -485,7 +386,6 @@ export default function ServiceDiscountManager() {
             <p className="text-muted">No active or planned promos.</p>
           )}
         </div>
-      )}
 
       {/* Modals from shared component */}
       <ServiceSelectModal
@@ -507,6 +407,93 @@ export default function ServiceDiscountManager() {
         loading={loading}
         isCreatingNew={isCreatingNew}
       />
+
+      {/* Launch Confirmation Modal */}
+      {showLaunchConfirm && actionPromo && (
+        <div className="modal fade show d-block" tabIndex="-1" style={{ backgroundColor: "rgba(0,0,0,0.5)", zIndex: 1055 }}>
+          <div className="modal-dialog modal-dialog-centered">
+            <div className="modal-content">
+              <div className="modal-header bg-success text-white">
+                <h5 className="modal-title">
+                  <i className="bi bi-play-circle me-2"></i>
+                  Launch Promo
+                </h5>
+                <button type="button" className="btn-close" onClick={cancelLaunchConfirm}></button>
+              </div>
+              <div className="modal-body">
+                <div className="alert alert-warning">
+                  <i className="bi bi-exclamation-triangle me-2"></i>
+                  <strong>Warning:</strong> This action cannot be undone easily.
+                </div>
+                <p>Are you sure you want to launch this promo?</p>
+                <div className="card">
+                  <div className="card-body">
+                    <h6 className="card-title">{actionPromo.service?.name}</h6>
+                    <p className="card-text mb-1">
+                      <strong>Start Date:</strong> {actionPromo.start_date}<br />
+                      <strong>End Date:</strong> {actionPromo.end_date}<br />
+                      <strong>Discounted Price:</strong> ₱{Number(actionPromo.discounted_price).toFixed(2)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn btn-secondary" onClick={cancelLaunchConfirm}>
+                  Cancel
+                </button>
+                <button type="button" className="btn btn-success" onClick={confirmLaunchPromo}>
+                  <i className="bi bi-play-fill me-1"></i>
+                  Launch Promo
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cancel Confirmation Modal */}
+      {showCancelConfirm && actionPromo && (
+        <div className="modal fade show d-block" tabIndex="-1" style={{ backgroundColor: "rgba(0,0,0,0.5)", zIndex: 1055 }}>
+          <div className="modal-dialog modal-dialog-centered">
+            <div className="modal-content">
+              <div className="modal-header bg-warning text-dark">
+                <h5 className="modal-title">
+                  <i className="bi bi-x-circle me-2"></i>
+                  Cancel Promo
+                </h5>
+                <button type="button" className="btn-close" onClick={cancelCancelConfirm}></button>
+              </div>
+              <div className="modal-body">
+                <div className="alert alert-danger">
+                  <i className="bi bi-exclamation-triangle me-2"></i>
+                  <strong>Warning:</strong> This action cannot be undone.
+                </div>
+                <p>Are you sure you want to cancel this promo?</p>
+                <div className="card">
+                  <div className="card-body">
+                    <h6 className="card-title">{actionPromo.service?.name}</h6>
+                    <p className="card-text mb-1">
+                      <strong>Start Date:</strong> {actionPromo.start_date}<br />
+                      <strong>End Date:</strong> {actionPromo.end_date}<br />
+                      <strong>Discounted Price:</strong> ₱{Number(actionPromo.discounted_price).toFixed(2)}<br />
+                      <strong>Status:</strong> {renderStatusBadge(actionPromo.status)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn btn-secondary" onClick={cancelCancelConfirm}>
+                  Cancel
+                </button>
+                <button type="button" className="btn btn-warning" onClick={confirmCancelPromo}>
+                  <i className="bi bi-x-circle me-1"></i>
+                  Cancel Promo
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {loading && <LoadingSpinner message="Saving promo..." />}
         </div>
