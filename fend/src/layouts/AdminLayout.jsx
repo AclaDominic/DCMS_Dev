@@ -183,8 +183,8 @@ function AdminLayout() {
 
       {/* Main area */}
       <div className="content-area">
-        {/* Topbar */}
-<div className="topbar d-flex align-items-center">
+{/* Topbar */}
+<div className="topbar d-flex align-items-center pe-0">
   <button
     className="btn btn-dark toggle-btn me-2"
     onClick={() => setSidebarOpen((v) => !v)}
@@ -192,10 +192,13 @@ function AdminLayout() {
   >
     <i className="bi bi-list"></i>
   </button>
-  <div className="flex-grow-1" />
-  {/* Bell lives here only */}
-  <NotificationsBell />
-        </div>
+
+  {/* push bell to the right without spacer */}
+  <div className="notifications-bell me-0">
+    <NotificationsBell />
+  </div>
+</div>
+
 
         {/* Routed content */}
         <main className="flex-grow-1">

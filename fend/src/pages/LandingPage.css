@@ -32,17 +32,11 @@
   left: 0;
   width: 100%;
   z-index: 100;
-  background: rgba(255, 255, 255, 0.15); /* slight transparent white */
+  background: white; /* slight transparent white */
   backdrop-filter: blur(20px);            /* glass blur effect */
   transition: background-color 0.4s ease, box-shadow 0.4s ease;
   
 }
-
-/* Push page content down so it doesn't hide behind header */
-body {
-  padding-top: 90px; /* match header height */
-}
-
 
 /* Logo + brand */
 .site-logo{
