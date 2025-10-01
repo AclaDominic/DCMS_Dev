@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import api from "../../api/api";
+import * as XLSX from 'xlsx';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -378,6 +379,89 @@ export default function AdminMonthlyReport() {
     }
   };
 
+  const downloadExcel = () => {
+    try {
+      const workbook = XLSX.utils.book_new();
+      
+      // Overview Sheet
+      const overviewData = [
+        ["Metric", "Value"],
+        ["Total Visits", data?.totals?.visits ?? 0],
+        ["Inquiries This Month", data?.totals?.inquiries ?? 0]
+      ];
+      
+      const overviewSheet = XLSX.utils.aoa_to_sheet(overviewData);
+      XLSX.utils.book_append_sheet(workbook, overviewSheet, "Overview");
+
+      // Hourly Analysis Sheet
+      if (byHour?.length > 0) {
+        const hourlyData = [
+          ["Hour", "Visits", "Walk-ins", "Appointments"],
+          ...byHour.map(hour => [
+            hour.label,
+            hour.count,
+            hour.walkin,
+            hour.appointment
+          ])
+        ];
+        
+        const hourlySheet = XLSX.utils.aoa_to_sheet(hourlyData);
+        XLSX.utils.book_append_sheet(workbook, hourlySheet, "Hourly Analysis");
+      }
+
+      // Service Analysis Sheet
+      if (byService?.length > 0) {
+        const serviceData = [
+          ["Service", "Total Visits", "Walk-ins", "Appointments", "Walk-in %", "Appointment %"],
+          ...byService.map(service => {
+            const totalCount = service.count || 0;
+            const walkinCount = service.walkin || 0;
+            const appointmentCount = service.appointment || 0;
+            
+            // Calculate percentages
+            const walkinPercentage = totalCount > 0 ? ((walkinCount / totalCount) * 100).toFixed(1) : 0;
+            const appointmentPercentage = totalCount > 0 ? ((appointmentCount / totalCount) * 100).toFixed(1) : 0;
+            
+            return [
+              service.label,
+              totalCount,
+              walkinCount,
+              appointmentCount,
+              parseFloat(walkinPercentage),
+              parseFloat(appointmentPercentage)
+            ];
+          })
+        ];
+        
+        const serviceSheet = XLSX.utils.aoa_to_sheet(serviceData);
+        XLSX.utils.book_append_sheet(workbook, serviceSheet, "Service Analysis");
+      }
+
+      // Detailed Visit Data Sheet (if available)
+      if (data?.visits?.length > 0) {
+        const visitData = [
+          ["Date", "Time", "Service", "Type", "Patient ID", "Status"],
+          ...data.visits.map(visit => [
+            visit.date,
+            visit.time,
+            visit.service,
+            visit.type,
+            visit.patient_id,
+            visit.status
+          ])
+        ];
+        
+        const visitSheet = XLSX.utils.aoa_to_sheet(visitData);
+        XLSX.utils.book_append_sheet(workbook, visitSheet, "Visit Details");
+      }
+
+      XLSX.writeFile(workbook, `visits-report-${month}.xlsx`);
+    } catch (e) {
+      console.error(e);
+      alert("Failed to generate Excel file.");
+    }
+  };
+
   return (
     <div className="p-2 p-md-3">
       {/* Responsive Header */}
@@ -398,6 +482,9 @@ export default function AdminMonthlyReport() {
             </button>
             <button className="btn btn-dark btn-sm" onClick={downloadPdf} disabled={loading}>
               Download PDF
+            </button>
+            <button className="btn btn-success btn-sm" onClick={downloadExcel} disabled={loading}>
+              Export Excel
             </button>
           </div>
         </div>

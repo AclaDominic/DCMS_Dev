@@ -23,7 +23,7 @@ return [
         'http://127.0.0.1:5173',
         'http://127.0.0.1:8000',
         'https://it-42-capstone.vercel.app',
-        'https://43661469358e.ngrok-free.app',
+        'https://4ce950038a1a.ngrok-free.app',
         'https://postomental-miley-rangier.ngrok-free.dev',
     ],
 

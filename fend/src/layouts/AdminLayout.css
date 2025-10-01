@@ -67,13 +67,20 @@
 .content-area{
   flex: 1;
   min-width: 0;
-  background: #ffffff;            /* ← white background */
-  color: #0f172a;                 /* dark text for readability */
+  background: #f8f9fa !important;    /* ← light gray background with !important */
+  color: #0f172a;                    /* dark text for readability */
   display: flex;
   flex-direction: column;
   transition: none;
   transform: translateZ(0);
   backface-visibility: hidden;
+}
+
+/* Ensure main content area has clean white background */
+.content-area main {
+  background: #f8f9fa !important;
+  width: 100% !important;
+  max-width: none !important;
 }
 
 /* Ensure full width utilization for admin pages */

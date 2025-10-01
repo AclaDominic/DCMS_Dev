@@ -501,4 +501,156 @@ class ReportController extends Controller
             'alerts' => $alerts,
         ]);
     }
+
+    public function analyticsComparison(Request $request)
+    {
+        // Accept either 'month' or 'period' (YYYY-MM). Default: current month
+        $month = $request->query('month') ?? $request->query('period');
+        if (!is_string($month) || !preg_match('/^\d{4}-\d{2}$/', $month)) {
+            $start = now()->startOfMonth();
+        } else {
+            try {
+                $start = Carbon::createFromFormat('Y-m-d', $month . '-01')->startOfMonth();
+            } catch (\Exception $e) {
+                $start = now()->startOfMonth();
+            }
+        }
+
+        $end = (clone $start)->endOfMonth();
+        $prevStart = (clone $start)->subMonth()->startOfMonth();
+        $prevEnd = (clone $start)->subMonth()->endOfMonth();
+
+        // Total visits
+        $visitsCurr = DB::table('patient_visits as v')
+            ->whereNotNull('v.start_time')
+            ->whereBetween('v.start_time', [$start, $end])
+            ->count();
+        $visitsPrev = DB::table('patient_visits as v')
+            ->whereNotNull('v.start_time')
+            ->whereBetween('v.start_time', [$prevStart, $prevEnd])
+            ->count();
+
+        // Approved appointments
+        $approvedCurr = DB::table('appointments')
+            ->where('status', 'approved')
+            ->whereBetween('date', [$start->toDateString(), $end->toDateString()])
+            ->count();
+        $approvedPrev = DB::table('appointments')
+            ->where('status', 'approved')
+            ->whereBetween('date', [$prevStart->toDateString(), $prevEnd->toDateString()])
+            ->count();
+
+        // No-shows
+        $noShowCurr = DB::table('appointments')
+            ->where('status', 'no_show')
+            ->whereBetween('date', [$start->toDateString(), $end->toDateString()])
+            ->count();
+        $noShowPrev = DB::table('appointments')
+            ->where('status', 'no_show')
+            ->whereBetween('date', [$prevStart->toDateString(), $prevEnd->toDateString()])
+            ->count();
+
+        // Average visit duration
+        $avgDurCurr = (float) (DB::table('patient_visits')
+            ->whereNotNull('start_time')
+            ->whereNotNull('end_time')
+            ->whereBetween('start_time', [$start, $end])
+            ->selectRaw('AVG(TIMESTAMPDIFF(MINUTE, start_time, end_time)) as avg_min')
+            ->value('avg_min') ?? 0);
+        $avgDurPrev = (float) (DB::table('patient_visits')
+            ->whereNotNull('start_time')
+            ->whereNotNull('end_time')
+            ->whereBetween('start_time', [$prevStart, $prevEnd])
+            ->selectRaw('AVG(TIMESTAMPDIFF(MINUTE, start_time, end_time)) as avg_min')
+            ->value('avg_min') ?? 0);
+
+        // Total revenue
+        $totalRevenueCurr = DB::table('payments')
+            ->where('status', 'paid')
+            ->whereBetween('paid_at', [$start, $end])
+            ->sum('amount_paid');
+        $totalRevenuePrev = DB::table('payments')
+            ->where('status', 'paid')
+            ->whereBetween('paid_at', [$prevStart, $prevEnd])
+            ->sum('amount_paid');
+
+        return response()->json([
+            'metrics' => [
+                [
+                    'label' => 'Total Visits',
+                    'this_month' => (int) $visitsCurr,
+                    'last_month' => (int) $visitsPrev,
+                ],
+                [
+                    'label' => 'Approved Appointments',
+                    'this_month' => (int) $approvedCurr,
+                    'last_month' => (int) $approvedPrev,
+                ],
+                [
+                    'label' => 'No-Shows',
+                    'this_month' => (int) $noShowCurr,
+                    'last_month' => (int) $noShowPrev,
+                ],
+                [
+                    'label' => 'Avg Visit Duration',
+                    'this_month' => round($avgDurCurr, 1),
+                    'last_month' => round($avgDurPrev, 1),
+                ],
+                [
+                    'label' => 'Total Revenue',
+                    'this_month' => round($totalRevenueCurr, 2),
+                    'last_month' => round($totalRevenuePrev, 2),
+                ],
+            ],
+        ]);
+    }
+
+    public function analyticsTrend(Request $request)
+    {
+        $months = (int) $request->query('months', 6);
+        $months = max(3, min(12, $months)); // Limit between 3-12 months
+
+        $end = now()->endOfMonth();
+        $start = (clone $end)->subMonths($months - 1)->startOfMonth();
+
+        $labels = [];
+        $visits = [];
+        $appointments = [];
+        $revenue = [];
+
+        for ($i = 0; $i < $months; $i++) {
+            $monthStart = (clone $start)->addMonths($i)->startOfMonth();
+            $monthEnd = (clone $monthStart)->endOfMonth();
+            
+            $labels[] = $monthStart->format('M');
+            
+            // Visits for this month
+            $monthVisits = DB::table('patient_visits as v')
+                ->whereNotNull('v.start_time')
+                ->whereBetween('v.start_time', [$monthStart, $monthEnd])
+                ->count();
+            $visits[] = (int) $monthVisits;
+            
+            // Approved appointments for this month
+            $monthAppointments = DB::table('appointments')
+                ->where('status', 'approved')
+                ->whereBetween('date', [$monthStart->toDateString(), $monthEnd->toDateString()])
+                ->count();
+            $appointments[] = (int) $monthAppointments;
+            
+            // Revenue for this month
+            $monthRevenue = DB::table('payments')
+                ->where('status', 'paid')
+                ->whereBetween('paid_at', [$monthStart, $monthEnd])
+                ->sum('amount_paid');
+            $revenue[] = round((float) $monthRevenue, 2);
+        }
+
+        return response()->json([
+            'labels' => $labels,
+            'visits' => $visits,
+            'appointments' => $appointments,
+            'revenue' => $revenue,
+        ]);
+    }
 }
