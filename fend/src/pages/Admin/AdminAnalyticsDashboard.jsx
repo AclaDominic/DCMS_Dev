@@ -9,12 +9,13 @@ import {
   PointElement,
   LineElement,
   BarElement,
+  ArcElement,
   Title as ChartTitle,
   Tooltip as ChartTooltip,
   Legend as ChartLegend,
   Filler,
 } from "chart.js";
-import { Line, Bar } from "react-chartjs-2";
+import { Line, Bar, Pie } from "react-chartjs-2";
 
 ChartJS.register(
   CategoryScale,
@@ -22,6 +23,7 @@ ChartJS.register(
   PointElement,
   LineElement,
   BarElement,
+  ArcElement,
   ChartTitle,
   ChartTooltip,
   ChartLegend,
@@ -101,12 +103,12 @@ export default function AdminAnalyticsDashboard() {
       currentY = addSectionTitle(doc, "Key Performance Indicators", currentY);
       
       const kpiData = [
-        ["Metric", "Current Value", "Previous Value", "Change (%)"],
-        ["Total Visits", String(k?.total_visits?.value ?? 0), String(k?.total_visits?.prev ?? 0), `${k?.total_visits?.pct_change ?? 0}%`],
-        ["Approved Appointments", String(k?.approved_appointments?.value ?? 0), String(k?.approved_appointments?.prev ?? 0), `${k?.approved_appointments?.pct_change ?? 0}%`],
-        ["No-shows", String(k?.no_shows?.value ?? 0), String(k?.no_shows?.prev ?? 0), `${k?.no_shows?.pct_change ?? 0}%`],
-        ["Avg Visit Duration (min)", String(k?.avg_visit_duration_min?.value ?? 0), String(k?.avg_visit_duration_min?.prev ?? 0), `${k?.avg_visit_duration_min?.pct_change ?? 0}%`],
-        ["Total Revenue", `₱${(k?.total_revenue?.value ?? 0).toLocaleString()}`, `₱${(k?.total_revenue?.prev ?? 0).toLocaleString()}`, `${k?.total_revenue?.pct_change ?? 0}%`]
+        ["Metric", "Current Value", "Previous Value", "Change (%)", "Trend"],
+        ["Total Visits", String(k?.total_visits?.value ?? 0), String(k?.total_visits?.prev ?? 0), `${k?.total_visits?.pct_change ?? 0}%`, (k?.total_visits?.pct_change ?? 0) >= 0 ? "↗ Positive" : "↘ Negative"],
+        ["Approved Appointments", String(k?.approved_appointments?.value ?? 0), String(k?.approved_appointments?.prev ?? 0), `${k?.approved_appointments?.pct_change ?? 0}%`, (k?.approved_appointments?.pct_change ?? 0) >= 0 ? "↗ Positive" : "↘ Negative"],
+        ["No-shows", String(k?.no_shows?.value ?? 0), String(k?.no_shows?.prev ?? 0), `${k?.no_shows?.pct_change ?? 0}%`, (k?.no_shows?.pct_change ?? 0) >= 0 ? "↗ Concerning" : "↘ Improving"],
+        ["Avg Visit Duration (min)", String(k?.avg_visit_duration_min?.value ?? 0), String(k?.avg_visit_duration_min?.prev ?? 0), `${k?.avg_visit_duration_min?.pct_change ?? 0}%`, (k?.avg_visit_duration_min?.pct_change ?? 0) >= 0 ? "↗ Longer" : "↘ Shorter"],
+        ["Total Revenue", `₱${(k?.total_revenue?.value ?? 0).toLocaleString()}`, `₱${(k?.total_revenue?.prev ?? 0).toLocaleString()}`, `${k?.total_revenue?.pct_change ?? 0}%`, (k?.total_revenue?.pct_change ?? 0) >= 0 ? "↗ Growth" : "↘ Decline"]
       ];
 
       autoTable(doc, {
@@ -168,12 +170,12 @@ export default function AdminAnalyticsDashboard() {
       
       // KPI Overview Sheet
       const kpiData = [
-        ["Metric", "Current Value", "Previous Value", "Change (%)"],
-        ["Total Visits", k?.total_visits?.value ?? 0, k?.total_visits?.prev ?? 0, k?.total_visits?.pct_change ?? 0],
-        ["Approved Appointments", k?.approved_appointments?.value ?? 0, k?.approved_appointments?.prev ?? 0, k?.approved_appointments?.pct_change ?? 0],
-        ["No-shows", k?.no_shows?.value ?? 0, k?.no_shows?.prev ?? 0, k?.no_shows?.pct_change ?? 0],
-        ["Avg Visit Duration (min)", k?.avg_visit_duration_min?.value ?? 0, k?.avg_visit_duration_min?.prev ?? 0, k?.avg_visit_duration_min?.pct_change ?? 0],
-        ["Total Revenue", k?.total_revenue?.value ?? 0, k?.total_revenue?.prev ?? 0, k?.total_revenue?.pct_change ?? 0]
+        ["Metric", "Current Value", "Previous Value", "Change (%)", "Trend Status"],
+        ["Total Visits", k?.total_visits?.value ?? 0, k?.total_visits?.prev ?? 0, k?.total_visits?.pct_change ?? 0, (k?.total_visits?.pct_change ?? 0) >= 0 ? "Positive" : "Negative"],
+        ["Approved Appointments", k?.approved_appointments?.value ?? 0, k?.approved_appointments?.prev ?? 0, k?.approved_appointments?.pct_change ?? 0, (k?.approved_appointments?.pct_change ?? 0) >= 0 ? "Positive" : "Negative"],
+        ["No-shows", k?.no_shows?.value ?? 0, k?.no_shows?.prev ?? 0, k?.no_shows?.pct_change ?? 0, (k?.no_shows?.pct_change ?? 0) >= 0 ? "Concerning" : "Improving"],
+        ["Avg Visit Duration (min)", k?.avg_visit_duration_min?.value ?? 0, k?.avg_visit_duration_min?.prev ?? 0, k?.avg_visit_duration_min?.pct_change ?? 0, (k?.avg_visit_duration_min?.pct_change ?? 0) >= 0 ? "Longer" : "Shorter"],
+        ["Total Revenue", k?.total_revenue?.value ?? 0, k?.total_revenue?.prev ?? 0, k?.total_revenue?.pct_change ?? 0, (k?.total_revenue?.pct_change ?? 0) >= 0 ? "Growth" : "Decline"]
       ];
       
       const kpiSheet = XLSX.utils.aoa_to_sheet(kpiData);
@@ -311,6 +313,206 @@ export default function AdminAnalyticsDashboard() {
     }),
     []
   );
+
+  // Individual Pie Chart Configurations
+  const chartConfigs = useMemo(() => {
+    const visits = k?.total_visits?.value || 0;
+    const approved = k?.approved_appointments?.value || 0;
+    const noShows = k?.no_shows?.value || 0;
+    const avgDuration = k?.avg_visit_duration_min?.value || 0;
+    const revenue = k?.total_revenue?.value || 0;
+    const prevRevenue = k?.total_revenue?.prev || 0;
+
+    return [
+      {
+        id: 'revenue',
+        title: 'Total Revenue',
+        icon: '💰',
+        value: revenue,
+        prevValue: prevRevenue,
+        change: k?.total_revenue?.pct_change || 0,
+        color: '#14B8A6', // Teal
+        glowColor: 'rgba(20, 184, 166, 0.4)',
+        data: {
+          labels: ['Current Month', 'Previous Month'],
+          datasets: [{
+            data: [revenue, prevRevenue],
+            backgroundColor: ['#14B8A6', 'rgba(20, 184, 166, 0.3)'],
+            borderColor: ['#14B8A6', 'rgba(20, 184, 166, 0.5)'],
+            borderWidth: 3,
+            hoverBackgroundColor: ['#0F766E', 'rgba(20, 184, 166, 0.4)'],
+          }]
+        },
+        formatter: (val) => `₱${val.toLocaleString()}`
+      },
+      {
+        id: 'visits',
+        title: 'Total Visits',
+        icon: '👥',
+        value: visits,
+        prevValue: k?.total_visits?.prev || 0,
+        change: k?.total_visits?.pct_change || 0,
+        color: '#8B5CF6', // Violet
+        glowColor: 'rgba(139, 92, 246, 0.4)',
+        data: {
+          labels: ['Current Month', 'Previous Month'],
+          datasets: [{
+            data: [visits, k?.total_visits?.prev || 0],
+            backgroundColor: ['#8B5CF6', 'rgba(139, 92, 246, 0.3)'],
+            borderColor: ['#8B5CF6', 'rgba(139, 92, 246, 0.5)'],
+            borderWidth: 3,
+            hoverBackgroundColor: ['#7C3AED', 'rgba(139, 92, 246, 0.4)'],
+          }]
+        },
+        formatter: (val) => val.toString()
+      },
+      {
+        id: 'approved',
+        title: 'Approved Appointments',
+        icon: '✅',
+        value: approved,
+        prevValue: k?.approved_appointments?.prev || 0,
+        change: k?.approved_appointments?.pct_change || 0,
+        color: '#0EA5E9', // Electric Blue
+        glowColor: 'rgba(14, 165, 233, 0.4)',
+        data: {
+          labels: ['Current Month', 'Previous Month'],
+          datasets: [{
+            data: [approved, k?.approved_appointments?.prev || 0],
+            backgroundColor: ['#0EA5E9', 'rgba(14, 165, 233, 0.3)'],
+            borderColor: ['#0EA5E9', 'rgba(14, 165, 233, 0.5)'],
+            borderWidth: 3,
+            hoverBackgroundColor: ['#0284C7', 'rgba(14, 165, 233, 0.4)'],
+          }]
+        },
+        formatter: (val) => val.toString()
+      },
+      {
+        id: 'noshows',
+        title: 'No-shows',
+        icon: '❌',
+        value: noShows,
+        prevValue: k?.no_shows?.prev || 0,
+        change: k?.no_shows?.pct_change || 0,
+        color: '#FF6B6B', // Coral
+        glowColor: 'rgba(255, 107, 107, 0.4)',
+        data: {
+          labels: ['Current Month', 'Previous Month'],
+          datasets: [{
+            data: [noShows, k?.no_shows?.prev || 0],
+            backgroundColor: ['#FF6B6B', 'rgba(255, 107, 107, 0.3)'],
+            borderColor: ['#FF6B6B', 'rgba(255, 107, 107, 0.5)'],
+            borderWidth: 3,
+            hoverBackgroundColor: ['#EF4444', 'rgba(255, 107, 107, 0.4)'],
+          }]
+        },
+        formatter: (val) => val.toString()
+      },
+      {
+        id: 'avgtime',
+        title: 'Average Visit Time',
+        icon: '⏱️',
+        value: avgDuration,
+        prevValue: k?.avg_visit_duration_min?.prev || 0,
+        change: k?.avg_visit_duration_min?.pct_change || 0,
+        color: '#84CC16', // Lime Green
+        glowColor: 'rgba(132, 204, 22, 0.4)',
+        data: {
+          labels: ['Current Month', 'Previous Month'],
+          datasets: [{
+            data: [avgDuration, k?.avg_visit_duration_min?.prev || 0],
+            backgroundColor: ['#84CC16', 'rgba(132, 204, 22, 0.3)'],
+            borderColor: ['#84CC16', 'rgba(132, 204, 22, 0.5)'],
+            borderWidth: 3,
+            hoverBackgroundColor: ['#65A30D', 'rgba(132, 204, 22, 0.4)'],
+          }]
+        },
+        formatter: (val) => `${val} min`
+      }
+    ];
+  }, [k]);
+
+  const createPieOptions = (config) => ({
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        display: true,
+        position: 'bottom',
+        align: 'center',
+        labels: {
+          usePointStyle: true,
+          pointStyle: 'circle',
+          padding: 15,
+          font: { 
+            size: 12, 
+            weight: '600',
+            family: "'Inter', 'Segoe UI', sans-serif"
+          },
+          color: '#374151',
+          boxWidth: 12,
+          boxHeight: 12,
+          generateLabels: function(chart) {
+            const data = chart.data;
+            if (data.labels.length && data.datasets.length) {
+              return data.labels.map((label, i) => {
+                const dataset = data.datasets[0];
+                const value = dataset.data[i];
+                const backgroundColor = dataset.backgroundColor[i];
+                
+                return {
+                  text: label,
+                  fillStyle: backgroundColor,
+                  strokeStyle: backgroundColor,
+                  lineWidth: 0,
+                  pointStyle: 'circle',
+                  hidden: false,
+                  index: i
+                };
+              });
+            }
+            return [];
+          }
+        },
+      },
+      tooltip: {
+        enabled: true,
+        backgroundColor: 'rgba(0, 0, 0, 0.9)',
+        titleColor: 'white',
+        bodyColor: 'white',
+        borderColor: config.color,
+        borderWidth: 2,
+        cornerRadius: 12,
+        displayColors: true,
+        titleFont: { size: 14, weight: 'bold' },
+        bodyFont: { size: 13, weight: '500' },
+        padding: 12,
+        callbacks: {
+          label: function (context) {
+            const value = context.parsed;
+            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+            const percentage = ((value / total) * 100).toFixed(1);
+            return `${context.label}: ${config.formatter(value)} (${percentage}%)`;
+          },
+        },
+      },
+    },
+    elements: {
+      arc: {
+        borderWidth: 0,
+      },
+    },
+    interaction: {
+      intersect: false,
+      mode: 'nearest',
+    },
+    animation: {
+      animateRotate: true,
+      animateScale: true,
+      duration: 1200,
+      easing: 'easeOutQuart',
+    },
+  });
 
   const kpiInsights = useMemo(() => {
     if (!data) return null;
@@ -681,69 +883,97 @@ export default function AdminAnalyticsDashboard() {
 
   return (
     <>
-      <div className="p-4" style={{ minHeight: "100vh" }}>
+      <div className="p-4" style={{ 
+        minHeight: "100vh", 
+        background: "linear-gradient(135deg, #F8FAFC 0%, #E2E8F0 50%, #CBD5E1 100%)",
+        color: "#1E293B"
+      }}>
         <div className="container-xl">
-        <div className="d-flex justify-content-between align-items-center mb-4">
+        <div className="d-flex justify-content-between align-items-center mb-5">
           <div>
-            <h2 className="m-0 fw-bold" style={{ color: "#000000", fontSize: "2rem" }}>
+            <h2 className="m-0 fw-bold" style={{ color: "#1E293B", fontSize: "2.5rem", textShadow: "0 2px 4px rgba(0, 0, 0, 0.1)" }}>
               📊 Analytics Dashboard
             </h2>
-            <p className="text-muted mb-0 mt-1" style={{ color: "#374151", fontSize: "1rem" }}>
-              Monitor your clinic's performance and key metrics
+            <p className="mb-0 mt-2" style={{ color: "#64748B", fontSize: "1.1rem" }}>
+              Real-time insights and performance metrics for your clinic
             </p>
           </div>
-          <div className="d-flex gap-2 gap-md-3 align-items-center flex-wrap">
+          <div className="d-flex gap-3 align-items-center flex-wrap">
             <input
               type="month"
-              className="form-control form-control-sm border-0 shadow-sm"
+              className="form-control form-control-sm border-0"
               style={{
                 width: 180,
-                borderRadius: "12px",
-                padding: "12px 16px",
+                borderRadius: "16px",
+                padding: "14px 18px",
                 fontSize: "14px",
-                fontWeight: "500",
+                fontWeight: "600",
+                background: "rgba(255, 255, 255, 0.9)",
+                color: "#1E293B",
+                border: "1px solid rgba(59, 130, 246, 0.2)",
+                boxShadow: "0 4px 20px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.8)",
               }}
               value={month}
               onChange={(e) => setMonth(e.target.value)}
               aria-label="Select month"
             />
             <button
-              className="btn btn-primary btn-sm border-0 shadow-sm"
+              className="btn border-0"
               onClick={load}
               disabled={loading}
               style={{
-                background: "linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)",
+                background: "linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)",
                 color: "white",
-                borderRadius: "12px",
-                padding: "12px 24px",
-                fontWeight: "600",
+                borderRadius: "16px",
+                padding: "14px 28px",
+                fontWeight: "700",
+                fontSize: "14px",
+                boxShadow: "0 8px 25px rgba(59, 130, 246, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2)",
                 transition: "all 0.3s ease",
+                transform: loading ? "scale(0.95)" : "scale(1)",
               }}
             >
-              {loading ? "⟳" : "↻"} Refresh
+              {loading ? "⟳" : "🔄"} {loading ? "Loading..." : "Refresh Data"}
             </button>
             <div className="dropdown">
               <button
-                className="btn btn-outline-secondary btn-sm dropdown-toggle"
+                className="btn dropdown-toggle border-0"
                 type="button"
                 data-bs-toggle="dropdown"
                 aria-expanded="false"
                 style={{
-                  borderRadius: "12px",
-                  padding: "12px 16px",
-                  fontWeight: "600",
+                  background: "linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%)",
+                  color: "white",
+                  borderRadius: "16px",
+                  padding: "14px 20px",
+                  fontWeight: "700",
+                  fontSize: "14px",
+                  boxShadow: "0 8px 25px rgba(139, 92, 246, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2)",
                 }}
               >
-                📊 Export
+                📊 Export Data
               </button>
-              <ul className="dropdown-menu">
+              <ul className="dropdown-menu" style={{
+                background: "rgba(255, 255, 255, 0.95)",
+                border: "1px solid rgba(59, 130, 246, 0.2)",
+                borderRadius: "12px",
+                boxShadow: "0 10px 40px rgba(0, 0, 0, 0.15)",
+              }}>
                 <li>
                   <button
                     className="dropdown-item"
                     onClick={downloadPdf}
                     disabled={loading}
+                    style={{
+                      color: "#1E293B",
+                      padding: "12px 20px",
+                      borderRadius: "8px",
+                      transition: "all 0.2s ease",
+                    }}
+                    onMouseEnter={(e) => e.target.style.background = "rgba(59, 130, 246, 0.1)"}
+                    onMouseLeave={(e) => e.target.style.background = "transparent"}
                   >
-                    📄 Download PDF
+                    📄 Download PDF Report
                   </button>
                 </li>
                 <li>
@@ -751,8 +981,16 @@ export default function AdminAnalyticsDashboard() {
                     className="dropdown-item"
                     onClick={downloadExcel}
                     disabled={loading}
+                    style={{
+                      color: "#1E293B",
+                      padding: "12px 20px",
+                      borderRadius: "8px",
+                      transition: "all 0.2s ease",
+                    }}
+                    onMouseEnter={(e) => e.target.style.background = "rgba(16, 185, 129, 0.1)"}
+                    onMouseLeave={(e) => e.target.style.background = "transparent"}
                   >
-                    📊 Export Excel
+                    📊 Export Excel Data
                   </button>
                 </li>
               </ul>
@@ -762,13 +1000,35 @@ export default function AdminAnalyticsDashboard() {
 
         {error && (
           <div
-            className="alert alert-danger border-0 shadow-sm mb-4"
+            className="alert border-0 mb-4"
             role="alert"
-            style={{ borderRadius: "12px" }}
+            style={{ 
+              borderRadius: "20px",
+              background: "linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(254, 226, 226, 0.8) 100%)",
+              border: "2px solid rgba(239, 68, 68, 0.2)",
+              boxShadow: "0 10px 30px rgba(239, 68, 68, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.8)",
+              backdropFilter: "blur(10px)",
+              color: "#DC2626"
+            }}
           >
             <div className="d-flex align-items-center">
-              <span className="me-2">⚠️</span>
-              {error}
+              <div
+                className="me-3 d-flex align-items-center justify-content-center"
+                style={{
+                  width: "40px",
+                  height: "40px",
+                  borderRadius: "12px",
+                  background: "linear-gradient(135deg, #EF4444 0%, #DC2626 100%)",
+                  boxShadow: "0 6px 15px rgba(239, 68, 68, 0.3)",
+                  fontSize: "18px"
+                }}
+              >
+                ⚠️
+              </div>
+              <div>
+                <div className="fw-bold mb-1" style={{ color: "#B91C1C" }}>System Alert</div>
+                <div style={{ color: "#DC2626" }}>{error}</div>
+              </div>
             </div>
           </div>
         )}
@@ -776,55 +1036,191 @@ export default function AdminAnalyticsDashboard() {
         {loading ? (
           <div
             className="d-flex justify-content-center align-items-center"
-            style={{ minHeight: "400px" }}
+            style={{ minHeight: "500px" }}
           >
             <div className="text-center">
-              <div className="spinner-border text-primary mb-3" role="status">
-                <span className="visually-hidden">Loading...</span>
+              <div className="position-relative mb-4">
+                <div
+                  className="spinner-border"
+                  role="status"
+                  style={{
+                    width: "4rem",
+                    height: "4rem",
+                    borderWidth: "4px",
+                    borderColor: "transparent",
+                    borderTopColor: "#3B82F6",
+                    borderRightColor: "#8B5CF6",
+                    borderBottomColor: "#14B8A6",
+                    borderLeftColor: "#F97316",
+                    animation: "spin 1.5s linear infinite",
+                    filter: "drop-shadow(0 4px 8px rgba(59, 130, 246, 0.3))"
+                  }}
+                >
+                  <span className="visually-hidden">Loading...</span>
+                </div>
+                <div
+                  className="position-absolute top-50 start-50 translate-middle"
+                  style={{
+                    fontSize: "1.5rem",
+                    animation: "pulse 2s ease-in-out infinite"
+                  }}
+                >
+                  📊
+                </div>
               </div>
-              <p className="text-muted">Loading analytics data...</p>
+              <h5 className="fw-bold mb-2" style={{ color: "#1E293B", textShadow: "0 2px 4px rgba(0, 0, 0, 0.1)" }}>
+                Analyzing Data...
+              </h5>
+              <p style={{ color: "#64748B", fontSize: "1rem" }}>
+                Processing clinic analytics and generating insights
+              </p>
+              <div className="d-flex justify-content-center gap-2 mt-3">
+                <div className="bg-primary rounded-circle" style={{ width: "8px", height: "8px", animation: "bounce 1.4s ease-in-out infinite" }}></div>
+                <div className="bg-info rounded-circle" style={{ width: "8px", height: "8px", animation: "bounce 1.4s ease-in-out 0.2s infinite" }}></div>
+                <div className="bg-success rounded-circle" style={{ width: "8px", height: "8px", animation: "bounce 1.4s ease-in-out 0.4s infinite" }}></div>
+              </div>
             </div>
           </div>
         ) : (
           <>
-            {/* First Row - 2 cards */}
-            <div className="row g-3 g-lg-4 mb-3">
-              <div className="col-6">{kpiCard("Total Visits", tv?.value, tv?.pct_change, "👥", "#3b82f6", prev.visits, { size:'comfortable', unit:'count' })}</div>
-              <div className="col-6">{kpiCard("Approved Appointments", aa?.value, aa?.pct_change, "✅", "#10b981", prev.approved, { size:'comfortable', unit:'count' })}</div>
-            </div>
+            {/* Modern Light Theme KPI Grid */}
+            <div className="row g-4 mb-5">
+              {chartConfigs.map((config, index) => (
+                <div key={config.id} className="col-12 col-md-6 col-xl-4">
+                  <div
+                    className="card h-100 border-0"
+                    style={{
+                      background: "linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.9) 100%)",
+                      borderRadius: "24px",
+                      border: `2px solid ${config.color}20`,
+                      boxShadow: `
+                        0 20px 40px rgba(0, 0, 0, 0.1),
+                        0 0 0 1px rgba(255, 255, 255, 0.8),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.9),
+                        0 0 30px ${config.color}15
+                      `,
+                      backdropFilter: "blur(20px)",
+                      transition: "all 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
+                      transform: "translateY(0px)",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = "translateY(-8px)";
+                      e.currentTarget.style.boxShadow = `
+                        0 30px 60px rgba(0, 0, 0, 0.15),
+                        0 0 0 1px rgba(255, 255, 255, 0.9),
+                        inset 0 1px 0 rgba(255, 255, 255, 1),
+                        0 0 40px ${config.color}25
+                      `;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = "translateY(0px)";
+                      e.currentTarget.style.boxShadow = `
+                        0 20px 40px rgba(0, 0, 0, 0.1),
+                        0 0 0 1px rgba(255, 255, 255, 0.8),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.9),
+                        0 0 30px ${config.color}15
+                      `;
+                    }}
+                  >
+                    <div className="card-header border-0 bg-transparent pt-4 pb-2">
+                      <div className="d-flex align-items-center justify-content-between">
+                        <div className="d-flex align-items-center">
+                          <div
+                            className="me-3 d-flex align-items-center justify-content-center"
+                            style={{
+                              width: "48px",
+                              height: "48px",
+                              borderRadius: "16px",
+                              background: `linear-gradient(135deg, ${config.color} 0%, ${config.color}CC 100%)`,
+                              boxShadow: `0 8px 20px ${config.color}30, inset 0 1px 0 rgba(255, 255, 255, 0.3)`,
+                              fontSize: "20px",
+                            }}
+                          >
+                            {config.icon}
+                          </div>
+                          <div>
+                            <h6
+                              className="mb-0 fw-bold"
+                              style={{
+                                color: "#1E293B",
+                                fontSize: "1rem",
+                                textShadow: "0 1px 2px rgba(0, 0, 0, 0.1)",
+                              }}
+                            >
+                              {config.title}
+                            </h6>
+                            <small style={{ color: "#64748B", fontSize: "0.8rem" }}>
+                              {toMonthName(month)}
+                            </small>
+                          </div>
+                        </div>
+                        <div
+                          className="px-3 py-1 rounded-pill"
+                          style={{
+                            background: config.change >= 0 
+                              ? "linear-gradient(135deg, #10B981 0%, #059669 100%)"
+                              : "linear-gradient(135deg, #EF4444 0%, #DC2626 100%)",
+                            fontSize: "0.75rem",
+                            fontWeight: "700",
+                            color: "white",
+                            boxShadow: config.change >= 0 
+                              ? "0 4px 12px rgba(16, 185, 129, 0.3)"
+                              : "0 4px 12px rgba(239, 68, 68, 0.3)",
+                          }}
+                        >
+                          {config.change >= 0 ? "↗" : "↘"} {Math.abs(config.change).toFixed(1)}%
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="card-body pt-2 pb-4">
+                      {/* Main Value Display */}
+                      <div className="text-center mb-3">
+                        <div
+                          className="fw-bold mb-1"
+                          style={{
+                            fontSize: "2.2rem",
+                            color: config.color,
+                            textShadow: `0 2px 4px ${config.color}30`,
+                            lineHeight: "1.1",
+                          }}
+                        >
+                          {config.formatter(config.value)}
+                        </div>
+                        <div style={{ color: "#64748B", fontSize: "0.85rem" }}>
+                          Previous: {config.formatter(config.prevValue)}
+                        </div>
+                      </div>
 
-            {/* Second Row - 2 cards */}
-            <div className="row g-3 g-lg-4 mb-3">
-              <div className="col-6">{kpiCard("No-shows", ns?.value, ns?.pct_change, "❌", "#ef4444", prev.noShows, { size:'comfortable', unit:'count' })}</div>
-              <div className="col-6">{kpiCard("Avg Visit (min)", av?.value?.toFixed?.(1) ?? 0, av?.pct_change, "⏱️", "#f59e0b", prev.avgDur, { size:'comfortable', unit:'minutes' })}</div>
-            </div>
-
-            {/* Third Row - 1 card centered */}
-            <div className="row g-3 g-lg-4 mb-4">
-              <div className="col-12 d-flex justify-content-center">
-                <div style={{ maxWidth: "400px", width: "100%" }}>
-                  {kpiCard("Total Revenue", tr?.value ?? 0, tr?.pct_change, "💰", "#10b981", prev.revenue, { size:'comfortable', unit:'money', money:true })}
+                      {/* Pie Chart */}
+                      <div style={{ height: "250px", position: "relative" }}>
+                        <Pie data={config.data} options={createPieOptions(config)} />
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              </div>
+              ))}
             </div>
 
 
-            <div className="row g-2 g-md-3 g-lg-4">
+            <div className="row g-4">
               <div className="col-12 col-lg-6">
                 <div
-                  className="card h-100 border-0 shadow-sm"
+                  className="card h-100 border-0"
                   style={{
-                    background:
-                      "linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)",
-                    borderRadius: "16px",
+                    background: "linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.9) 100%)",
+                    borderRadius: "24px",
+                    border: "2px solid rgba(14, 165, 233, 0.2)",
+                    boxShadow: "0 20px 40px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(255, 255, 255, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 0 30px rgba(14, 165, 233, 0.15)",
+                    backdropFilter: "blur(20px)",
                   }}
                 >
                   <div className="card-header border-0 bg-transparent py-4">
                     <h5
                       className="mb-0 fw-bold d-flex align-items-center"
-                      style={{ color: "#1e293b" }}
+                      style={{ color: "#1E293B", textShadow: "0 1px 2px rgba(0, 0, 0, 0.1)" }}
                     >
-                      <span className="me-2">💳</span>
+                      <span className="me-3" style={{ fontSize: "1.5rem" }}>💳</span>
                       Payment Method Share
                     </h5>
                   </div>
