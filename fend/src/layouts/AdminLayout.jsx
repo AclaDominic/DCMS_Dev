@@ -1,5 +1,6 @@
+
 import { useEffect, useState } from "react";
-import { Outlet, useNavigate, NavLink, useLocation } from "react-router-dom";
+import { Outlet, useNavigate, NavLink } from "react-router-dom";
 import api from "../api/api";
 import { useAuth } from "../hooks/useAuth";
 import "./AdminLayout.css";
@@ -7,10 +8,8 @@ import NotificationsBell from "../components/NotificationBell";
 
 function AdminLayout() {
   const navigate = useNavigate();
-  const location = useLocation();
   const { logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(() => window.innerWidth >= 992);
-  const [headerTitle, setHeaderTitle] = useState("Dashboard");
 
   // Keep sidebar open by default on lg+, closed on md-
   useEffect(() => {
@@ -22,44 +21,6 @@ function AdminLayout() {
     return () => window.removeEventListener("resize", onResize);
   }, []);
 
-  // Update header title based on current route
-  useEffect(() => {
-    const routeTitleMap = {
-      '/admin': 'Dashboard',
-      '/admin/device-approvals': 'Device Approvals',
-      '/admin/approved-devices': 'Approved Devices',
-      '/admin/staff-register': 'Create Staff Account',
-      '/admin/dentists': 'Dentists',
-      '/admin/schedule': 'Clinic Schedule',
-      '/admin/appointments': 'Appointments',
-      '/admin/services': 'Manage Services',
-      '/admin/service-discounts': 'Service Promos',
-      '/admin/promo-archive': 'Promo Archive',
-      '/admin/inventory': 'Inventory',
-      '/admin/goals': 'Goals',
-      '/admin/monthly-report': 'Monthly Visits',
-      '/admin/analytics': 'Analytics',
-      '/admin/system-logs': 'System Logs',
-      '/admin/profile': 'Account'
-    };
-    setHeaderTitle(routeTitleMap[location.pathname] || 'Dashboard');
-  }, [location.pathname]);
-
-  // Handle body class for mobile sidebar
-  useEffect(() => {
-    if (window.innerWidth < 992) {
-      if (sidebarOpen) {
-        document.body.classList.add('sidebar-open');
-      } else {
-        document.body.classList.remove('sidebar-open');
-      }
-    }
-    
-    return () => {
-      document.body.classList.remove('sidebar-open');
-    };
-  }, [sidebarOpen]);
-
   const handleLogout = async () => {
     await logout();
     navigate("/app");
@@ -68,7 +29,7 @@ function AdminLayout() {
   return (
     <div className={`admin-shell ${sidebarOpen ? "sidebar-open" : "sidebar-closed"}`}>
       {/* Sidebar */}
-      <aside className="sidebar bg-dark text-white">
+      <aside className="sidebar bg-danger text-white">
         <div className="sidebar-header d-flex align-items-center justify-content-between">
           <h5 className="m-0 fw-bold text-center">Admin Panel</h5>
           <div className="d-flex align-items-center gap-2">
@@ -234,16 +195,19 @@ function AdminLayout() {
             </NavLink>
           </li>
 
+
           <li className="nav-item mt-4 px-3">
-    <button
+  <button
     className="btn btn-outline-danger w-100 d-flex align-items-center justify-content-center icon-only-btn"
     onClick={handleLogout}
     title="Logout"
     aria-label="Logout"
   >
-    <svg className="icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.59L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/>
-    </svg>
+    {/* Bootstrap Icon */}
+    <i className="bi-box-arrow-right fs-5"></i>
+    {/* If you don’t use Bootstrap Icons, use the emoji instead:
+      <span role="img" aria-label="Logout" className="fs-5">🚪</span>
+    */}
     <span className="visually-hidden">Logout</span>
   </button>
 </li>
@@ -254,22 +218,17 @@ function AdminLayout() {
       {/* Main area */}
       <div className="content-area">
 {/* Topbar */}
-<div className="topbar d-flex align-items-center justify-content-between pe-0">
-  <div className="d-flex align-items-center">
-    <button
-      className="btn btn-dark toggle-btn me-3"
-      onClick={() => setSidebarOpen((v) => !v)}
-      aria-label="Toggle sidebar"
-    >
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-        <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/>
-      </svg>
-    </button>
-    <h4 className="mb-0 fw-semibold text-dark">{headerTitle}</h4>
-  </div>
-  
-  {/* Notification bell aligned to far right */}
-  <div className="notifications-bell" style={{ margin: 0 }}>
+<div className="topbar d-flex align-items-center pe-0">
+  <button
+    className="btn btn-dark toggle-btn me-2"
+    onClick={() => setSidebarOpen((v) => !v)}
+    aria-label="Toggle sidebar"
+  >
+    <i className="bi bi-list"></i>
+  </button>
+
+  {/* push bell to the right without spacer */}
+  <div className="notifications-bell me-0">
     <NotificationsBell />
   </div>
 </div>
@@ -283,8 +242,8 @@ function AdminLayout() {
 
       {/* Mobile overlay */}
       <div
-        className={`sidebar-overlay ${sidebarOpen ? "show" : ""}`}
-        onClick={() => setSidebarOpen(false)}
+        // className={`sidebar-overlay ${sidebarOpen ? "show" : ""}`}
+        // onClick={() => setSidebarOpen(false)}
       />
     </div>
   );
