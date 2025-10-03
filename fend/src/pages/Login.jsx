@@ -5,6 +5,7 @@ import LoadingSpinner from "../components/LoadingSpinner";
 import AuthLayout from "../layouts/AuthLayout";
 import { getFingerprint } from "../utils/getFingerprint";
 import { useAuth } from "../hooks/useAuth";
+// EmailVerificationModal removed - using Laravel's built-in email verification
 import "./Logs.css"; // ✅ Your custom CSS
 import logo from "./logo.png";
 
@@ -13,6 +14,7 @@ function Login() {
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  // Email verification modal removed - using Laravel's built-in system
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -40,6 +42,17 @@ function Login() {
       const res = await api.post("/api/login", { email, password, device_id: fingerprint });
 
       const user = res.data.user || res.data;
+      
+      // Check if password change is required for dentist
+      if (res.data.requires_password_change) {
+        setMessage("Login successful. Please change your password.");
+        setUser(user);
+        setTimeout(() => {
+          navigate("/dentist/profile");
+        }, 150);
+        return;
+      }
+      
       setMessage("Login successful!");
       
       // Update authentication context
@@ -58,10 +71,16 @@ function Login() {
             navigate("/patient");
           }
         }
+        else if (user.role === "dentist") {
+          navigate("/dentist");
+        }
         else setMessage("Login successful, but no dashboard yet for this role.");
       }, 150);
     } catch (err) {
       console.error(err);
+      
+      // Email verification no longer required for dentists
+      
       setMessage(err.response?.data?.message || "Login failed");
     } finally {
       setLoading(false);
@@ -178,6 +197,8 @@ function Login() {
         </div>
       </div>
       </div>
+      
+      {/* Email verification now handled by Laravel's built-in system */}
     </AuthLayout>
   );
 }

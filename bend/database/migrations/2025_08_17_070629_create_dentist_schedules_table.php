@@ -18,6 +18,12 @@ return new class extends Migration {
             $table->enum('status', ['active','inactive'])->default('active');
             $table->string('dentist_code')->unique()->comment('Stable anonymized identifier, e.g. D-001');
             
+            // Account fields (email verification removed)
+            $table->string('email')->unique();
+            $table->string('temporary_password')->nullable();
+            $table->boolean('password_changed')->default(false);
+            $table->timestamp('password_changed_at')->nullable();
+            
             // Days (Sun..Sat)
             $table->boolean('sun')->default(false)->index();
             $table->boolean('mon')->default(false)->index();

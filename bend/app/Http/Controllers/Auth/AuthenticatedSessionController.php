@@ -11,6 +11,9 @@ use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Requests\Auth\LoginRequest;
 use Illuminate\Validation\ValidationException;
+use App\Models\DentistSchedule;
+use App\Services\SystemLogService;
+use Illuminate\Support\Facades\Mail;
 
 class AuthenticatedSessionController extends Controller
 {
@@ -26,12 +29,51 @@ class AuthenticatedSessionController extends Controller
     ]);
 
     if (!Auth::attempt($request->only('email', 'password'), $request->boolean('remember'))) {
+        // Email verification no longer required for dentists
+
         throw ValidationException::withMessages([
             'email' => trans('auth.failed'),
         ]);
     }
 
     $user = Auth::user();
+
+    // Check if password change is required for dentists
+    if ($user->role === 'dentist') {
+        $dentistSchedule = DentistSchedule::where('email', $user->email)->first();
+        
+        if (!$dentistSchedule) {
+            Auth::logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Dentist schedule not found',
+            ], 403);
+        }
+
+        // Check if dentist status is active
+        if ($dentistSchedule->status !== 'active') {
+            Auth::logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Your account is not active. Please contact the administrator.',
+            ], 403);
+        }
+        
+        if (!$dentistSchedule->password_changed) {
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Login successful. Password change required.',
+                'user' => $user,
+                'requires_password_change' => true,
+            ]);
+        }
+    }
 
     if ($user->role === 'staff') {
         $fingerprint = $this->generateDeviceFingerprint($request);

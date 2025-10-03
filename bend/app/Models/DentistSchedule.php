@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
 class DentistSchedule extends Model
@@ -17,12 +18,18 @@ class DentistSchedule extends Model
         'employment_type',
         'contract_end_date',
         'status',
+        'email',
+        'temporary_password',
+        'password_changed',
+        'password_changed_at',
         'sun','mon','tue','wed','thu','fri','sat',
     ];
 
     protected $casts = [
         'is_pseudonymous' => 'boolean',
         'contract_end_date' => 'date:Y-m-d',
+        'password_changed' => 'boolean',
+        'password_changed_at' => 'datetime',
         'sun' => 'boolean','mon' => 'boolean','tue' => 'boolean','wed' => 'boolean',
         'thu' => 'boolean','fri' => 'boolean','sat' => 'boolean',
     ];
@@ -74,7 +81,7 @@ class DentistSchedule extends Model
         $weekday = strtolower($d->format('D'));
         $worksToday = (bool) $this->{$weekday};
 
-        $validContract = is_null($this->contract_end_date) || $this->contract_end_date->gte($d);
+        $validContract = is_null($this->contract_end_date) || $this->contract_end_date >= $d;
 
         return $this->status === 'active' && $worksToday && $validContract;
     }
@@ -88,7 +95,7 @@ class DentistSchedule extends Model
     {
         // prefer code if present; else fallback to name
         return static::activeOnDate($date)
-            ->pluck(\DB::raw("COALESCE(dentist_code, dentist_name)"))
+            ->pluck(DB::raw("COALESCE(dentist_code, dentist_name)"))
             ->all();
     }
 }

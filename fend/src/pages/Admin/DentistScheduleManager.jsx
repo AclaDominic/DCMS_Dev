@@ -31,6 +31,10 @@ export default function DentistScheduleManager() {
     employment_type: "full_time",
     status: "active",
     contract_end_date: "",
+    email: "",
+    temporary_password: "",
+    email_verified: false,
+    password_changed: false,
     sun: false, mon: true, tue: true, wed: true, thu: true, fri: true, sat: false,
   };
 
@@ -42,6 +46,10 @@ export default function DentistScheduleManager() {
   const [errors, setErrors] = useState({});
   const [showModal, setShowModal] = useState(false);
   const [editMode, setEditMode] = useState(false);
+  const [showAccountModal, setShowAccountModal] = useState(false);
+  const [selectedDentist, setSelectedDentist] = useState(null);
+  const [accountForm, setAccountForm] = useState({ email: "", name: "" });
+  const [accountLoading, setAccountLoading] = useState(false);
 
   useEffect(() => { fetchRows(); }, []);
 
@@ -85,6 +93,10 @@ export default function DentistScheduleManager() {
       employment_type: row.employment_type || "full_time",
       status: row.status || "active",
       contract_end_date: row.contract_end_date || "",
+      email: row.email || "",
+      temporary_password: row.temporary_password || "",
+      email_verified: !!row.email_verified,
+      password_changed: !!row.password_changed,
       sun: !!row.sun, mon: !!row.mon, tue: !!row.tue, wed: !!row.wed,
       thu: !!row.thu, fri: !!row.fri, sat: !!row.sat,
     });
@@ -103,6 +115,11 @@ export default function DentistScheduleManager() {
     if (form.contract_end_date && !/^\d{4}-\d{2}-\d{2}$/.test(form.contract_end_date)) {
       e.contract_end_date = "Use YYYY-MM-DD format.";
     }
+    if (!form.email || !form.email.trim()) {
+      e.email = "Email address is required.";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
+      e.email = "Please enter a valid email address.";
+    }
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -120,6 +137,7 @@ export default function DentistScheduleManager() {
         employment_type: form.employment_type,
         status: form.status,
         contract_end_date: form.contract_end_date || null,
+        email: form.email?.trim(), // required
         sun: !!form.sun, mon: !!form.mon, tue: !!form.tue, wed: !!form.wed,
         thu: !!form.thu, fri: !!form.fri, sat: !!form.sat,
       };
@@ -153,6 +171,79 @@ export default function DentistScheduleManager() {
     }
   };
 
+  const openAccountModal = (row) => {
+    setSelectedDentist(row);
+    setAccountForm({
+      email: row.email || "",
+      name: row.dentist_name || "",
+    });
+    setShowAccountModal(true);
+  };
+
+  const createAccount = async () => {
+    if (!selectedDentist) return;
+    
+    // Validate form
+    if (!accountForm.email || !accountForm.email.trim()) {
+      alert("Email address is required.");
+      return;
+    }
+    
+    if (!accountForm.name || !accountForm.name.trim()) {
+      alert("Full name is required.");
+      return;
+    }
+    
+    setAccountLoading(true);
+    try {
+      const res = await api.post("/api/dentist/create-account", {
+        dentist_schedule_id: selectedDentist.id,
+        email: accountForm.email.trim(),
+        name: accountForm.name.trim(),
+      });
+      
+      alert(`Account created successfully! Temporary password: ${res.data.temporary_password}`);
+      setShowAccountModal(false);
+      fetchRows();
+    } catch (err) {
+      const errorMessage = err?.response?.data?.message || "Failed to create account.";
+      const validationErrors = err?.response?.data?.errors;
+      
+      if (validationErrors) {
+        const errorList = Object.values(validationErrors).flat().join('\n');
+        alert(`Validation errors:\n${errorList}`);
+      } else {
+        alert(errorMessage);
+      }
+    } finally {
+      setAccountLoading(false);
+    }
+  };
+
+  const createDentistAccount = async (row) => {
+    if (!row.email) {
+      alert(`Please add an email address for ${row.dentist_code} first.`);
+      return;
+    }
+    
+    if (!confirm(`Create account for ${row.dentist_code}? This will send a temporary password to ${row.email}.`)) return;
+    
+    try {
+      const res = await api.post("/api/dentist/create-account", {
+        dentist_schedule_id: row.id,
+        email: row.email,
+        name: row.dentist_name || row.dentist_code,
+      });
+      
+      alert(`Account created successfully! Temporary password: ${res.data.temporary_password}`);
+      fetchRows();
+    } catch (err) {
+      alert(err?.response?.data?.message || "Failed to create account.");
+    }
+  };
+
+  // Email verification no longer needed for dentists
+
   const DayBadge = ({ on, label }) => (
     <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs border ${on ? "bg-green-50 border-green-300" : "bg-gray-50 border-gray-200 text-gray-400"}`}>
       {label}
@@ -184,6 +275,8 @@ export default function DentistScheduleManager() {
               <tr>
                 <th className="p-2 border">Code</th>
                 <th className="p-2 border">Name</th>
+                <th className="p-2 border">Email</th>
+                <th className="p-2 border">Account Status</th>
                 <th className="p-2 border">Pseudonymous</th>
                 <th className="p-2 border">Employment</th>
                 <th className="p-2 border">Status</th>
@@ -197,6 +290,33 @@ export default function DentistScheduleManager() {
                 <tr key={r.id} className="hover:bg-gray-50">
                   <td className="p-2 border font-medium">{r.dentist_code}</td>
                   <td className="p-2 border">{r.dentist_name || <span className="text-gray-400">—</span>}</td>
+                  <td className="p-2 border">
+                    {r.email ? (
+                      <div>
+                        <div className="text-sm">{r.email}</div>
+                        {r.temporary_password && (
+                          <div className="text-xs text-gray-500">Temp: {r.temporary_password}</div>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-gray-400">—</span>
+                    )}
+                  </td>
+                  <td className="p-2 border">
+                    <div className="flex flex-col gap-1">
+                      {r.email ? (
+                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs ${
+                          r.password_changed 
+                            ? 'bg-blue-100 text-blue-800' 
+                            : 'bg-orange-100 text-orange-800'
+                        }`}>
+                          {r.password_changed ? '✓ Password Changed' : '⚠ Temp Password'}
+                        </span>
+                      ) : (
+                        <span className="text-gray-400 text-xs">No Account</span>
+                      )}
+                    </div>
+                  </td>
                   <td className="p-2 border">{r.is_pseudonymous ? "Yes" : "No"}</td>
                   <td className="p-2 border">{r.employment_type}</td>
                   <td className="p-2 border">{r.status}</td>
@@ -209,16 +329,29 @@ export default function DentistScheduleManager() {
                   </td>
                   <td className="p-2 border">{r.contract_end_date || <span className="text-gray-400">—</span>}</td>
                   <td className="p-2 border">
-                    <div className="flex gap-2">
-                      <button className="px-2 py-1 rounded border" onClick={() => openEdit(r)}>Edit</button>
-                      <button className="px-2 py-1 rounded border" onClick={() => onDelete(r)}>Delete</button>
+                    <div className="flex flex-col gap-1">
+                      <div className="flex gap-1">
+                        <button className="px-2 py-1 rounded border text-xs" onClick={() => openEdit(r)}>Edit</button>
+                        <button className="px-2 py-1 rounded border text-xs" onClick={() => onDelete(r)}>Delete</button>
+                      </div>
+                      {!r.email ? (
+                        <button className="px-2 py-1 rounded border bg-blue-500 text-white text-xs" onClick={() => openEdit(r)}>
+                          Add Email
+                        </button>
+                      ) : !r.temporary_password ? (
+                        <button className="px-2 py-1 rounded border bg-green-500 text-white text-xs" onClick={() => createDentistAccount(r)}>
+                          Create Account
+                        </button>
+                      ) : (
+                        <span className="text-xs text-gray-500">Account Created</span>
+                      )}
                     </div>
                   </td>
                 </tr>
               ))}
               {filtered.length === 0 && (
                 <tr>
-                  <td className="p-3 text-center text-gray-500" colSpan={8}>No dentists found.</td>
+                  <td className="p-3 text-center text-gray-500" colSpan={10}>No dentists found.</td>
                 </tr>
               )}
             </tbody>
@@ -289,6 +422,29 @@ export default function DentistScheduleManager() {
                     onChange={(e) => setForm({ ...form, contract_end_date: e.target.value })} />
                   {errors.contract_end_date && <p className="text-xs text-red-600 mt-1">{String(errors.contract_end_date)}</p>}
                 </div>
+
+                <div>
+                  <label className="block text-sm">Email Address<span className="text-red-500">*</span></label>
+                  <input 
+                    type="email" 
+                    className="w-full border rounded px-3 py-2"
+                    value={form.email || ""}
+                    onChange={(e) => setForm({ ...form, email: e.target.value })}
+                    placeholder="dentist@example.com"
+                    required
+                  />
+                  {errors.email && <p className="text-xs text-red-600 mt-1">{String(errors.email)}</p>}
+                </div>
+
+                {editMode && form.temporary_password && (
+                  <div>
+                    <label className="block text-sm">Temporary Password</label>
+                    <div className="w-full border rounded px-3 py-2 bg-gray-50 text-sm">
+                      {form.temporary_password}
+                      <span className="text-gray-500 ml-2">(Auto-generated)</span>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div>
@@ -313,6 +469,80 @@ export default function DentistScheduleManager() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Account Creation Modal */}
+      {showAccountModal && (
+        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-4">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold">Create Dentist Account</h2>
+              <button onClick={() => setShowAccountModal(false)} className="text-gray-500">✕</button>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium mb-1">Dentist</label>
+                <div className="p-2 bg-gray-50 rounded border">
+                  {selectedDentist?.dentist_code} - {selectedDentist?.dentist_name}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">Email Address</label>
+                <input
+                  type="email"
+                  className="w-full border rounded px-3 py-2"
+                  value={accountForm.email}
+                  onChange={(e) => setAccountForm({ ...accountForm, email: e.target.value })}
+                  placeholder="dentist@example.com"
+                  required
+                />
+                {selectedDentist?.email && accountForm.email !== selectedDentist.email && (
+                  <p className="text-xs text-orange-600 mt-1">
+                    ⚠️ Email differs from schedule email ({selectedDentist.email}) - this will be logged as an email change
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">Full Name</label>
+                <input
+                  type="text"
+                  className="w-full border rounded px-3 py-2"
+                  value={accountForm.name}
+                  onChange={(e) => setAccountForm({ ...accountForm, name: e.target.value })}
+                  placeholder="Dr. John Doe"
+                  required
+                />
+              </div>
+
+              <div className="bg-yellow-50 border border-yellow-200 rounded p-3">
+                <p className="text-sm text-yellow-800">
+                  <strong>Note:</strong> A temporary password will be generated and sent to the email address. 
+                  The dentist will need to verify their email and change their password on first login.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-4">
+              <button
+                type="button"
+                className="px-3 py-2 rounded border"
+                onClick={() => setShowAccountModal(false)}
+              >
+                Cancel
+              </button>
+              <button
+                disabled={accountLoading}
+                onClick={createAccount}
+                className="px-3 py-2 rounded border bg-blue-500 text-white disabled:opacity-50"
+              >
+                {accountLoading ? "Creating..." : "Create Account"}
+              </button>
+            </div>
           </div>
         </div>
       )}

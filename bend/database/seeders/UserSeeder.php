@@ -43,6 +43,20 @@ class UserSeeder extends Seeder
                 'password' => Hash::make('password'),
                 'role' => 'patient',
             ],
+            [
+                'name' => 'Dr. A',
+                'email' => 'dr.a@kreativedental.com',
+                'password' => Hash::make('password'),
+                'role' => 'dentist',
+                'email_verified_at' => now(),
+            ],
+            [
+                'name' => 'Dr. B',
+                'email' => 'dr.b@kreativedental.com',
+                'password' => Hash::make('temp789012'),
+                'role' => 'dentist',
+                'email_verified_at' => null,
+            ],
         ];
 
         foreach ($users as $user) {

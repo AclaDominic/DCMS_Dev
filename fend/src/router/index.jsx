@@ -55,6 +55,11 @@ import BookAppointment from "../pages/Patient/BookAppointment";
 import PatientProfile from "../pages/Patient/PatientProfile";
 import PatientAppointments from "../pages/Patient/PatientAppointments";
 
+// Dentist layout and pages
+import DentistLayout from "../layouts/DentistLayout";
+import DentistHomepage from "../pages/Dentist/DentistHomepage";
+import DentistProfile from "../pages/Dentist/DentistProfile";
+
 //
 import NotificationsPage from "../pages/NotificationsPage";
 import PaySuccess from "../pages/payments/PaySuccess";
@@ -166,6 +171,12 @@ export default function AppRouter() {
           <Route path="appointment" element={<BookAppointment />} />
           <Route path="profile" element={<PatientProfile />} />
           <Route path="appointments" element={<PatientAppointments />} />
+        </Route>
+
+        {/* Dentist Routes */}
+        <Route path="/dentist" element={<DentistLayout />}>
+          <Route index element={<DentistHomepage />} />
+          <Route path="profile" element={<DentistProfile />} />
         </Route>
         {/* Payment Result Routes */}
         <Route path="/pay/success" element={<PaySuccess />} />

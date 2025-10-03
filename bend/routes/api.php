@@ -34,6 +34,10 @@ use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Admin\SystemLogController;
 use App\Http\Controllers\API\ReportController;
 use App\Http\Controllers\API\GoalController;
+use App\Http\Controllers\API\DentistUserController;
+use App\Http\Controllers\API\DentistPasswordController;
+use App\Http\Middleware\DentistAuthMiddleware;
+use App\Http\Middleware\DentistPasswordChangeMiddleware;
 
 // ------------------------
 // Public auth routes
@@ -155,6 +159,14 @@ Route::middleware(['auth:sanctum', AdminOnly::class])->group(function () {
         Route::get('/', [GoalController::class, 'index']);
         Route::get('/{id}/progress', [GoalController::class, 'progress'])->whereNumber('id');
     });
+
+    // Dentist account management
+    Route::prefix('dentist')->group(function () {
+        Route::post('/create-account', [DentistUserController::class, 'createAccount']);
+        Route::put('/change-email', [DentistUserController::class, 'changeEmail']);
+        Route::get('/status/{dentist_schedule_id}', [DentistUserController::class, 'status']);
+        Route::post('/reset-password', [DentistPasswordController::class, 'resetPassword']);
+    });
 });
 
 // ------------------------
@@ -225,6 +237,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/patients/{patient}/hmos', [PatientHmoController::class, 'store'])->name('hmos.store');
     Route::put('/patients/{patient}/hmos/{hmo}', [PatientHmoController::class, 'update'])->name('hmos.update');
     Route::delete('/patients/{patient}/hmos/{hmo}', [PatientHmoController::class, 'destroy'])->name('hmos.destroy');
+
+    // Dentist email verification routes removed - no longer needed
 });
 
 // ------------------------
@@ -276,3 +290,14 @@ Route::post('/maya/webhook', [MayaController::class, 'webhook'])
 Route::get('/maya/return/success', [MayaController::class, 'returnCapture'])->defaults('outcome', 'success');
 Route::get('/maya/return/failure', [MayaController::class, 'returnCapture'])->defaults('outcome', 'failure');
 Route::get('/maya/return/cancel', [MayaController::class, 'returnCapture'])->defaults('outcome', 'cancel');
+
+// ------------------------
+// Dentist routes (authenticated dentists only)
+// ------------------------
+Route::middleware(['auth:sanctum', DentistAuthMiddleware::class])->group(function () {
+    // Dentist password management
+    Route::prefix('dentist')->group(function () {
+        Route::post('/change-password', [DentistPasswordController::class, 'changePassword']);
+        Route::get('/password-status', [DentistPasswordController::class, 'checkPasswordStatus']);
+    });
+});

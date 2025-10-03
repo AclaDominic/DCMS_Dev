@@ -18,6 +18,7 @@ export default function AuthRedirector() {
       if (user.role === 'admin') navigate('/admin');
       else if (user.role === 'staff') navigate('/staff');
       else if (user.role === 'patient') navigate('/patient');
+      else if (user.role === 'dentist') navigate('/dentist');
     }
     
     // If no user is logged in and not on a public route, redirect to /app (landing page)

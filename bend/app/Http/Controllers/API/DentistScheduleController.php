@@ -4,8 +4,12 @@ namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
 use App\Models\DentistSchedule;
+use App\Models\User;
+use App\Services\SystemLogService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 
 class DentistScheduleController extends Controller
 {
@@ -29,6 +33,7 @@ class DentistScheduleController extends Controller
     {
         $data = $this->validatedData($request, isUpdate: false);
         $row  = DentistSchedule::create($data);
+        
         return response()->json($row, 201);
     }
 
@@ -36,9 +41,12 @@ class DentistScheduleController extends Controller
     {
         $row  = DentistSchedule::findOrFail($id);
         $data = $this->validatedData($request, isUpdate: true, currentId: $row->id);
+        
         $row->update($data);
+        
         return response()->json($row);
     }
+
 
     public function destroy($id)
     {
@@ -62,6 +70,9 @@ class DentistScheduleController extends Controller
 
             'contract_end_date' => ['nullable','date','after_or_equal:today'],
             'status'            => ['required', Rule::in(['active','inactive'])],
+            
+            // Email fields
+            'email'             => ['required','email','max:255', Rule::unique('dentist_schedules','email')->ignore($currentId)],
         ];
 
         // Weekdays as booleans (not required, UI sends them; we default later)
@@ -76,6 +87,8 @@ class DentistScheduleController extends Controller
             $data[$d] = (bool) ($request->boolean($d));
         }
         $data['is_pseudonymous'] = (bool) ($data['is_pseudonymous'] ?? true);
+        
+        // Email is required, no need to handle nullable
 
         // Enforce: at least one working day must be selected
         $hasAny = false;
@@ -91,4 +104,5 @@ class DentistScheduleController extends Controller
 
         return $data;
     }
+
 }
