@@ -12,10 +12,13 @@
 /.vscode
 /.zed
 /auth.json
+/config/cors.php
 /node_modules
 /public/build
 /public/hot
 /public/storage
+/public/assets
+/public/index.html
 /storage/*.key
 /storage/pail
 /vendor
