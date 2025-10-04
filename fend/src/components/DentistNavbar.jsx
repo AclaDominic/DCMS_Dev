@@ -69,6 +69,18 @@ function DentistNavbar() {
                 </Link>
               </li>
 
+              {/* Visit Codes Link */}
+              <li className="nav-item">
+                <Link
+                  className="nav-link"
+                  to="/dentist/dashboard"
+                  style={{ fontWeight: "500" }}
+                >
+                  <i className="bi bi-key me-1"></i>
+                  Visit Codes
+                </Link>
+              </li>
+
               {/* Profile Link */}
               <li className="nav-item">
                 <Link

@@ -10,6 +10,7 @@ use App\Models\PerformanceGoal;
 use App\Models\GoalProgressSnapshot;
 use App\Models\Service;
 use App\Models\User;
+use App\Models\VisitNote;
 use App\Services\ClinicDateResolverService;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
@@ -243,9 +244,8 @@ class AnalyticsSeeder extends Seeder
                     'start_time' => $startTime->toDateTimeString(),
                     'end_time' => $endTime->toDateTimeString(),
                     'status' => $status,
-                    'note' => $this->generateVisitNote($status),
-                    'created_at' => $startTime->toDateTimeString(),
-                    'updated_at' => $endTime->toDateTimeString(),
+                    'created_at' => now()->toDateTimeString(),
+                    'updated_at' => now()->toDateTimeString(),
                 ];
                 
                 $visitRows[] = $visitData;
@@ -300,6 +300,9 @@ class AnalyticsSeeder extends Seeder
         foreach (array_chunk($visitRows, 1000) as $chunk) {
             PatientVisit::insert($chunk);
         }
+        
+        // Create visit notes for visits that need them
+        $this->createVisitNotes();
         
         // Bulk insert appointments
         foreach (array_chunk($appointmentRows, 1000) as $chunk) {
@@ -588,6 +591,31 @@ class AnalyticsSeeder extends Seeder
         }
     }
 
+    private function createVisitNotes(): void
+    {
+        // Get all visits that need notes (inquiry status or completed visits with notes)
+        $visits = PatientVisit::whereIn('status', ['inquiry', 'completed', 'rejected'])
+            ->whereDoesntHave('visitNotes')
+            ->get();
+        
+        foreach ($visits as $visit) {
+            $noteContent = $this->generateVisitNote($visit->status);
+            
+            VisitNote::create([
+                'patient_visit_id' => $visit->id,
+                'dentist_notes_encrypted' => $noteContent,
+                'findings_encrypted' => $visit->status === 'completed' ? 'Patient examination completed successfully.' : null,
+                'treatment_plan_encrypted' => $visit->status === 'completed' ? 'Follow-up recommended in 6 months.' : null,
+                'created_by' => null,
+                'updated_by' => null,
+                'last_accessed_at' => null,
+                'last_accessed_by' => null,
+                'created_at' => $visit->created_at,
+                'updated_at' => $visit->updated_at,
+            ]);
+        }
+    }
+
     private function displaySummary(): void
     {
         $this->command->info('=== Analytics Data Summary ===');
@@ -596,6 +624,7 @@ class AnalyticsSeeder extends Seeder
         $this->command->info('Total Payments: ' . Payment::count());
         $this->command->info('Total Performance Goals: ' . PerformanceGoal::count());
         $this->command->info('Total Goal Snapshots: ' . GoalProgressSnapshot::count());
+        $this->command->info('Total Visit Notes: ' . VisitNote::count());
         
         $revenue = Payment::where('status', 'paid')->sum('amount_paid');
         $this->command->info('Total Revenue: ₱' . number_format($revenue, 2));

@@ -37,13 +37,29 @@ function VisitTrackerManager() {
     fetchVisits();
   }, []);
 
+  // Debug: Log when visits state changes
+  useEffect(() => {
+    console.log("🔄 Visits state updated:", visits);
+    console.log("📊 Visit counts:", {
+      total: visits.length,
+      pending: visits.filter(v => v.status === 'pending').length,
+      completed: visits.filter(v => v.status === 'completed').length,
+      rejected: visits.filter(v => v.status === 'rejected').length
+    });
+  }, [visits]);
+
   const fetchVisits = async () => {
     setLoading(true);
     try {
+      console.log("🌐 Fetching visits from API...");
       const res = await api.get("/api/visits");
+      console.log("📥 API response received:", res.data);
+      console.log("📈 Number of visits received:", res.data.length);
+      console.log("⏳ Visits with pending status:", res.data.filter(v => v.status === 'pending'));
+      console.log("🔍 Visit IDs:", res.data.map(v => ({ id: v.id, status: v.status, patient: v.patient?.first_name + ' ' + v.patient?.last_name })));
       setVisits(res.data);
     } catch (err) {
-      console.error("Failed to load visits", err);
+      console.error("❌ Failed to load visits", err);
     } finally {
       setLoading(false);
     }
@@ -68,11 +84,43 @@ function VisitTrackerManager() {
             .replace(/[^A-Z0-9]/g, ""),
         };
       }
-      await api.post("/api/visits", payload);
+      console.log("🚀 Creating visit with payload:", payload);
+      const response = await api.post("/api/visits", payload);
+      const visit = response.data;
+      console.log("✅ Visit created successfully:", visit);
+      console.log("📋 Visit details:", {
+        id: visit.id,
+        status: visit.status,
+        visit_code: visit.visit_code,
+        patient_id: visit.patient_id,
+        patient_name: visit.patient?.first_name + ' ' + visit.patient?.last_name,
+        start_time: visit.start_time
+      });
+      
+      // Show visit code to staff
+      if (visit.visit_code) {
+        alert(`Visit started successfully!\n\nVisit Code: ${visit.visit_code}\n\nShare this code with the dentist to begin consultation.`);
+      }
+      
+      // Add the newly created visit to the state immediately
+      console.log("➕ Adding new visit to state:", visit);
+      setVisits(prevVisits => {
+        const newVisits = [visit, ...prevVisits];
+        console.log("🔄 Updated visits state with new visit:", newVisits);
+        console.log("🎯 New visit should now be visible in the list");
+        return newVisits;
+      });
+      
       setRefCode("");
       setAppointmentData(null);
+      
+      // Also fetch from server to ensure consistency
+      console.log("🔄 Fetching visits after creation to ensure consistency...");
+      await new Promise(resolve => setTimeout(resolve, 200));
       await fetchVisits();
+      console.log("✅ Visit creation process completed");
     } catch (err) {
+      console.error("Error creating visit:", err);
       alert("Failed to start visit.");
     } finally {
       setSubmitting(false);
@@ -82,6 +130,13 @@ function VisitTrackerManager() {
   const handleAction = async (id, action) => {
     if (action === "finish") {
       const visit = visits.find(v => v.id === id);
+      
+      // Check if service is selected for walk-in patients
+      if (!visit.service_id) {
+        alert("Please select a service for this patient before finishing the visit. Use the 'Edit' button to assign a service.");
+        return;
+      }
+      
       setCompletingVisit(visit);
       return;
     }
@@ -221,21 +276,31 @@ function VisitTrackerManager() {
       ) : (
         <div>
           <div className="d-flex justify-content-between align-items-center mb-2">
-            <h5>Ongoing Visits</h5>
-            <button
-              className="btn btn-sm btn-outline-secondary"
-              onClick={() => setShowAllVisits((prev) => !prev)}
-            >
-              {showAllVisits
-                ? "🔽 Hide Completed/Rejected"
-                : "🔼 Show All Today’s Visits"}
-            </button>
+            <h5>Ongoing Visits ({visits.length} total, {visits.filter(v => v.status === 'pending').length} pending)</h5>
+            <div>
+              <button
+                className="btn btn-sm btn-outline-primary me-2"
+                onClick={fetchVisits}
+              >
+                🔄 Refresh
+              </button>
+              <button
+                className="btn btn-sm btn-outline-secondary"
+                onClick={() => setShowAllVisits((prev) => !prev)}
+              >
+                {showAllVisits
+                  ? "🔽 Hide Completed/Rejected"
+                  : "🔼 Show All Today's Visits"}
+              </button>
+            </div>
           </div>
           <table className="table table-bordered">
             <thead>
               <tr>
                 <th>Name</th>
                 <th>Contact</th>
+                <th>Visit Code</th>
+                <th>Service</th>
                 <th>Note</th>
                 <th>Started At</th>
                 <th>Status</th>
@@ -243,14 +308,38 @@ function VisitTrackerManager() {
               </tr>
             </thead>
             <tbody>
-              {visits
-                .filter((v) => showAllVisits || v.status === "pending")
-                .map((v) => (
+              {(() => {
+                const filteredVisits = visits.filter((v) => showAllVisits || v.status === "pending");
+                console.log("All visits:", visits);
+                console.log("Show all visits:", showAllVisits);
+                console.log("Filtered visits:", filteredVisits);
+                return filteredVisits;
+              })()
+                .map((v) => {
+                  console.log("Rendering visit:", v.id, "Patient:", v.patient);
+                  return (
                   <tr key={v.id}>
                     <td>
                       {v.patient?.first_name} {v.patient?.last_name}
                     </td>
                     <td>{v.patient?.contact_number || "—"}</td>
+                    <td>
+                      {v.visit_code ? (
+                        <span className="badge bg-primary">{v.visit_code}</span>
+                      ) : (
+                        "—"
+                      )}
+                    </td>
+                    <td>
+                      {v.service ? (
+                        <span className="badge bg-info">{v.service.name}</span>
+                      ) : (
+                        <span className="badge bg-warning">
+                          <i className="bi bi-exclamation-triangle me-1"></i>
+                          No Service
+                        </span>
+                      )}
+                    </td>
                     <td>
                       {v.status === "completed" && v.visit_notes ? (
                         <button
@@ -277,10 +366,25 @@ function VisitTrackerManager() {
                       {v.status === "pending" && (
                         <>
                           <button
-                            className="btn btn-success btn-sm me-1"
+                            className={`btn btn-sm me-1 ${
+                              v.service_id ? "btn-success" : "btn-outline-secondary"
+                            }`}
                             onClick={() => handleAction(v.id, "finish")}
+                            disabled={!v.service_id}
+                            title={
+                              !v.service_id 
+                                ? "Please select a service first" 
+                                : "Complete this visit"
+                            }
                           >
-                            Finish
+                            {!v.service_id ? (
+                              <>
+                                <i className="bi bi-exclamation-triangle me-1"></i>
+                                Finish
+                              </>
+                            ) : (
+                              "Finish"
+                            )}
                           </button>
                           <button
                             className="btn btn-warning btn-sm me-1"
@@ -303,7 +407,8 @@ function VisitTrackerManager() {
                       )}
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
             </tbody>
           </table>
         </div>

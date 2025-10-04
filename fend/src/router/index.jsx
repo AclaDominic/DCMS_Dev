@@ -59,6 +59,7 @@ import PatientAppointments from "../pages/Patient/PatientAppointments";
 import DentistLayout from "../layouts/DentistLayout";
 import DentistHomepage from "../pages/Dentist/DentistHomepage";
 import DentistProfile from "../pages/Dentist/DentistProfile";
+import DentistDashboard from "../pages/Dentist/DentistDashboard";
 
 //
 import NotificationsPage from "../pages/NotificationsPage";
@@ -176,6 +177,7 @@ export default function AppRouter() {
         {/* Dentist Routes */}
         <Route path="/dentist" element={<DentistLayout />}>
           <Route index element={<DentistHomepage />} />
+          <Route path="dashboard" element={<DentistDashboard />} />
           <Route path="profile" element={<DentistProfile />} />
         </Route>
         {/* Payment Result Routes */}

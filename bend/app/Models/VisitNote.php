@@ -23,6 +23,9 @@ class VisitNote extends Model
 
     protected $casts = [
         'last_accessed_at' => 'datetime',
+        'dentist_notes_encrypted' => 'encrypted',
+        'findings_encrypted' => 'encrypted',
+        'treatment_plan_encrypted' => 'encrypted',
     ];
 
     // Relationships
@@ -46,35 +49,15 @@ class VisitNote extends Model
         return $this->belongsTo(User::class, 'last_accessed_by');
     }
 
-    // Encrypted attribute accessors and mutators
-    protected function dentistNotes(): Attribute
+    // Add snake_case accessors for API compatibility
+    public function getDentistNotesAttribute()
     {
-        return Attribute::make(
-            get: fn ($value, $attributes) => $attributes['dentist_notes_encrypted'] 
-                ? decrypt($attributes['dentist_notes_encrypted']) 
-                : null,
-            set: fn ($value) => ['dentist_notes_encrypted' => $value ? encrypt($value) : null],
-        );
+        return $this->dentist_notes_encrypted;
     }
 
-    protected function findings(): Attribute
+    public function getTreatmentPlanAttribute()
     {
-        return Attribute::make(
-            get: fn ($value, $attributes) => $attributes['findings_encrypted'] 
-                ? decrypt($attributes['findings_encrypted']) 
-                : null,
-            set: fn ($value) => ['findings_encrypted' => $value ? encrypt($value) : null],
-        );
-    }
-
-    protected function treatmentPlan(): Attribute
-    {
-        return Attribute::make(
-            get: fn ($value, $attributes) => $attributes['treatment_plan_encrypted'] 
-                ? decrypt($attributes['treatment_plan_encrypted']) 
-                : null,
-            set: fn ($value) => ['treatment_plan_encrypted' => $value ? encrypt($value) : null],
-        );
+        return $this->treatment_plan_encrypted;
     }
 
     // Helper method to track access

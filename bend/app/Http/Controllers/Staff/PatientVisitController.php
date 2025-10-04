@@ -24,10 +24,25 @@ class PatientVisitController extends Controller
     // 🟢 List visits (e.g. for tracker)
     public function index()
     {
+        // First, let's check if there are any visits with null start_time
+        $nullStartTimeVisits = PatientVisit::whereNull('start_time')->count();
+        Log::info('🔍 INDEX: Found ' . $nullStartTimeVisits . ' visits with null start_time');
+        
+        // Check total visits count
+        $totalVisits = PatientVisit::count();
+        Log::info('🔍 INDEX: Total visits in database: ' . $totalVisits);
+        
         $visits = PatientVisit::with(['patient', 'service', 'visitNotes'])
-            ->latest('start_time')
+            ->orderBy('created_at', 'desc')
             ->take(50)
             ->get();
+        
+        Log::info('🔍 INDEX: Returning ' . $visits->count() . ' visits from index method');
+        Log::info('🔍 INDEX: Latest created_at in results: ' . ($visits->first()?->created_at ?? 'null'));
+        
+        foreach ($visits as $visit) {
+            Log::info('📋 INDEX: Visit ID: ' . $visit->id . ', Status: ' . $visit->status . ', Patient: ' . $visit->patient?->first_name . ' ' . $visit->patient?->last_name . ', Start Time: ' . $visit->start_time . ', Patient ID: ' . $visit->patient_id);
+        }
 
         return response()->json($visits);
     }
@@ -36,25 +51,35 @@ class PatientVisitController extends Controller
     public function store(Request $request)
     {
         $visitType = $request->input('visit_type');
+        Log::info('🚀 STORE: Creating visit with type: ' . $visitType);
 
         if ($visitType === 'walkin') {
-            // ✅ Create placeholder patient
-            $patient = Patient::create([
-                'first_name' => 'Patient',
-                'last_name' => strtoupper(Str::random(6)),
-                'user_id' => null,
-            ]);
+            return DB::transaction(function () {
+                // ✅ Create placeholder patient
+                $patient = Patient::create([
+                    'first_name' => 'Patient',
+                    'last_name' => strtoupper(Str::random(6)),
+                    'user_id' => null,
+                ]);
+                Log::info('👤 STORE: Created patient with ID: ' . $patient->id . ', Name: ' . $patient->first_name . ' ' . $patient->last_name);
 
-            // ✅ Create the visit
-            $visit = PatientVisit::create([
-                'patient_id' => $patient->id,
-                'service_id' => null, // to be selected later
-                'visit_date' => now()->toDateString(),
-                'start_time' => now(),
-                'status' => 'pending',
-            ]);
+                // ✅ Create the visit
+                $startTime = now();
+                $visit = PatientVisit::create([
+                    'patient_id' => $patient->id,
+                    'service_id' => null, // to be selected later
+                    'visit_date' => now()->toDateString(),
+                    'start_time' => $startTime,
+                    'status' => 'pending',
+                    'visit_code' => PatientVisit::generateVisitCode(),
+                ]);
+                Log::info('✅ STORE: Created visit with ID: ' . $visit->id . ', status: ' . $visit->status . ', patient_id: ' . $visit->patient_id . ', visit_code: ' . $visit->visit_code . ', start_time: ' . $visit->start_time . ', created_at: ' . $visit->created_at);
 
-            return response()->json($visit, 201);
+                // Load the visit with relationships before returning
+                $visit->load(['patient', 'service', 'visitNotes']);
+                
+                return response()->json($visit, 201);
+            });
         } elseif ($visitType === 'appointment') {
             $data = $request->validate([
                 'reference_code' => ['required', 'string', 'size:8'],
@@ -79,6 +104,7 @@ class PatientVisitController extends Controller
                 'visit_date' => now()->toDateString(),
                 'start_time' => now(),
                 'status' => 'pending',
+                'visit_code' => PatientVisit::generateVisitCode(),
             ]);
 
             // Prevent code reuse (recommended)
@@ -137,6 +163,7 @@ class PatientVisitController extends Controller
         $visit->update([
             'end_time' => now(),
             'status' => 'completed',
+            'visit_code' => null, // Clear the code to make it unusable
         ]);
 
         return response()->json(['message' => 'Visit completed.']);
@@ -148,7 +175,7 @@ class PatientVisitController extends Controller
      */
     public function completeWithDetails(Request $request, $id)
     {
-        $visit = PatientVisit::with(['patient', 'service', 'payments'])->findOrFail($id);
+        $visit = PatientVisit::with(['patient', 'service', 'payments', 'visitNotes'])->findOrFail($id);
 
         if ($visit->status !== 'pending') {
             return response()->json(['message' => 'Only pending visits can be completed.'], 422);
@@ -219,13 +246,24 @@ class PatientVisitController extends Controller
                 }
             }
 
-            // 2. Create encrypted visit notes
-            $visit->visitNotes()->create([
-                'dentist_notes' => $validated['dentist_notes'] ?? null,
-                'findings' => $validated['findings'] ?? null,
-                'treatment_plan' => $validated['treatment_plan'] ?? null,
-                'created_by' => $userId,
-            ]);
+            // 2. Create or update encrypted visit notes
+            if ($visit->visitNotes) {
+                // Update existing notes
+                $visit->visitNotes->update([
+                    'dentist_notes_encrypted' => $validated['dentist_notes'] ?? $visit->visitNotes->dentist_notes_encrypted,
+                    'findings_encrypted' => $validated['findings'] ?? $visit->visitNotes->findings_encrypted,
+                    'treatment_plan_encrypted' => $validated['treatment_plan'] ?? $visit->visitNotes->treatment_plan_encrypted,
+                    'updated_by' => $userId,
+                ]);
+            } else {
+                // Create new notes
+                $visit->visitNotes()->create([
+                    'dentist_notes_encrypted' => $validated['dentist_notes'] ?? null,
+                    'findings_encrypted' => $validated['findings'] ?? null,
+                    'treatment_plan_encrypted' => $validated['treatment_plan'] ?? null,
+                    'created_by' => $userId,
+                ]);
+            }
 
             // 3. Update visit status
             $visit->update([
@@ -350,6 +388,7 @@ class PatientVisitController extends Controller
             'end_time' => now(),
             'status' => $status,
             'note' => $this->buildRejectionNote($request),
+            'visit_code' => null, // Clear the code to make it unusable
         ]);
 
         $message = $status === 'inquiry' ? 'Visit marked as inquiry only.' : 'Visit rejected.';
@@ -392,7 +431,9 @@ class PatientVisitController extends Controller
         // In future, insert this into system_logs with performed_by, note, etc.
 
         // Delete the temporary patient profile
+        Log::info('🗑️ LINK: About to delete temporary patient ID: ' . $oldPatient->id . ', Name: ' . $oldPatient->first_name . ' ' . $oldPatient->last_name);
         $oldPatient->delete(); // full delete for now
+        Log::info('🗑️ LINK: Deleted temporary patient ID: ' . $oldPatient->id);
 
         return response()->json([
             'message' => 'Visit successfully linked to existing patient profile.',
@@ -513,27 +554,164 @@ class PatientVisitController extends Controller
         ]);
 
         $userId = $request->user()->id;
+        $userRole = $request->user()->role;
 
         // Check if notes already exist for this visit
         if ($visit->visitNotes) {
             // Update existing notes
             $visit->visitNotes->update([
-                'dentist_notes' => $validated['dentist_notes'] ?? $visit->visitNotes->dentist_notes,
-                'findings' => $validated['findings'] ?? $visit->visitNotes->findings,
-                'treatment_plan' => $validated['treatment_plan'] ?? $visit->visitNotes->treatment_plan,
+                'dentist_notes_encrypted' => $validated['dentist_notes'] ?? $visit->visitNotes->dentist_notes_encrypted,
+                'findings_encrypted' => $validated['findings'] ?? $visit->visitNotes->findings_encrypted,
+                'treatment_plan_encrypted' => $validated['treatment_plan'] ?? $visit->visitNotes->treatment_plan_encrypted,
                 'updated_by' => $userId,
             ]);
+            
+            $action = 'notes_updated';
         } else {
             // Create new notes
             $visit->visitNotes()->create([
-                'dentist_notes' => $validated['dentist_notes'] ?? null,
-                'findings' => $validated['findings'] ?? null,
-                'treatment_plan' => $validated['treatment_plan'] ?? null,
+                'dentist_notes_encrypted' => $validated['dentist_notes'] ?? null,
+                'findings_encrypted' => $validated['findings'] ?? null,
+                'treatment_plan_encrypted' => $validated['treatment_plan'] ?? null,
                 'created_by' => $userId,
+            ]);
+            
+            $action = 'notes_created';
+        }
+
+        // Log the notes save action
+        SystemLog::create([
+            'category' => 'visit',
+            'action' => $action,
+            'message' => "Dentist notes saved for visit #{$visit->id} by {$userRole}",
+            'user_id' => $userId,
+            'subject_id' => $visit->id,
+            'context' => [
+                'visit_id' => $visit->id,
+                'patient_id' => $visit->patient_id,
+                'visit_code' => $visit->visit_code,
+                'user_role' => $userRole,
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+            ],
+        ]);
+
+        return response()->json(['message' => 'Dentist notes saved successfully.']);
+    }
+
+    /**
+     * GET /api/visits/resolve/{code}
+     * Resolve visit code and return patient summary with history
+     */
+    public function resolveCode(Request $request, $code)
+    {
+        // Check authorization - only dentist or staff can resolve codes
+        $user = $request->user();
+        if (!in_array($user->role, ['dentist', 'staff'])) {
+            return response()->json(['message' => 'Unauthorized: Only dentists and staff can resolve visit codes.'], 403);
+        }
+
+        // Normalize the code
+        $code = strtoupper(trim($code));
+        
+        if (empty($code)) {
+            return response()->json(['message' => 'Invalid visit code.'], 422);
+        }
+
+        // Find the visit by code
+        $visit = PatientVisit::with(['patient', 'service', 'visitNotes'])
+            ->where('visit_code', $code)
+            ->first();
+
+        if (!$visit) {
+            // Log failed code resolution attempt
+            SystemLog::create([
+                'category' => 'visit',
+                'action' => 'code_resolution_failed',
+                'message' => "Failed to resolve visit code: {$code} (not found)",
+                'user_id' => $user->id,
+                'context' => [
+                    'code' => $code,
+                    'user_role' => $user->role,
+                    'reason' => 'code_not_found',
+                    'ip_address' => $request->ip(),
+                    'user_agent' => $request->userAgent(),
+                ],
+            ]);
+            
+            return response()->json(['message' => 'Visit code not found.'], 404);
+        }
+
+        // Check if visit is in allowed state
+        if (!in_array($visit->status, ['pending', 'inquiry'])) {
+            // Log failed code resolution attempt
+            SystemLog::create([
+                'category' => 'visit',
+                'action' => 'code_resolution_failed',
+                'message' => "Failed to resolve visit code: {$code} (inactive status: {$visit->status})",
+                'user_id' => $user->id,
+                'subject_id' => $visit->id,
+                'context' => [
+                    'code' => $code,
+                    'visit_id' => $visit->id,
+                    'visit_status' => $visit->status,
+                    'user_role' => $user->role,
+                    'reason' => 'inactive_status',
+                    'ip_address' => $request->ip(),
+                    'user_agent' => $request->userAgent(),
+                ],
+            ]);
+            
+            return response()->json(['message' => 'Visit code is no longer active.'], 422);
+        }
+
+        // Set consultation started time if not already set
+        if (!$visit->consultation_started_at) {
+            $visit->update(['consultation_started_at' => now()]);
+            
+            // Log the consultation start
+            SystemLog::create([
+                'category' => 'visit',
+                'action' => 'consultation_started',
+                'message' => "Consultation started for visit code: {$code}",
+                'user_id' => $request->user()->id,
+                'subject_id' => $visit->id,
+                'context' => [
+                    'visit_id' => $visit->id,
+                    'patient_id' => $visit->patient_id,
+                    'visit_code' => $code,
+                    'ip_address' => $request->ip(),
+                    'user_agent' => $request->userAgent(),
+                ],
             ]);
         }
 
-        return response()->json(['message' => 'Dentist notes saved successfully.']);
+        // Get patient history
+        $patientHistory = $visit->getPatientHistory();
+
+        // Return minimal patient summary and history
+        return response()->json([
+            'visit' => [
+                'id' => $visit->id,
+                'visit_code' => $visit->visit_code,
+                'visit_date' => $visit->visit_date,
+                'start_time' => $visit->start_time,
+                'consultation_started_at' => $visit->consultation_started_at,
+                'status' => $visit->status,
+            ],
+            'patient' => [
+                'id' => $visit->patient->id,
+                'first_name' => $visit->patient->first_name,
+                'last_name' => $visit->patient->last_name,
+                'contact_number' => $visit->patient->contact_number,
+            ],
+            'service' => $visit->service ? [
+                'id' => $visit->service->id,
+                'name' => $visit->service->name,
+            ] : null,
+            'patient_history' => $patientHistory,
+            'has_existing_notes' => $visit->visitNotes ? true : false,
+        ]);
     }
 
     /**
@@ -543,8 +721,28 @@ class PatientVisitController extends Controller
     public function getDentistNotes(Request $request, $id)
     {
         $visit = PatientVisit::with(['visitNotes'])->findOrFail($id);
+        $userId = $request->user()->id;
+        $userRole = $request->user()->role;
         
         if (!$visit->visitNotes) {
+            // Log access attempt even if no notes exist
+            SystemLog::create([
+                'category' => 'visit',
+                'action' => 'notes_accessed',
+                'message' => "Attempted to access notes for visit #{$visit->id} (no notes found) by {$userRole}",
+                'user_id' => $userId,
+                'subject_id' => $visit->id,
+                'context' => [
+                    'visit_id' => $visit->id,
+                    'patient_id' => $visit->patient_id,
+                    'visit_code' => $visit->visit_code,
+                    'user_role' => $userRole,
+                    'notes_found' => false,
+                    'ip_address' => $request->ip(),
+                    'user_agent' => $request->userAgent(),
+                ],
+            ]);
+            
             return response()->json([
                 'dentist_notes' => null,
                 'findings' => null,
@@ -552,10 +750,36 @@ class PatientVisitController extends Controller
             ]);
         }
 
+        // Record access to existing notes
+        $visit->visitNotes->recordAccess($userId);
+        
+        // Log the notes access
+        SystemLog::create([
+            'category' => 'visit',
+            'action' => 'notes_accessed',
+            'message' => "Accessed notes for visit #{$visit->id} by {$userRole}",
+            'user_id' => $userId,
+            'subject_id' => $visit->id,
+            'context' => [
+                'visit_id' => $visit->id,
+                'patient_id' => $visit->patient_id,
+                'visit_code' => $visit->visit_code,
+                'user_role' => $userRole,
+                'notes_found' => true,
+                'notes_created_by' => $visit->visitNotes->created_by,
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+            ],
+        ]);
+
         return response()->json([
-            'dentist_notes' => $visit->visitNotes->dentist_notes,
-            'findings' => $visit->visitNotes->findings,
-            'treatment_plan' => $visit->visitNotes->treatment_plan,
+            'dentist_notes' => $visit->visitNotes->dentist_notes_encrypted,
+            'findings' => $visit->visitNotes->findings_encrypted,
+            'treatment_plan' => $visit->visitNotes->treatment_plan_encrypted,
+            'created_by' => $visit->visitNotes->createdBy?->name,
+            'created_at' => $visit->visitNotes->created_at,
+            'updated_by' => $visit->visitNotes->updatedBy?->name,
+            'updated_at' => $visit->visitNotes->updated_at,
         ]);
     }
 

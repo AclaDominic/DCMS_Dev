@@ -191,6 +191,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/resolve/{code}', [AppointmentController::class, 'resolveReferenceCode']);
     });
 
+
     // HMO verification and notification by staff/admin (per appointment)
     Route::post('/appointments/{id}/hmo/reveal', [AppointmentController::class, 'revealHmo']);
     Route::post('/appointments/{id}/hmo/notify', [AppointmentController::class, 'notifyHmoCoverage']);
@@ -262,6 +263,9 @@ Route::middleware(['auth:sanctum', EnsureDeviceIsApproved::class])->group(functi
         Route::put('/{id}/update-patient', [PatientVisitController::class, 'updatePatient']);
         Route::post('/{visit}/link-existing', [PatientVisitController::class, 'linkToExistingPatient']);
         Route::post('/{id}/view-notes', [PatientVisitController::class, 'viewNotes']);
+        
+        // Visit code resolution and notes (accessible to staff and dentists)
+        Route::get('/resolve/{code}', [PatientVisitController::class, 'resolveCode'])->middleware('throttle:10,1');
         Route::post('/{id}/save-dentist-notes', [PatientVisitController::class, 'saveDentistNotes']);
         Route::get('/{id}/dentist-notes', [PatientVisitController::class, 'getDentistNotes']);
     });

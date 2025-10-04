@@ -22,9 +22,16 @@ return new class extends Migration {
 
             $table->enum('status', ['pending', 'completed', 'rejected', 'inquiry'])->default('pending');
 
+            // Visit code for dentist access
+            $table->string('visit_code', 10)->unique()->nullable();
+            $table->timestamp('consultation_started_at')->nullable();
+
             // Note: visit notes are now stored in separate visit_notes table with encryption
 
             $table->timestamps();
+            
+            // Index for visit code lookups
+            $table->index('visit_code');
         });
     }
 

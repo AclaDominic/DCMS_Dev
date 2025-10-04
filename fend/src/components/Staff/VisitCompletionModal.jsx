@@ -12,6 +12,7 @@ export default function VisitCompletionModal({ visit, onClose, onComplete }) {
   const [dentistNotes, setDentistNotes] = useState("");
   const [findings, setFindings] = useState("");
   const [treatmentPlan, setTreatmentPlan] = useState("");
+  const [originalNotesInfo, setOriginalNotesInfo] = useState(null);
 
   // Step 3: Payment
   const [paymentStatus, setPaymentStatus] = useState("paid");
@@ -41,6 +42,16 @@ export default function VisitCompletionModal({ visit, onClose, onComplete }) {
       if (notes.dentist_notes) setDentistNotes(notes.dentist_notes);
       if (notes.findings) setFindings(notes.findings);
       if (notes.treatment_plan) setTreatmentPlan(notes.treatment_plan);
+      
+      // Store original notes info for display
+      if (notes.created_by || notes.created_at) {
+        setOriginalNotesInfo({
+          created_by: notes.created_by,
+          created_at: notes.created_at,
+          updated_by: notes.updated_by,
+          updated_at: notes.updated_at,
+        });
+      }
     } catch (err) {
       // No notes found or error - that's okay, form will start empty
       console.log("No dentist notes found or error fetching notes:", err?.response?.data?.message);
@@ -196,6 +207,25 @@ export default function VisitCompletionModal({ visit, onClose, onComplete }) {
           {step === 2 && (
             <div>
               <h3 className="text-lg font-semibold mb-4">Visit Documentation</h3>
+              
+              {/* Show original notes info if available */}
+              {originalNotesInfo && (
+                <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded">
+                  <h4 className="text-sm font-medium text-blue-800 mb-1">Original Notes Information</h4>
+                  <p className="text-sm text-blue-700">
+                    <strong>Created by:</strong> {originalNotesInfo.created_by} on {new Date(originalNotesInfo.created_at).toLocaleString()}
+                  </p>
+                  {originalNotesInfo.updated_by && originalNotesInfo.updated_at && (
+                    <p className="text-sm text-blue-700">
+                      <strong>Last updated by:</strong> {originalNotesInfo.updated_by} on {new Date(originalNotesInfo.updated_at).toLocaleString()}
+                    </p>
+                  )}
+                  <p className="text-xs text-blue-600 mt-1">
+                    You can edit these notes as needed for the final documentation.
+                  </p>
+                </div>
+              )}
+              
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium mb-1">Dentist Notes</label>

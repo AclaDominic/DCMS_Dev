@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use App\Models\User;
+use Illuminate\Support\Facades\Log;
 
 class Patient extends Model
 {
@@ -35,5 +36,16 @@ class Patient extends Model
             ->first();
     }
 
+    protected static function boot()
+    {
+        parent::boot();
 
+        static::deleting(function ($patient) {
+            Log::info('🗑️ PATIENT: About to delete patient ID: ' . $patient->id . ', Name: ' . $patient->first_name . ' ' . $patient->last_name);
+        });
+
+        static::deleted(function ($patient) {
+            Log::info('🗑️ PATIENT: Deleted patient ID: ' . $patient->id . ', Name: ' . $patient->first_name . ' ' . $patient->last_name);
+        });
+    }
 }
