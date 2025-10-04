@@ -258,18 +258,49 @@ export default function ServiceDiscountManager() {
   );
 
   return (
-    <div className="service-discounts-page">
-      <div className="card border-0 shadow-sm">
-        <div className="card-header bg-primary text-white">
-          <h1 className="card-title mb-0 fs-4 fs-md-3">
-            <i className="bi bi-percent me-2"></i>
-            Service Promo Discounts
-          </h1>
+    <div 
+      className="service-discounts-page"
+      style={{
+        background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
+        minHeight: '100vh',
+        width: '100vw',
+        position: 'relative',
+        left: 0,
+        right: 0,
+        padding: '1.5rem 2rem',
+        boxSizing: 'border-box'
+      }}
+    >
+      {/* Header Section */}
+      <div className="d-flex flex-column flex-lg-row justify-content-between align-items-start align-items-lg-center mb-4 gap-3">
+        <div>
+          <h2 className="m-0 fw-bold" style={{ color: '#1e293b' }}>
+            💰 Service Promo Discounts
+          </h2>
+          <p className="text-muted mb-0 mt-1">Create and manage promotional discounts for services</p>
         </div>
-        <div className="card-body">
+        <button 
+          className="btn border-0 shadow-sm"
+          onClick={openPromoCreation}
+          style={{
+            background: 'linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%)',
+            color: 'white',
+            borderRadius: '12px',
+            padding: '12px 24px',
+            fontWeight: '600',
+            transition: 'all 0.3s ease'
+          }}
+        >
+          <i className="bi bi-plus-circle me-2"></i>
+          Create New Promo
+        </button>
+      </div>
+
+      <div className="card border-0 shadow-sm" style={{ borderRadius: '16px' }}>
+        <div className="card-body p-4">
 
       {cleanupMessage && (
-        <div className="alert alert-success d-flex align-items-center gap-2 mb-3">
+        <div className="alert alert-success border-0 shadow-sm mb-4" style={{ borderRadius: '12px' }}>
           <i className="bi bi-check-circle me-2"></i>
           {cleanupMessage}
         </div>
@@ -277,115 +308,211 @@ export default function ServiceDiscountManager() {
 
       <div className="row mb-4">
         <div className="col-12 col-md-6">
-          <button className="btn btn-primary btn-lg" onClick={openPromoCreation}>
-            <i className="bi bi-plus-circle me-2"></i>
-            Create New Promo
-          </button>
+          <div className="d-flex align-items-center p-3 bg-light rounded" style={{ borderRadius: '12px' }}>
+            <div className="bg-info rounded-circle me-3 d-flex align-items-center justify-content-center" 
+                 style={{ width: '50px', height: '50px', fontSize: '1.5rem' }}>
+              <i className="bi bi-info-circle text-white"></i>
+            </div>
+            <div>
+              <div className="fw-semibold text-dark">Promo Management</div>
+              <small className="text-muted">Create and manage service discounts</small>
+            </div>
+          </div>
         </div>
-        <div className="col-12 col-md-6 text-md-end mt-2 mt-md-0">
-          <span
-            className="text-muted small d-inline-flex align-items-center"
-            title="Services marked as Special/Package are excluded from discounts."
-          >
-            <i className="bi bi-info-circle me-2"></i>
-            Specials/Packages cannot be discounted
-          </span>
+        <div className="col-12 col-md-6 mt-3 mt-md-0">
+          <div className="d-flex align-items-center p-3 bg-light rounded" style={{ borderRadius: '12px' }}>
+            <div className="bg-warning rounded-circle me-3 d-flex align-items-center justify-content-center" 
+                 style={{ width: '50px', height: '50px', fontSize: '1.5rem' }}>
+              <i className="bi bi-exclamation-triangle text-white"></i>
+            </div>
+            <div>
+              <div className="fw-semibold text-dark">Restrictions</div>
+              <small className="text-muted">Specials/Packages cannot be discounted</small>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Always show overview table */}
-        <div className="mt-4">
-          <div className="d-flex align-items-center mb-4">
-            <h5 className="mb-0 me-3">
-              <i className="bi bi-list-ul me-2 text-primary"></i>
-              Active and Planned Promos
-            </h5>
-            <div className="flex-grow-1"></div>
-            <span className="badge bg-primary">
-              {overviewPromos.length} promo{overviewPromos.length !== 1 ? 's' : ''}
-            </span>
+      {/* Promos Overview Table */}
+      <div className="mt-4">
+        <div className="d-flex flex-column flex-md-row align-items-start align-items-md-center mb-4 gap-3">
+          <h5 className="mb-0">
+            <i className="bi bi-list-ul me-2 text-primary"></i>
+            Active and Planned Promos
+          </h5>
+          <div className="flex-grow-1"></div>
+          <span className="badge bg-primary fs-6">
+            {overviewPromos.length} promo{overviewPromos.length !== 1 ? 's' : ''}
+          </span>
+        </div>
+        {overviewLoading ? (
+          <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '400px' }}>
+            <div className="text-center">
+              <div className="spinner-border text-primary mb-3" role="status">
+                <span className="visually-hidden">Loading...</span>
+              </div>
+              <p className="text-muted">Loading promos...</p>
+            </div>
           </div>
-          {overviewLoading ? (
-            <LoadingSpinner message="Loading promos..." />
-          ) : overviewPromos.length > 0 ? (
-            <div className="table-responsive">
-              <table className="table table-bordered table-hover mb-0">
-                <thead className="table-light">
-                  <tr>
-                    <th style={{ minWidth: '150px' }}>Service Name</th>
-                    <th style={{ minWidth: '120px' }}>Start Date</th>
-                    <th style={{ minWidth: '120px' }}>End Date</th>
-                    <th style={{ minWidth: '140px' }}>Discounted Price</th>
-                    <th style={{ minWidth: '100px' }}>Status</th>
-                    <th style={{ minWidth: '120px' }}>Activated Date</th>
-                    <th className="text-center" style={{ minWidth: '150px' }}>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {overviewPromos.map((promo) => (
-                    <tr key={promo.id}>
-                      <td>{promo.service?.name || "-"}</td>
-                      <td>{promo.start_date}</td>
-                      <td>{promo.end_date}</td>
-                      <td>₱{Number(promo.discounted_price).toFixed(2)}</td>
-                      <td>{renderStatusBadge(promo.status)}</td>
-                      <td>{promo.activated_at?.split("T")[0] || "-"}</td>
-                      <td className="text-center">
-                        {promo.status === "planned" && (
-                          <div className="btn-group" role="group">
-                            <button
-                              className="btn btn-sm btn-success"
-                              onClick={() => openLaunchConfirm(promo)}
-                              title="Launch this promo"
-                            >
-                              <i className="bi bi-play-fill"></i>
-                            </button>
-                            <button
-                              className="btn btn-sm btn-warning"
-                              onClick={() => openCancelConfirm(promo)}
-                              title="Cancel this promo"
-                            >
-                              <i className="bi bi-x-circle"></i>
-                            </button>
-                            <button
-                              className="btn btn-sm btn-info"
-                              onClick={() => editOverviewPromo(promo)}
-                              title="Edit this promo"
-                            >
-                              <i className="bi bi-pencil"></i>
-                            </button>
-                          </div>
-                        )}
-                        {promo.status === "launched" && isCancelable(promo) && (
+        ) : overviewPromos.length > 0 ? (
+          <div className="table-responsive" style={{ width: '100%' }}>
+            <table className="table table-hover mb-0" style={{ width: '100%' }}>
+              <thead className="table-primary">
+                <tr>
+                  <th className="fw-semibold px-4 py-3 border-0" style={{ fontSize: '1.1rem' }}>
+                    <i className="bi bi-tag me-2"></i>Service Name
+                  </th>
+                  <th className="fw-semibold px-4 py-3 border-0" style={{ fontSize: '1.1rem' }}>
+                    <i className="bi bi-calendar-event me-2"></i>Start Date
+                  </th>
+                  <th className="fw-semibold px-4 py-3 border-0" style={{ fontSize: '1.1rem' }}>
+                    <i className="bi bi-calendar-x me-2"></i>End Date
+                  </th>
+                  <th className="fw-semibold px-4 py-3 border-0" style={{ fontSize: '1.1rem' }}>
+                    <i className="bi bi-currency-dollar me-2"></i>Discounted Price
+                  </th>
+                  <th className="fw-semibold px-4 py-3 border-0" style={{ fontSize: '1.1rem' }}>
+                    <i className="bi bi-activity me-2"></i>Status
+                  </th>
+                  <th className="fw-semibold px-4 py-3 border-0" style={{ fontSize: '1.1rem' }}>
+                    <i className="bi bi-clock-history me-2"></i>Activated Date
+                  </th>
+                  <th className="fw-semibold px-4 py-3 border-0 text-center" style={{ fontSize: '1.1rem' }}>
+                    <i className="bi bi-gear me-2"></i>Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {overviewPromos.map((promo) => (
+                  <tr key={promo.id} className="align-middle" style={{ height: '60px' }}>
+                    <td className="px-4 py-3 fw-medium border-0" style={{ fontSize: '1rem' }}>
+                      <div className="d-flex align-items-center">
+                        <div className="bg-primary rounded-circle me-3 d-flex align-items-center justify-content-center" 
+                             style={{ width: '40px', height: '40px', fontSize: '1.2rem' }}>
+                          🦷
+                        </div>
+                        <div>
+                          <div className="fw-bold text-dark">{promo.service?.name || "-"}</div>
+                          <small className="text-muted">Dental Service</small>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 border-0" style={{ fontSize: '1rem' }}>
+                      <div className="d-flex flex-column">
+                        <span className="fw-semibold text-dark">{promo.start_date}</span>
+                        <small className="text-muted">Campaign Start</small>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 border-0" style={{ fontSize: '1rem' }}>
+                      <div className="d-flex flex-column">
+                        <span className="fw-semibold text-dark">{promo.end_date}</span>
+                        <small className="text-muted">Campaign End</small>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 border-0" style={{ fontSize: '1rem' }}>
+                      <div className="d-flex flex-column">
+                        <span className="fw-bold text-success fs-5">₱{Number(promo.discounted_price).toFixed(2)}</span>
+                        <small className="text-muted">Promotional Price</small>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 border-0" style={{ fontSize: '1rem' }}>
+                      <div className="d-flex flex-column align-items-start">
+                        {renderStatusBadge(promo.status)}
+                        <small className="text-muted mt-1">Current State</small>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-muted border-0" style={{ fontSize: '1rem' }}>
+                      <div className="d-flex flex-column">
+                        <span className="fw-semibold text-dark">{promo.activated_at?.split("T")[0] || "-"}</span>
+                        <small className="text-muted">
+                          {promo.activated_at ? "Launch Date" : "Not Activated"}
+                        </small>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 border-0 text-center" style={{ fontSize: '1rem' }}>
+                      {promo.status === "planned" && (
+                        <div className="btn-group" role="group">
                           <button
-                            className="btn btn-sm btn-warning"
+                            className="btn btn-sm btn-success me-1"
+                            onClick={() => openLaunchConfirm(promo)}
+                            title="Launch this promo"
+                            style={{ borderRadius: '8px' }}
+                          >
+                            <i className="bi bi-play-fill"></i>
+                          </button>
+                          <button
+                            className="btn btn-sm btn-warning me-1"
                             onClick={() => openCancelConfirm(promo)}
                             title="Cancel this promo"
+                            style={{ borderRadius: '8px' }}
                           >
-                            <i className="bi bi-x-circle me-1"></i>
-                            Cancel
+                            <i className="bi bi-x-circle"></i>
                           </button>
-                        )}
-                        {promo.status === "launched" && !isCancelable(promo) && (
-                          <span className="text-muted small">
-                            <i className="bi bi-check-circle text-success"></i> Active
-                          </span>
-                        )}
-                        {promo.status === "canceled" && (
-                          <span className="text-muted small">
-                            <i className="bi bi-x-circle text-warning"></i> Canceled
-                          </span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                          <button
+                            className="btn btn-sm btn-info"
+                            onClick={() => editOverviewPromo(promo)}
+                            title="Edit this promo"
+                            style={{ borderRadius: '8px' }}
+                          >
+                            <i className="bi bi-pencil"></i>
+                          </button>
+                        </div>
+                      )}
+                      {promo.status === "launched" && isCancelable(promo) && (
+                        <button
+                          className="btn btn-sm btn-warning"
+                          onClick={() => openCancelConfirm(promo)}
+                          title="Cancel this promo"
+                          style={{ borderRadius: '8px' }}
+                        >
+                          <i className="bi bi-x-circle me-1"></i>
+                          Cancel
+                        </button>
+                      )}
+                      {promo.status === "launched" && !isCancelable(promo) && (
+                        <span className="text-muted small">
+                          <i className="bi bi-check-circle text-success"></i> Active
+                        </span>
+                      )}
+                      {promo.status === "canceled" && (
+                        <span className="text-muted small">
+                          <i className="bi bi-x-circle text-warning"></i> Canceled
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="text-center text-muted" style={{ height: '400px' }}>
+            <div className="d-flex flex-column align-items-center justify-content-center py-5">
+              <div className="bg-light rounded-circle mb-4 d-flex align-items-center justify-content-center" 
+                   style={{ width: '120px', height: '120px', fontSize: '3rem' }}>
+                💰
+              </div>
+              <h3 className="text-muted mb-3">No active or planned promos</h3>
+              <p className="text-muted mb-4 fs-5">Create your first promotional discount to get started.</p>
+              <button 
+                className="btn border-0 shadow-sm"
+                onClick={openPromoCreation}
+                style={{
+                  background: 'linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%)',
+                  color: 'white',
+                  borderRadius: '12px',
+                  padding: '12px 24px',
+                  fontWeight: '600',
+                  transition: 'all 0.3s ease'
+                }}
+              >
+                <i className="bi bi-plus-circle me-2"></i>
+                Create First Promo
+              </button>
             </div>
-          ) : (
-            <p className="text-muted">No active or planned promos.</p>
-          )}
-        </div>
+          </div>
+        )}
+      </div>
 
       {/* Modals from shared component */}
       <ServiceSelectModal

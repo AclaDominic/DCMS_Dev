@@ -463,79 +463,177 @@ export default function AdminMonthlyReport() {
   };
 
   return (
-    <div className="p-2 p-md-3">
-      {/* Responsive Header */}
-      <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-3 gap-2">
-        <h3 className="m-0 fs-4 fs-md-3">📈 Monthly Visits Report</h3>
-        <div className="d-flex flex-column flex-sm-row gap-2 align-items-stretch align-items-sm-center w-100 w-md-auto">
-          <input
-            type="month"
-            className="form-control form-control-sm"
-            style={{ minWidth: 150, maxWidth: 170 }}
-            value={month}
-            onChange={(e) => setMonth(e.target.value)}
-            aria-label="Select month"
-          />
-          <div className="d-flex gap-2">
-            <button className="btn btn-outline-secondary btn-sm" onClick={load} disabled={loading}>
+    <div 
+      className="admin-monthly-report-page"
+      style={{
+        background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
+        minHeight: '100vh',
+        width: '100%',
+        position: 'relative',
+        padding: '1.5rem',
+        boxSizing: 'border-box',
+        overflow: 'hidden'
+      }}
+    >
+      {/* Header Section */}
+      <div className="d-flex flex-column flex-lg-row justify-content-between align-items-start align-items-lg-center mb-4 gap-3">
+        <div className="flex-grow-1">
+          <h2 className="m-0 fw-bold" style={{ color: '#1e293b' }}>
+            📈 Monthly Visits Report
+          </h2>
+          <p className="text-muted mb-0 mt-1">Analyze patient visits and service usage patterns</p>
+        </div>
+        <div className="d-flex flex-column flex-sm-row gap-3 align-items-stretch align-items-sm-center">
+          <div className="flex-shrink-0">
+            <label className="form-label fw-semibold mb-1">Select Month</label>
+            <input
+              type="month"
+              className="form-control border-0 shadow-sm"
+              style={{ 
+                minWidth: 150,
+                maxWidth: 170,
+                borderRadius: '12px',
+                padding: '12px 16px',
+                fontSize: '14px',
+                fontWeight: '500'
+              }}
+              value={month}
+              onChange={(e) => setMonth(e.target.value)}
+              aria-label="Select month"
+            />
+          </div>
+          <div className="d-flex flex-column flex-sm-row gap-2 align-items-stretch align-items-sm-center flex-shrink-0">
+            <button 
+              className="btn border-0 shadow-sm" 
+              onClick={load} 
+              disabled={loading}
+              style={{
+                background: 'linear-gradient(135deg, #6c757d 0%, #495057 100%)',
+                color: 'white',
+                borderRadius: '12px',
+                padding: '12px 20px',
+                fontWeight: '600',
+                transition: 'all 0.3s ease',
+                minWidth: '100px'
+              }}
+            >
+              <i className="bi bi-arrow-clockwise me-2"></i>
               Refresh
             </button>
-            <button className="btn btn-dark btn-sm" onClick={downloadPdf} disabled={loading}>
-              Download PDF
+            <button 
+              className="btn border-0 shadow-sm" 
+              onClick={downloadPdf} 
+              disabled={loading}
+              style={{
+                background: 'linear-gradient(135deg, #343a40 0%, #212529 100%)',
+                color: 'white',
+                borderRadius: '12px',
+                padding: '12px 20px',
+                fontWeight: '600',
+                transition: 'all 0.3s ease',
+                minWidth: '100px'
+              }}
+            >
+              <i className="bi bi-file-earmark-pdf me-2"></i>
+              PDF
             </button>
-            <button className="btn btn-success btn-sm" onClick={downloadExcel} disabled={loading}>
-              Export Excel
+            <button 
+              className="btn border-0 shadow-sm" 
+              onClick={downloadExcel} 
+              disabled={loading}
+              style={{
+                background: 'linear-gradient(135deg, #198754 0%, #146c43 100%)',
+                color: 'white',
+                borderRadius: '12px',
+                padding: '12px 20px',
+                fontWeight: '600',
+                transition: 'all 0.3s ease',
+                minWidth: '100px'
+              }}
+            >
+              <i className="bi bi-file-earmark-excel me-2"></i>
+              Excel
             </button>
           </div>
         </div>
       </div>
 
       {error && (
-        <div className="alert alert-danger py-2" role="alert">
+        <div className="alert alert-danger border-0 shadow-sm mb-4" style={{ borderRadius: '12px' }} role="alert">
+          <i className="bi bi-exclamation-triangle me-2"></i>
           {error}
         </div>
       )}
 
       {loading ? (
-        <div>Loading…</div>
+        <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '400px' }}>
+          <div className="text-center">
+            <div className="spinner-border text-primary mb-3" role="status">
+              <span className="visually-hidden">Loading...</span>
+            </div>
+            <p className="text-muted">Loading monthly report...</p>
+          </div>
+        </div>
       ) : (
         <>
           {/* Overview Cards */}
-          <div className="row g-3 mb-3">
-            <div className="col-12 col-sm-6 col-md-4 col-lg-3">
-              <div className="card h-100 shadow-sm">
-                <div className="card-header">
-                  <div className="text-muted small">Total Visits</div>
-                  <div className="fs-2 fs-md-3 fw-bold text-primary">{data?.totals?.visits ?? 0}</div>
+          <div className="row g-3 mb-4">
+            <div className="col-12 col-sm-6 col-lg-3">
+              <div className="card border-0 shadow-sm h-100" style={{ borderRadius: '16px' }}>
+                <div className="card-body p-4">
+                  <div className="d-flex align-items-center">
+                    <div className="bg-primary rounded-circle me-3 d-flex align-items-center justify-content-center flex-shrink-0" 
+                         style={{ width: '50px', height: '50px', fontSize: '1.5rem' }}>
+                      <i className="bi bi-people text-white"></i>
+                    </div>
+                    <div className="flex-grow-1 min-width-0">
+                      <div className="text-muted small fw-semibold">Total Visits</div>
+                      <div className="fs-3 fw-bold text-primary">{data?.totals?.visits ?? 0}</div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
-            <div className="col-12 col-sm-6 col-md-4 col-lg-3">
-              <div className="card h-100 shadow-sm">
-                <div className="card-header">
-                  <div className="text-muted small">Inquiries This Month</div>
-                  <div className="fs-2 fs-md-3 fw-bold text-secondary">{data?.totals?.inquiries ?? 0}</div>
+            <div className="col-12 col-sm-6 col-lg-3">
+              <div className="card border-0 shadow-sm h-100" style={{ borderRadius: '16px' }}>
+                <div className="card-body p-4">
+                  <div className="d-flex align-items-center">
+                    <div className="bg-info rounded-circle me-3 d-flex align-items-center justify-content-center flex-shrink-0" 
+                         style={{ width: '50px', height: '50px', fontSize: '1.5rem' }}>
+                      <i className="bi bi-chat-dots text-white"></i>
+                    </div>
+                    <div className="flex-grow-1 min-width-0">
+                      <div className="text-muted small fw-semibold">Inquiries</div>
+                      <div className="fs-3 fw-bold text-info">{data?.totals?.inquiries ?? 0}</div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
 
           {/* Charts Grid */}
-          <div className="row g-3">
+          <div className="row g-4">
             {/* Visits by Hour Chart */}
             <div className="col-12">
-              <div className="card h-100 shadow-sm">
-                <div className="card-header bg-primary text-white">
-                  <h6 className="mb-0">Visits by Hour</h6>
+              <div className="card border-0 shadow-sm" style={{ borderRadius: '16px' }}>
+                <div className="card-header bg-primary text-white border-0" style={{ borderRadius: '16px 16px 0 0' }}>
+                  <h5 className="mb-0 fw-semibold">
+                    <i className="bi bi-clock me-2"></i>
+                    Visits by Hour
+                  </h5>
                 </div>
-                <div className="card-body">
-                  <div style={{ height: "300px", position: "relative" }}>
+                <div className="card-body p-4">
+                  <div style={{ height: "350px", position: "relative", width: "100%" }}>
                     <Bar data={hourBarData} options={hourBarOptions} />
                   </div>
                   {hourSummary && (
-                    <small className="text-muted d-block mt-2">
-                      On average, about {hourSummary.avgPerHour.toFixed(1)} patients come per hour. The busiest time is {hourSummary.peakHour}:00 ({hourSummary.peakCount} visits). More staff should be available at this time.
-                    </small>
+                    <div className="mt-3 p-3 bg-light rounded" style={{ borderRadius: '12px' }}>
+                      <small className="text-muted">
+                        <i className="bi bi-info-circle me-1"></i>
+                        On average, about {hourSummary.avgPerHour.toFixed(1)} patients come per hour. The busiest time is {hourSummary.peakHour}:00 ({hourSummary.peakCount} visits). More staff should be available at this time.
+                      </small>
+                    </div>
                   )}
                 </div>
               </div>
@@ -543,18 +641,24 @@ export default function AdminMonthlyReport() {
 
             {/* Visits by Service & Type Chart */}
             <div className="col-12">
-              <div className="card h-100 shadow-sm">
-                <div className="card-header bg-primary text-white">
-                  <h6 className="mb-0">Visits by Service & Type</h6>
+              <div className="card border-0 shadow-sm" style={{ borderRadius: '16px' }}>
+                <div className="card-header bg-success text-white border-0" style={{ borderRadius: '16px 16px 0 0' }}>
+                  <h5 className="mb-0 fw-semibold">
+                    <i className="bi bi-bar-chart me-2"></i>
+                    Visits by Service & Type
+                  </h5>
                 </div>
-                <div className="card-body">
-                  <div style={{ height: "300px", position: "relative" }}>
+                <div className="card-body p-4">
+                  <div style={{ height: "350px", position: "relative", width: "100%" }}>
                     <Bar data={serviceBarData} options={serviceBarOptions} />
                   </div>
                   {serviceSummary && (
-                    <small className="text-muted d-block mt-2">
-                      Most patients came for {serviceSummary.topService} ({serviceSummary.topCount} visits, {serviceSummary.topShare.toFixed(0)}% of total). Most were booked by {serviceSummary.topWalkin ? 'walk-in' : 'appointment'}.
-                    </small>
+                    <div className="mt-3 p-3 bg-light rounded" style={{ borderRadius: '12px' }}>
+                      <small className="text-muted">
+                        <i className="bi bi-info-circle me-1"></i>
+                        Most patients came for {serviceSummary.topService} ({serviceSummary.topCount} visits, {serviceSummary.topShare.toFixed(0)}% of total). Most were booked by {serviceSummary.topWalkin ? 'walk-in' : 'appointment'}.
+                      </small>
+                    </div>
                   )}
                 </div>
               </div>

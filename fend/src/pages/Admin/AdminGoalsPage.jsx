@@ -129,11 +129,18 @@ export default function AdminGoalsPage() {
   };
 
   return (
-    <div className="p-4" style={{ 
-      background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
-      minHeight: '100vh'
-    }}>
-      <div className="d-flex justify-content-between align-items-center mb-4">
+    <div 
+      className="admin-goals-page"
+      style={{
+        background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
+        minHeight: '100vh',
+        width: '100%',
+        padding: '1.5rem 1rem',
+        boxSizing: 'border-box'
+      }}
+    >
+      {/* Header Section */}
+      <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-3">
         <div>
           <h2 className="m-0 fw-bold" style={{ color: '#1e293b' }}>
             <i className="bi bi-bullseye me-2"></i>
@@ -141,7 +148,7 @@ export default function AdminGoalsPage() {
           </h2>
           <p className="text-muted mb-0 mt-1">Set and track your clinic's performance targets</p>
         </div>
-        <div className="d-flex gap-3 align-items-center">
+        <div className="d-flex gap-2 flex-wrap align-items-center">
           <input
             type="month"
             className="form-control border-0 shadow-sm"
@@ -180,7 +187,7 @@ export default function AdminGoalsPage() {
                 Create New Goal
               </h5>
               <form className="row g-3" onSubmit={createGoal}>
-                <div className="col-12 col-sm-6 col-lg-3">
+                <div className="col-12 col-md-6 col-lg-3">
                   <label className="form-label fw-medium">Metric</label>
                   <select 
                     className="form-select border-0 shadow-sm" 
@@ -194,7 +201,7 @@ export default function AdminGoalsPage() {
                   </select>
                 </div>
 
-                <div className="col-12 col-sm-6 col-lg-3">
+                <div className="col-12 col-md-6 col-lg-3">
                   <label className="form-label fw-medium">Period</label>
                   <input 
                     type="month" 
@@ -206,7 +213,7 @@ export default function AdminGoalsPage() {
                 </div>
 
                 {metric === "service_availment" && (
-                  <div className="col-12 col-sm-6 col-lg-3">
+                  <div className="col-12 col-md-6 col-lg-3">
                     <label className="form-label fw-medium">Service</label>
                     <select 
                       className="form-select border-0 shadow-sm" 
@@ -226,7 +233,7 @@ export default function AdminGoalsPage() {
                 )}
 
                 {metric === "package_promo_availment" && (
-                  <div className="col-12 col-sm-6 col-lg-3">
+                  <div className="col-12 col-md-6 col-lg-3">
                     <label className="form-label fw-medium">Package/Promo</label>
                     <select 
                       className="form-select border-0 shadow-sm" 
@@ -245,7 +252,7 @@ export default function AdminGoalsPage() {
                   </div>
                 )}
 
-                <div className="col-12 col-sm-6 col-lg-3">
+                <div className="col-12 col-md-6 col-lg-3">
                   <label className="form-label fw-medium">Target Value</label>
                   <input 
                     type="number" 
@@ -269,7 +276,7 @@ export default function AdminGoalsPage() {
                   </div>
                 )}
 
-                <div className="col-12 col-sm-6 col-lg-3">
+                <div className="col-12 col-md-6 col-lg-3 d-flex align-items-end">
                   <button 
                     className="btn w-100 border-0 shadow-sm" 
                     disabled={loading}
@@ -321,52 +328,89 @@ export default function AdminGoalsPage() {
                 </div>
               ) : (
                 <div className="table-responsive">
-                  <table className="table table-hover align-middle">
-                    <thead className="table-light">
+                  <table className="table table-hover mb-0 w-100">
+                    <colgroup>
+                      <col style={{ width: '20%' }} />
+                      <col style={{ width: '18%' }} />
+                      <col style={{ width: '15%' }} />
+                      <col style={{ width: '10%' }} />
+                      <col style={{ width: '10%' }} />
+                      <col style={{ width: '12%' }} />
+                      <col style={{ width: '15%' }} />
+                    </colgroup>
+                    <thead className="table-primary">
                       <tr>
-                        <th style={{ width: '15%' }}>Metric</th>
-                        <th style={{ width: '20%' }}>Description</th>
-                        <th style={{ width: '15%' }}>Period</th>
-                        <th style={{ width: '10%' }}>Target</th>
-                        <th style={{ width: '10%' }}>Actual</th>
-                        <th style={{ width: '12%' }}>Status</th>
-                        <th style={{ width: '18%' }}>Progress</th>
+                        <th className="fw-semibold px-3 px-md-4 py-3 border-0" style={{ fontSize: '1.1rem' }}>
+                          <i className="bi bi-bullseye me-2"></i>Metric
+                        </th>
+                        <th className="fw-semibold px-3 px-md-4 py-3 border-0" style={{ fontSize: '1.1rem' }}>
+                          <i className="bi bi-file-text me-2"></i>Description
+                        </th>
+                        <th className="fw-semibold px-3 px-md-4 py-3 border-0" style={{ fontSize: '1.1rem' }}>
+                          <i className="bi bi-calendar me-2"></i>Period
+                        </th>
+                        <th className="fw-semibold px-3 px-md-4 py-3 border-0" style={{ fontSize: '1.1rem' }}>
+                          <i className="bi bi-target me-2"></i>Target
+                        </th>
+                        <th className="fw-semibold px-3 px-md-4 py-3 border-0" style={{ fontSize: '1.1rem' }}>
+                          <i className="bi bi-check-circle me-2"></i>Actual
+                        </th>
+                        <th className="fw-semibold px-3 px-md-4 py-3 border-0" style={{ fontSize: '1.1rem' }}>
+                          <i className="bi bi-activity me-2"></i>Status
+                        </th>
+                        <th className="fw-semibold px-3 px-md-4 py-3 border-0" style={{ fontSize: '1.1rem' }}>
+                          <i className="bi bi-graph-up me-2"></i>Progress
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
                       {goals.map((g) => (
-                        <tr key={g.id}>
-                          <td>
-                            <span className="fw-medium">{getMetricDisplayName(g.metric)}</span>
-                          </td>
-                          <td>
-                            <span className="text-truncate d-inline-block" style={{ maxWidth: '200px' }} title={getGoalDescription(g)}>
-                              {getGoalDescription(g)}
-                            </span>
-                          </td>
-                          <td>
-                            <small className="text-muted">
-                              {g.period_type === "month" 
-                                ? new Date(g.period_start).toLocaleDateString('en-US', { year: 'numeric', month: 'short' })
-                                : `${new Date(g.period_start).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${new Date(g.period_end).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
-                              }
-                            </small>
-                          </td>
-                          <td>
-                            <span className="badge bg-light text-dark">{g.target_value}</span>
-                          </td>
-                          <td>
-                            <span className="fw-medium">{g.latest_actual || 0}</span>
-                          </td>
-                          <td>
-                            {(() => {
-                              const s = derivedStatus(g);
-                              return <span className={`badge bg-${s.color}`}>{s.label}</span>;
-                            })()}
-                          </td>
-                          <td>
+                        <tr key={g.id} className="align-middle" style={{ height: '60px' }}>
+                          <td className="px-3 px-md-4 py-3 fw-medium border-0" style={{ fontSize: '1rem' }}>
                             <div className="d-flex align-items-center">
-                              <div className="progress flex-grow-1 me-2" style={{ height: 20 }}>
+                              <div className="bg-primary rounded-circle me-3 d-flex align-items-center justify-content-center" 
+                                   style={{ width: '40px', height: '40px', fontSize: '1.2rem' }}>
+                                🎯
+                              </div>
+                              <div>
+                                <div className="fw-bold text-dark">{getMetricDisplayName(g.metric)}</div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-3 px-md-4 py-3 border-0" style={{ fontSize: '1rem' }}>
+                            <div className="text-truncate" style={{ maxWidth: '180px' }} title={getGoalDescription(g)}>
+                              {getGoalDescription(g)}
+                            </div>
+                          </td>
+                          <td className="px-3 px-md-4 py-3 border-0" style={{ fontSize: '1rem' }}>
+                            <div className="d-flex flex-column">
+                              <span className="fw-semibold text-dark">
+                                {g.period_type === "month" 
+                                  ? new Date(g.period_start).toLocaleDateString('en-US', { year: 'numeric', month: 'short' })
+                                  : `${new Date(g.period_start).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${new Date(g.period_end).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
+                                }
+                              </span>
+                              <small className="text-muted">Period</small>
+                            </div>
+                          </td>
+                          <td className="px-3 px-md-4 py-3 border-0" style={{ fontSize: '1rem' }}>
+                            <span className="badge bg-light text-dark fs-6">{g.target_value}</span>
+                          </td>
+                          <td className="px-3 px-md-4 py-3 border-0" style={{ fontSize: '1rem' }}>
+                            <div className="fw-bold text-success fs-5">{g.latest_actual || 0}</div>
+                          </td>
+                          <td className="px-3 px-md-4 py-3 border-0" style={{ fontSize: '1rem' }}>
+                            <div className="d-flex flex-column align-items-start">
+                              {(() => {
+                                const s = derivedStatus(g);
+                                return <span className={`badge bg-${s.color} mb-1`}>{s.label}</span>;
+                              })()}
+                              <small className="text-muted">Current</small>
+                            </div>
+                          </td>
+                          <td className="px-3 px-md-4 py-3 border-0">
+                            <div className="d-flex align-items-center">
+                              <div className="progress flex-grow-1 me-2" style={{ height: 24 }}>
                                 <div
                                   className={`progress-bar ${progressPct(g) >= 100 ? 'bg-success' : progressPct(g) >= 70 ? 'bg-info' : 'bg-warning'}`}
                                   role="progressbar"
@@ -375,7 +419,7 @@ export default function AdminGoalsPage() {
                                   aria-valuemin="0"
                                   aria-valuemax="100"
                                 >
-                                  <span className="text-white fw-medium">{progressPct(g)}%</span>
+                                  <span className="text-white fw-medium small">{progressPct(g)}%</span>
                                 </div>
                               </div>
                             </div>

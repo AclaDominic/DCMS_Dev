@@ -500,45 +500,67 @@ const SystemLogsPage = () => {
   };
 
   return (
-    <div className="system-logs-page">
-      <div className="container-fluid p-0">
-        <div className="row g-0">
-          <div className="col-12">
-            <div className="card border-0 shadow-sm h-100">
-              <div className="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                <h2 className="card-title mb-0">
-                  <i className="bi bi-journal-text me-2"></i>
-                  System Logs
-                </h2>
-                <button 
-                  className="btn btn-outline-light"
-                  onClick={() => setShowFilters(!showFilters)}
-                >
-                  <i className={`bi bi-${showFilters ? 'eye-slash' : 'eye'} me-1`}></i>
-                  {showFilters ? 'Hide Filters' : 'Show Filters'}
-                </button>
-              </div>
-              <div className="card-body p-4">
+    <div 
+      className="system-logs-page"
+      style={{
+        background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
+        minHeight: '100vh',
+        width: '100vw',
+        position: 'relative',
+        left: 0,
+        right: 0,
+        padding: '1.5rem 2rem',
+        boxSizing: 'border-box'
+      }}
+    >
+      {/* Header Section */}
+      <div className="d-flex flex-column flex-lg-row justify-content-between align-items-start align-items-lg-center mb-4 gap-3">
+        <div>
+          <h2 className="m-0 fw-bold" style={{ color: '#1e293b' }}>
+            📋 System Logs
+          </h2>
+          <p className="text-muted mb-0 mt-1">Monitor system activity and user actions</p>
+        </div>
+        <button 
+          className="btn border-0 shadow-sm"
+          onClick={() => setShowFilters(!showFilters)}
+          style={{
+            background: 'linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%)',
+            color: 'white',
+            borderRadius: '12px',
+            padding: '12px 24px',
+            fontWeight: '600',
+            transition: 'all 0.3s ease'
+          }}
+        >
+          <i className={`bi bi-${showFilters ? 'eye-slash' : 'eye'} me-2`}></i>
+          {showFilters ? 'Hide Filters' : 'Show Filters'}
+        </button>
+      </div>
+
+      <div className="card border-0 shadow-sm" style={{ borderRadius: '16px' }}>
+        <div className="card-body p-4">
 
       {/* Filters */}
       {showFilters && (
-        <div className="card mb-4">
-          <div className="card-header">
-            <h5 className="mb-0">
+        <div className="card border-0 shadow-sm mb-4" style={{ borderRadius: '16px' }}>
+          <div className="card-header bg-info text-white border-0" style={{ borderRadius: '16px 16px 0 0' }}>
+            <h5 className="mb-0 fw-semibold">
               <i className="bi bi-funnel me-2"></i>
               Filters
             </h5>
           </div>
-          <div className="card-body">
+          <div className="card-body p-4">
             <div className="row g-3">
               <div className="col-12 col-md-6 col-lg-3">
-                <label className="form-label">
+                <label className="form-label fw-semibold">
                   <i className="bi bi-search me-1"></i>
                   Search
                 </label>
                 <input
                   type="text"
-                  className="form-control"
+                  className="form-control border-0 shadow-sm"
+                  style={{ borderRadius: '12px', padding: '12px 16px' }}
                   placeholder="Search in message, category, action..."
                   value={filters.search}
                   onChange={(e) => handleFilterChange('search', e.target.value)}
@@ -546,12 +568,13 @@ const SystemLogsPage = () => {
               </div>
               
               <div className="col-12 col-md-6 col-lg-3">
-                <label className="form-label">
+                <label className="form-label fw-semibold">
                   <i className="bi bi-person me-1"></i>
                   User
                 </label>
                 <select
-                  className="form-select"
+                  className="form-select border-0 shadow-sm"
+                  style={{ borderRadius: '12px', padding: '12px 16px' }}
                   value={filters.user_id}
                   onChange={(e) => handleFilterChange('user_id', e.target.value)}
                 >
@@ -565,12 +588,13 @@ const SystemLogsPage = () => {
               </div>
 
               <div className="col-12 col-md-6 col-lg-3">
-                <label className="form-label">
+                <label className="form-label fw-semibold">
                   <i className="bi bi-tags me-1"></i>
                   Category
                 </label>
                 <select
-                  className="form-select"
+                  className="form-select border-0 shadow-sm"
+                  style={{ borderRadius: '12px', padding: '12px 16px' }}
                   value={filters.category}
                   onChange={(e) => handleFilterChange('category', e.target.value)}
                 >
@@ -587,12 +611,13 @@ const SystemLogsPage = () => {
               </div>
 
               <div className="col-12 col-md-6 col-lg-3">
-                <label className="form-label">
+                <label className="form-label fw-semibold">
                   <i className="bi bi-lightning me-1"></i>
                   Action
                 </label>
                 <select
-                  className="form-select"
+                  className="form-select border-0 shadow-sm"
+                  style={{ borderRadius: '12px', padding: '12px 16px' }}
                   value={filters.action}
                   onChange={(e) => handleFilterChange('action', e.target.value)}
                 >
@@ -609,13 +634,14 @@ const SystemLogsPage = () => {
               </div>
 
               <div className="col-12 col-md-6 col-lg-3">
-                <label className="form-label">
+                <label className="form-label fw-semibold">
                   <i className="bi bi-link-45deg me-1"></i>
                   Subject ID
                 </label>
                 <input
                   type="number"
-                  className="form-control"
+                  className="form-control border-0 shadow-sm"
+                  style={{ borderRadius: '12px', padding: '12px 16px' }}
                   placeholder="Enter subject ID"
                   value={filters.subject_id}
                   onChange={(e) => handleFilterChange('subject_id', e.target.value)}
@@ -623,45 +649,63 @@ const SystemLogsPage = () => {
               </div>
 
               <div className="col-12 col-md-6 col-lg-3">
-                <label className="form-label">
+                <label className="form-label fw-semibold">
                   <i className="bi bi-calendar-date me-1"></i>
                   Date From
                 </label>
                 <input
                   type="date"
-                  className="form-control"
+                  className="form-control border-0 shadow-sm"
+                  style={{ borderRadius: '12px', padding: '12px 16px' }}
                   value={filters.date_from}
                   onChange={(e) => handleFilterChange('date_from', e.target.value)}
                 />
               </div>
 
               <div className="col-12 col-md-6 col-lg-3">
-                <label className="form-label">
+                <label className="form-label fw-semibold">
                   <i className="bi bi-calendar-date me-1"></i>
                   Date To
                 </label>
                 <input
                   type="date"
-                  className="form-control"
+                  className="form-control border-0 shadow-sm"
+                  style={{ borderRadius: '12px', padding: '12px 16px' }}
                   value={filters.date_to}
                   onChange={(e) => handleFilterChange('date_to', e.target.value)}
                 />
               </div>
 
-              <div className="col-12 col-md-6 col-lg-3 d-flex align-items-end">
+              <div className="col-12 col-md-6 col-lg-3 d-flex align-items-end gap-2">
                 <button 
-                  className="btn btn-outline-secondary me-2 d-flex align-items-center flex-grow-1"
+                  className="btn border-0 shadow-sm flex-grow-1"
+                  style={{
+                    background: 'linear-gradient(135deg, #6c757d 0%, #495057 100%)',
+                    color: 'white',
+                    borderRadius: '12px',
+                    padding: '12px 16px',
+                    fontWeight: '600',
+                    transition: 'all 0.3s ease'
+                  }}
                   onClick={clearFilters}
                 >
                   <i className="bi bi-x-circle me-1"></i>
-                  Clear Filters
+                  Clear
                 </button>
                 <button 
-                  className="btn btn-primary d-flex align-items-center flex-grow-1"
+                  className="btn border-0 shadow-sm flex-grow-1"
+                  style={{
+                    background: 'linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%)',
+                    color: 'white',
+                    borderRadius: '12px',
+                    padding: '12px 16px',
+                    fontWeight: '600',
+                    transition: 'all 0.3s ease'
+                  }}
                   onClick={fetchLogs}
                 >
                   <i className="bi bi-funnel me-1"></i>
-                  Apply Filters
+                  Apply
                 </button>
               </div>
             </div>
@@ -670,8 +714,8 @@ const SystemLogsPage = () => {
       )}
 
       {/* Results Summary */}
-      <div className="mb-3">
-        <div className="d-flex align-items-center">
+      <div className="mb-4">
+        <div className="d-flex align-items-center p-3 bg-light rounded" style={{ borderRadius: '12px' }}>
           <i className="bi bi-info-circle me-2 text-primary"></i>
           <p className="text-muted mb-0">
             Showing <strong>{logs.length}</strong> of <strong>{pagination.total}</strong> system logs
@@ -684,48 +728,88 @@ const SystemLogsPage = () => {
 
       {/* Logs Table */}
       {loading ? (
-        <LoadingSpinner message="Loading system logs..." />
+        <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '400px' }}>
+          <div className="text-center">
+            <div className="spinner-border text-primary mb-3" role="status">
+              <span className="visually-hidden">Loading...</span>
+            </div>
+            <p className="text-muted">Loading system logs...</p>
+          </div>
+        </div>
       ) : logs.length === 0 ? (
-        <div className="text-center py-5">
-          <i className="bi bi-journal-x display-1 text-muted mb-3"></i>
-          <h5 className="text-muted">No system logs found</h5>
-          <p className="text-muted">Try adjusting your filters or check back later for new activity.</p>
+        <div className="text-center text-muted" style={{ height: '400px' }}>
+          <div className="d-flex flex-column align-items-center justify-content-center py-5">
+            <div className="bg-light rounded-circle mb-4 d-flex align-items-center justify-content-center" 
+                 style={{ width: '120px', height: '120px', fontSize: '3rem' }}>
+              📋
+            </div>
+            <h3 className="text-muted mb-3">No system logs found</h3>
+            <p className="text-muted mb-4 fs-5">Try adjusting your filters or check back later for new activity.</p>
+          </div>
         </div>
       ) : (
-        <div className="table-responsive">
-          <table className="table table-bordered table-striped mb-0 w-100">
-            <thead className="table-light">
+        <div className="table-responsive" style={{ width: '100%' }}>
+          <table className="table table-hover mb-0" style={{ width: '100%' }}>
+            <thead className="table-primary">
               <tr>
-                <th style={{ width: '5%' }}><i className="bi bi-hash me-1"></i>ID</th>
-                <th style={{ width: '15%' }}><i className="bi bi-person me-1"></i>User</th>
-                <th style={{ width: '12%' }}><i className="bi bi-tags me-1"></i>Category</th>
-                <th style={{ width: '12%' }}><i className="bi bi-lightning me-1"></i>Action</th>
-                <th style={{ width: '10%' }}><i className="bi bi-link-45deg me-1"></i>Subject ID</th>
-                <th style={{ width: '25%' }}><i className="bi bi-chat-text me-1"></i>Message</th>
-                <th style={{ width: '10%' }}><i className="bi bi-info-circle me-1"></i>Details</th>
-                <th style={{ width: '11%' }}><i className="bi bi-calendar me-1"></i>Date</th>
+                <th className="fw-semibold px-4 py-3 border-0" style={{ fontSize: '1.1rem', width: '5%' }}>
+                  <i className="bi bi-hash me-2"></i>ID
+                </th>
+                <th className="fw-semibold px-4 py-3 border-0" style={{ fontSize: '1.1rem', width: '15%' }}>
+                  <i className="bi bi-person me-2"></i>User
+                </th>
+                <th className="fw-semibold px-4 py-3 border-0" style={{ fontSize: '1.1rem', width: '12%' }}>
+                  <i className="bi bi-tags me-2"></i>Category
+                </th>
+                <th className="fw-semibold px-4 py-3 border-0" style={{ fontSize: '1.1rem', width: '12%' }}>
+                  <i className="bi bi-lightning me-2"></i>Action
+                </th>
+                <th className="fw-semibold px-4 py-3 border-0" style={{ fontSize: '1.1rem', width: '10%' }}>
+                  <i className="bi bi-link-45deg me-2"></i>Subject ID
+                </th>
+                <th className="fw-semibold px-4 py-3 border-0" style={{ fontSize: '1.1rem', width: '25%' }}>
+                  <i className="bi bi-chat-text me-2"></i>Message
+                </th>
+                <th className="fw-semibold px-4 py-3 border-0 text-center" style={{ fontSize: '1.1rem', width: '10%' }}>
+                  <i className="bi bi-info-circle me-2"></i>Details
+                </th>
+                <th className="fw-semibold px-4 py-3 border-0" style={{ fontSize: '1.1rem', width: '11%' }}>
+                  <i className="bi bi-calendar me-2"></i>Date
+                </th>
               </tr>
             </thead>
             <tbody>
               {logs.map((log) => (
-                <tr key={log.id}>
-                  <td style={{ width: '5%' }} className="text-center">
+                <tr key={log.id} className="align-middle" style={{ height: '60px' }}>
+                  <td className="px-4 py-3 border-0 text-center" style={{ fontSize: '1rem' }}>
                     <span className="badge bg-secondary">{log.id}</span>
                   </td>
-                  <td style={{ width: '15%' }}>
+                  <td className="px-4 py-3 border-0" style={{ fontSize: '1rem' }}>
                     {log.user ? (
-                      <div className="text-truncate">
-                        <div className="fw-bold text-truncate" title={log.user.name}>{log.user.name}</div>
-                        <small className="text-muted text-truncate d-block" title={log.user.email}>{log.user.email}</small>
+                      <div className="d-flex align-items-center">
+                        <div className="bg-primary rounded-circle me-3 d-flex align-items-center justify-content-center" 
+                             style={{ width: '40px', height: '40px', fontSize: '1.2rem' }}>
+                          <i className="bi bi-person text-white"></i>
+                        </div>
+                        <div>
+                          <div className="fw-bold text-dark text-truncate" style={{ maxWidth: '150px' }} title={log.user.name}>{log.user.name}</div>
+                          <small className="text-muted text-truncate d-block" style={{ maxWidth: '150px' }} title={log.user.email}>{log.user.email}</small>
+                        </div>
                       </div>
                     ) : (
-                      <span className="text-muted">
-                        <i className="bi bi-gear me-1"></i>
-                        System
-                      </span>
+                      <div className="d-flex align-items-center">
+                        <div className="bg-secondary rounded-circle me-3 d-flex align-items-center justify-content-center" 
+                             style={{ width: '40px', height: '40px', fontSize: '1.2rem' }}>
+                          <i className="bi bi-gear text-white"></i>
+                        </div>
+                        <div>
+                          <div className="fw-bold text-dark">System</div>
+                          <small className="text-muted">Automated</small>
+                        </div>
+                      </div>
                     )}
                   </td>
-                  <td style={{ width: '12%' }}>
+                  <td className="px-4 py-3 border-0" style={{ fontSize: '1rem' }}>
                     {(() => {
                       const categoryInfo = getCategoryInfo(log.category);
                       return (
@@ -736,7 +820,7 @@ const SystemLogsPage = () => {
                       );
                     })()}
                   </td>
-                  <td style={{ width: '12%' }}>
+                  <td className="px-4 py-3 border-0" style={{ fontSize: '1rem' }}>
                     {(() => {
                       const actionInfo = getActionInfo(log.action);
                       return (
@@ -747,7 +831,7 @@ const SystemLogsPage = () => {
                       );
                     })()}
                   </td>
-                  <td style={{ width: '10%' }} className="text-center">
+                  <td className="px-4 py-3 border-0 text-center" style={{ fontSize: '1rem' }}>
                     {log.subject_id ? (
                       <span className="badge bg-light text-dark">
                         {log.subject_id}
@@ -756,20 +840,21 @@ const SystemLogsPage = () => {
                       <span className="text-muted">-</span>
                     )}
                   </td>
-                  <td style={{ width: '25%' }}>
-                    <div className="text-truncate" title={log.message}>
+                  <td className="px-4 py-3 border-0" style={{ fontSize: '1rem' }}>
+                    <div className="text-truncate" style={{ maxWidth: '300px' }} title={log.message}>
                       {log.message}
                     </div>
                   </td>
-                  <td style={{ width: '10%' }} className="text-center">
+                  <td className="px-4 py-3 border-0 text-center" style={{ fontSize: '1rem' }}>
                     {log.context ? (
                       <button
-                        className="btn btn-sm btn-outline-info d-flex align-items-center mx-auto"
+                        className="btn btn-sm btn-outline-info"
                         onClick={(e) => handleViewContext(log.context, e.currentTarget)}
                         title="View detailed information"
+                        style={{ borderRadius: '8px' }}
                       >
                         <i className="bi bi-eye me-1"></i>
-                        <span className="text-truncate">Details</span>
+                        Details
                       </button>
                     ) : (
                       <span className="text-muted">
@@ -778,8 +863,8 @@ const SystemLogsPage = () => {
                       </span>
                     )}
                   </td>
-                  <td style={{ width: '11%' }}>
-                    <small className="text-truncate d-block" title={formatDate(log.created_at)}>
+                  <td className="px-4 py-3 border-0" style={{ fontSize: '1rem' }}>
+                    <small className="text-truncate d-block" style={{ maxWidth: '120px' }} title={formatDate(log.created_at)}>
                       {formatDate(log.created_at)}
                     </small>
                   </td>
@@ -792,49 +877,58 @@ const SystemLogsPage = () => {
 
       {/* Pagination */}
       {pagination.last_page > 1 && (
-        <nav aria-label="System logs pagination">
-          <ul className="pagination justify-content-center">
-            <li className={`page-item ${pagination.current_page === 1 ? 'disabled' : ''}`}>
-              <button
-                className="page-link"
-                onClick={() => setPagination(prev => ({ ...prev, current_page: prev.current_page - 1 }))}
-                disabled={pagination.current_page === 1}
-              >
-                Previous
-              </button>
-            </li>
-            
-            {Array.from({ length: pagination.last_page }, (_, i) => i + 1).map(page => (
-              <li key={page} className={`page-item ${page === pagination.current_page ? 'active' : ''}`}>
+        <div className="d-flex justify-content-center mt-4">
+          <nav aria-label="System logs pagination">
+            <ul className="pagination">
+              <li className={`page-item ${pagination.current_page === 1 ? 'disabled' : ''}`}>
                 <button
-                  className="page-link"
-                  onClick={() => setPagination(prev => ({ ...prev, current_page: page }))}
+                  className="page-link border-0 shadow-sm"
+                  style={{ borderRadius: '8px', margin: '0 2px' }}
+                  onClick={() => setPagination(prev => ({ ...prev, current_page: prev.current_page - 1 }))}
+                  disabled={pagination.current_page === 1}
                 >
-                  {page}
+                  <i className="bi bi-chevron-left"></i>
                 </button>
               </li>
-            ))}
-            
-            <li className={`page-item ${pagination.current_page === pagination.last_page ? 'disabled' : ''}`}>
-              <button
-                className="page-link"
-                onClick={() => setPagination(prev => ({ ...prev, current_page: prev.current_page + 1 }))}
-                disabled={pagination.current_page === pagination.last_page}
-              >
-                Next
-              </button>
-            </li>
-          </ul>
-        </nav>
+              
+              {Array.from({ length: Math.min(pagination.last_page, 5) }, (_, i) => {
+                const page = i + 1;
+                return (
+                  <li key={page} className={`page-item ${page === pagination.current_page ? 'active' : ''}`}>
+                    <button
+                      className="page-link border-0 shadow-sm"
+                      style={{ borderRadius: '8px', margin: '0 2px' }}
+                      onClick={() => setPagination(prev => ({ ...prev, current_page: page }))}
+                    >
+                      {page}
+                    </button>
+                  </li>
+                );
+              })}
+              
+              <li className={`page-item ${pagination.current_page === pagination.last_page ? 'disabled' : ''}`}>
+                <button
+                  className="page-link border-0 shadow-sm"
+                  style={{ borderRadius: '8px', margin: '0 2px' }}
+                  onClick={() => setPagination(prev => ({ ...prev, current_page: prev.current_page + 1 }))}
+                  disabled={pagination.current_page === pagination.last_page}
+                >
+                  <i className="bi bi-chevron-right"></i>
+                </button>
+              </li>
+            </ul>
+          </nav>
+        </div>
       )}
 
       {/* Per Page Selector */}
-      <div className="d-flex justify-content-between align-items-center mt-3">
-        <div className="d-flex align-items-center">
+      <div className="d-flex justify-content-center align-items-center mt-4">
+        <div className="d-flex align-items-center p-3 bg-light rounded" style={{ borderRadius: '12px' }}>
           <i className="bi bi-list-ul me-2 text-muted"></i>
-          <label className="form-label me-2 mb-0">Logs per page:</label>
+          <label className="form-label me-2 mb-0 fw-semibold">Logs per page:</label>
           <select
-            className="form-select d-inline-block w-auto"
+            className="form-select border-0 shadow-sm d-inline-block w-auto"
+            style={{ borderRadius: '8px', padding: '8px 12px' }}
             value={pagination.per_page}
             onChange={(e) => setPagination(prev => ({ 
               ...prev, 
@@ -932,9 +1026,6 @@ const SystemLogsPage = () => {
         </div>,
         document.body
       )}
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     </div>

@@ -137,99 +137,170 @@ export default function ServiceManager() {
   };
 
   return (
-    <div className="container-fluid">
-      <div className="row">
-        <div className="col-12">
-          <div className="card border-0 shadow-sm">
-            <div className="card-header bg-primary text-white">
-              <h1 className="card-title mb-0">
-                <i className="bi bi-gear me-2"></i>
-                Service Management
-              </h1>
-            </div>
-            <div className="card-body">
-
-      <div className="mb-3">
-        <button className="btn btn-primary" onClick={() => setShowModal(true)}>
-          + Add New Service
-        </button>
+    <div 
+      className="service-manager-page"
+      style={{
+        background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
+        minHeight: '100vh',
+        width: '100%',
+        padding: '1.5rem 1rem',
+        boxSizing: 'border-box'
+      }}
+    >
+      {/* Header Section */}
+      <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-3">
+        <div>
+          <h2 className="m-0 fw-bold" style={{ color: '#1e293b' }}>
+            <i className="bi bi-gear me-2"></i>
+            Service Management
+          </h2>
+          <p className="text-muted mb-0 mt-1">Manage your clinic's services and packages</p>
+        </div>
+        <div className="d-flex gap-2 flex-wrap">
+          <button 
+            className="btn border-0 shadow-sm" 
+            onClick={() => setShowModal(true)}
+            style={{
+              background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+              color: 'white',
+              borderRadius: '12px',
+              padding: '12px 24px',
+              fontWeight: '600',
+              transition: 'all 0.3s ease'
+            }}
+          >
+            <i className="bi bi-plus-circle me-2"></i>
+            Add New Service
+          </button>
+        </div>
       </div>
 
+      <div className="card border-0 shadow-sm" style={{ borderRadius: '16px' }}>
+        <div className="card-body p-4">
+
       {loading ? (
-        <LoadingSpinner message="Fetching services..." />
+        <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '400px' }}>
+          <div className="text-center">
+            <div className="spinner-border text-primary mb-3" role="status">
+              <span className="visually-hidden">Loading...</span>
+            </div>
+            <p className="text-muted">Fetching services...</p>
+          </div>
+        </div>
       ) : (
-        <table className="table table-bordered">
-          <thead className="table-light">
-            <tr>
-              <th>Name</th>
-              <th>Description</th>
-              <th>Price (₱)</th>
-              <th>Category</th>
-              <th>Estimated Time</th>
-              <th>Special</th>
-              <th>Analytics</th>
-              <th className="text-center">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {services.map((service) => (
-              <tr key={service.id}>
-                <td>
-                  {service.name}
-                  {service.bundled_services?.length > 0 && (
-                    <div className="text-muted small">
-                      ({service.bundled_services.map((s) => s.name).join(", ")})
-                    </div>
-                  )}
-                </td>
-                <td>{service.description}</td>
-                <td>{Number(service.price).toFixed(2)}</td>
-                <td>{service.category || "-"}</td>
-
-                {/* Estimated Time */}
-                <td>{service.estimated_minutes} mins</td>
-
-                {/* Special Tag */}
-                <td>
-                  {service.is_special ? (
-                    <>
-                      <span className="badge bg-warning text-dark">
-                        Special
-                      </span>
-                      <br />
-                      <small>
-                        {service.special_start_date && service.special_end_date
-                          ? `${service.special_start_date} → ${service.special_end_date}`
-                          : "(Permanent)"}
-                      </small>
-                    </>
-                  ) : (
-                    "-"
-                  )}
-                </td>
-
-                <td>
-                  {service.is_excluded_from_analytics ? "Excluded" : "Included"}
-                </td>
-                <td className="text-center">
-                  <button
-                    className="btn btn-sm btn-success me-2"
-                    onClick={() => handleEdit(service)}
-                  >
-                    Edit
-                  </button>
-                  <button
-                    className="btn btn-sm btn-danger"
-                    onClick={() => handleDelete(service)}
-                  >
-                    Delete
-                  </button>
-                </td>
+        <div className="table-responsive">
+          <table className="table table-hover mb-0 w-100">
+            <thead className="table-primary">
+              <tr>
+                <th className="fw-semibold px-4 py-3 border-0" style={{ fontSize: '1.1rem' }}>
+                  <i className="bi bi-tag me-2"></i>Service Name
+                </th>
+                <th className="fw-semibold px-4 py-3 border-0" style={{ fontSize: '1.1rem' }}>
+                  <i className="bi bi-file-text me-2"></i>Description
+                </th>
+                <th className="fw-semibold px-4 py-3 border-0" style={{ fontSize: '1.1rem' }}>
+                  <i className="bi bi-currency-dollar me-2"></i>Price
+                </th>
+                <th className="fw-semibold px-4 py-3 border-0" style={{ fontSize: '1.1rem' }}>
+                  <i className="bi bi-grid me-2"></i>Category
+                </th>
+                <th className="fw-semibold px-4 py-3 border-0" style={{ fontSize: '1.1rem' }}>
+                  <i className="bi bi-clock me-2"></i>Time
+                </th>
+                <th className="fw-semibold px-4 py-3 border-0" style={{ fontSize: '1.1rem' }}>
+                  <i className="bi bi-star me-2"></i>Special
+                </th>
+                <th className="fw-semibold px-4 py-3 border-0" style={{ fontSize: '1.1rem' }}>
+                  <i className="bi bi-graph-up me-2"></i>Analytics
+                </th>
+                <th className="fw-semibold px-4 py-3 border-0 text-center" style={{ fontSize: '1.1rem' }}>
+                  <i className="bi bi-gear me-2"></i>Actions
+                </th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {services.map((service) => (
+                <tr key={service.id} className="align-middle" style={{ height: '60px' }}>
+                  <td className="px-4 py-3 fw-medium border-0" style={{ fontSize: '1rem' }}>
+                    <div className="d-flex align-items-center">
+                      <div className="bg-primary rounded-circle me-3 d-flex align-items-center justify-content-center" 
+                           style={{ width: '40px', height: '40px', fontSize: '1.2rem' }}>
+                        🦷
+                      </div>
+                      <div>
+                        <div className="fw-bold text-dark">{service.name}</div>
+                        {service.bundled_services?.length > 0 && (
+                          <small className="text-muted">
+                            ({service.bundled_services.map((s) => s.name).join(", ")})
+                          </small>
+                        )}
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 border-0" style={{ fontSize: '1rem' }}>
+                    <div className="text-truncate" style={{ maxWidth: '200px' }} title={service.description}>
+                      {service.description || "-"}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 border-0" style={{ fontSize: '1rem' }}>
+                    <div className="fw-bold text-success fs-5">₱{Number(service.price).toFixed(2)}</div>
+                  </td>
+                  <td className="px-4 py-3 border-0" style={{ fontSize: '1rem' }}>
+                    <span className="badge bg-light text-dark">{service.category || "-"}</span>
+                  </td>
+                  <td className="px-4 py-3 border-0" style={{ fontSize: '1rem' }}>
+                    <div className="d-flex flex-column">
+                      <span className="fw-semibold text-dark">{service.estimated_minutes} mins</span>
+                      <small className="text-muted">Estimated</small>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 border-0" style={{ fontSize: '1rem' }}>
+                    <div className="d-flex flex-column align-items-start">
+                      {service.is_special ? (
+                        <>
+                          <span className="badge bg-warning text-dark mb-1">Special</span>
+                          <small className="text-muted">
+                            {service.special_start_date && service.special_end_date
+                              ? `${service.special_start_date} → ${service.special_end_date}`
+                              : "(Permanent)"}
+                          </small>
+                        </>
+                      ) : (
+                        <span className="text-muted">-</span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 border-0" style={{ fontSize: '1rem' }}>
+                    <span className={`badge ${service.is_excluded_from_analytics ? 'bg-danger' : 'bg-success'}`}>
+                      {service.is_excluded_from_analytics ? "Excluded" : "Included"}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-center border-0">
+                    <div className="btn-group" role="group">
+                      <button
+                        className="btn btn-sm btn-success"
+                        onClick={() => handleEdit(service)}
+                        title="Edit service"
+                      >
+                        <i className="bi bi-pencil"></i>
+                      </button>
+                      <button
+                        className="btn btn-sm btn-danger"
+                        onClick={() => handleDelete(service)}
+                        title="Delete service"
+                      >
+                        <i className="bi bi-trash"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
+        </div>
+      </div>
 
       {showModal && (
         <div
@@ -593,10 +664,6 @@ export default function ServiceManager() {
           </div>
         </div>
       )}
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

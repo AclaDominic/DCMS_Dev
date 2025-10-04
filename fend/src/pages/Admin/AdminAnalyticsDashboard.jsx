@@ -883,13 +883,22 @@ export default function AdminAnalyticsDashboard() {
 
   return (
     <>
-      <div className="p-4" style={{ 
-        minHeight: "100vh", 
-        background: "linear-gradient(135deg, #F8FAFC 0%, #E2E8F0 50%, #CBD5E1 100%)",
-        color: "#1E293B"
-      }}>
+      <div 
+        className="analytics-dashboard-page"
+        style={{ 
+          minHeight: "100vh", 
+          width: '100vw',
+          position: 'relative',
+          left: 0,
+          right: 0,
+          padding: '1.5rem 2rem',
+          boxSizing: 'border-box',
+          background: "linear-gradient(135deg, #F8FAFC 0%, #E2E8F0 50%, #CBD5E1 100%)",
+          color: "#1E293B"
+        }}
+      >
         <div className="container-xl">
-        <div className="d-flex justify-content-between align-items-center mb-5">
+        <div className="d-flex flex-column flex-lg-row justify-content-between align-items-start align-items-lg-center mb-5 gap-3">
           <div>
             <h2 className="m-0 fw-bold" style={{ color: "#1E293B", fontSize: "2.5rem", textShadow: "0 2px 4px rgba(0, 0, 0, 0.1)" }}>
               📊 Analytics Dashboard
@@ -898,7 +907,7 @@ export default function AdminAnalyticsDashboard() {
               Real-time insights and performance metrics for your clinic
             </p>
           </div>
-          <div className="d-flex gap-3 align-items-center flex-wrap">
+          <div className="d-flex gap-2 align-items-center flex-wrap">
             <input
               type="month"
               className="form-control form-control-sm border-0"
@@ -1086,7 +1095,7 @@ export default function AdminAnalyticsDashboard() {
             {/* Modern Light Theme KPI Grid */}
             <div className="row g-4 mb-5">
               {chartConfigs.map((config, index) => (
-                <div key={config.id} className="col-12 col-md-6 col-xl-4">
+                <div key={config.id} className="col-12 col-sm-6 col-lg-4 col-xl-4">
                   <div
                     className="card h-100 border-0"
                     style={{

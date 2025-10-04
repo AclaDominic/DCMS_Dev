@@ -67,21 +67,27 @@ export default function Modal({ open, onClose, title, children, maxWidth = "md" 
         right: 0,
         bottom: 0,
         zIndex: 2000,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)'
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        overflowY: 'auto' // Allow scrolling when content exceeds viewport
       }}
       onMouseDown={(e) => {
         // close only when clicking the dark backdrop (not inside the panel)
         if (e.target === e.currentTarget) onClose?.();
       }}
     >
-      <div className="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+      <div className="modal-dialog modal-dialog-centered modal-dialog-scrollable" style={{ maxHeight: '95vh', margin: '1.75rem auto' }}>
         <div
           ref={panelRef}
           tabIndex={-1}
           className={`modal-content ${sizes[maxWidth]}`}
-          style={{ maxHeight: '90vh' }}
+          style={{ 
+            maxHeight: '95vh',
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden'
+          }}
         >
-          <div className="modal-header">
+          <div className="modal-header flex-shrink-0">
             <h5 className="modal-title">{title}</h5>
             <button
               type="button"
@@ -90,7 +96,11 @@ export default function Modal({ open, onClose, title, children, maxWidth = "md" 
               aria-label="Close"
             ></button>
           </div>
-          <div className="modal-body">
+          <div className="modal-body flex-grow-1" style={{ 
+            overflowY: 'auto',
+            minHeight: 0,
+            padding: '1rem'
+          }}>
             {children}
           </div>
         </div>
