@@ -1,6 +1,7 @@
 import { Outlet, useLocation } from "react-router-dom";
 import DentistNavbar from "../components/DentistNavbar";
 import "./DentistLayout.css";
+import DentistPasswordGate from "../components/DentistPasswordGate";
 
 function DentistLayout() {
   const location = useLocation();
@@ -15,13 +16,17 @@ function DentistLayout() {
       {isHomepage ? (
         // Full-width layout for homepage
         <main className="flex-grow-1">
-          <Outlet />
+          <DentistPasswordGate>
+            <Outlet />
+          </DentistPasswordGate>
         </main>
       ) : (
         // Full-width responsive layout for all other pages
         <main className="flex-grow-1 py-4">
           <div className="container-fluid px-2 px-md-3 px-lg-4">
-            <Outlet />
+            <DentistPasswordGate>
+              <Outlet />
+            </DentistPasswordGate>
           </div>
         </main>
       )}

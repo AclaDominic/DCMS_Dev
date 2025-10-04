@@ -20,7 +20,7 @@ class DentistPasswordController extends Controller
     public function changePassword(Request $request)
     {
         $request->validate([
-            'password' => ['required', 'confirmed', Rules\Password::defaults()],
+            'password' => ['required', Rules\Password::defaults()],
         ]);
 
         $user = Auth::user();

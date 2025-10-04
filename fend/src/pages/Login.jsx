@@ -47,9 +47,8 @@ function Login() {
       if (res.data.requires_password_change) {
         setMessage("Login successful. Please change your password.");
         setUser(user);
-        setTimeout(() => {
-          navigate("/dentist/profile");
-        }, 150);
+        setShowDentistPwModal(true); // show modal inline
+        setLoading(false);
         return;
       }
       
@@ -84,6 +83,33 @@ function Login() {
       setMessage(err.response?.data?.message || "Login failed");
     } finally {
       setLoading(false);
+    }
+  };
+
+  // state
+  const [showDentistPwModal, setShowDentistPwModal] = useState(false);
+  const [pw1, setPw1] = useState("");
+  const [pw2, setPw2] = useState("");
+  const [pwErr, setPwErr] = useState("");
+
+  // submit handler for modal
+  const submitDentistPassword = async () => {
+    setPwErr("");
+    if (!pw1 || pw1.length < 8) {
+      setPwErr("Password must be at least 8 characters.");
+      return;
+    }
+    if (pw1 !== pw2) {
+      setPwErr("Passwords do not match.");
+      return;
+    }
+    try {
+      await api.post("/api/dentist/change-password", { password: pw1 });
+      setShowDentistPwModal(false);
+      setMessage("Password changed successfully!");
+      navigate("/dentist");
+    } catch (err) {
+      setPwErr(err.response?.data?.message || "Failed to change password");
     }
   };
 
@@ -198,7 +224,80 @@ function Login() {
       </div>
       </div>
       
-      {/* Email verification now handled by Laravel's built-in system */}
+      {/* First login password change modal - no escape */}
+      {showDentistPwModal && (
+        <div style={{ 
+          position: "fixed", 
+          inset: 0, 
+          background: "rgba(0,0,0,0.7)", 
+          zIndex: 1050,
+          backdropFilter: "blur(2px)"
+        }}>
+          <div style={{ 
+            position: "fixed", 
+            inset: 0, 
+            display: "flex", 
+            alignItems: "center", 
+            justifyContent: "center", 
+            zIndex: 1060 
+          }}>
+            <div className="card shadow-lg border-warning" style={{ width: 450, maxWidth: "90vw" }}>
+              <div className="card-header bg-warning text-dark text-center">
+                <h4 className="mb-0">
+                  <i className="bi bi-shield-exclamation me-2"></i>
+                  Account Security Required
+                </h4>
+              </div>
+              <div className="card-body">
+                <div className="alert alert-warning mb-3">
+                  <i className="bi bi-info-circle me-2"></i>
+                  <strong>You must change your temporary password to continue.</strong>
+                  <br />
+                  <small>This is required for account security and cannot be skipped.</small>
+                </div>
+                
+                <div className="mb-3">
+                  <label className="form-label fw-semibold">New Password:</label>
+                  <input 
+                    type="password" 
+                    className="form-control" 
+                    value={pw1} 
+                    onChange={(e) => setPw1(e.target.value)}
+                    placeholder="Enter your new password"
+                    autoFocus
+                  />
+                </div>
+                <div className="mb-3">
+                  <label className="form-label fw-semibold">Confirm Password:</label>
+                  <input 
+                    type="password" 
+                    className="form-control" 
+                    value={pw2} 
+                    onChange={(e) => setPw2(e.target.value)}
+                    placeholder="Confirm your new password"
+                  />
+                </div>
+                {pwErr && (
+                  <div className="alert alert-danger mb-3">
+                    <i className="bi bi-exclamation-triangle me-2"></i>
+                    {pwErr}
+                  </div>
+                )}
+                <div className="d-grid">
+                  <button 
+                    className="btn btn-primary btn-lg" 
+                    onClick={submitDentistPassword}
+                    disabled={!pw1 || !pw2}
+                  >
+                    <i className="bi bi-shield-check me-2"></i>
+                    Secure My Account
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </AuthLayout>
   );
 }

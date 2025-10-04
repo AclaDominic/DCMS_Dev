@@ -53,7 +53,6 @@ const DentistProfile = () => {
     try {
       const res = await api.post("/api/dentist/change-password", {
         password: newPassword,
-        password_confirmation: confirmPassword,
       });
 
       setMessage("✅ Password changed successfully!");

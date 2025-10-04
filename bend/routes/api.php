@@ -294,10 +294,7 @@ Route::get('/maya/return/cancel', [MayaController::class, 'returnCapture'])->def
 // ------------------------
 // Dentist routes (authenticated dentists only)
 // ------------------------
-Route::middleware(['auth:sanctum', DentistAuthMiddleware::class])->group(function () {
-    // Dentist password management
-    Route::prefix('dentist')->group(function () {
-        Route::post('/change-password', [DentistPasswordController::class, 'changePassword']);
-        Route::get('/password-status', [DentistPasswordController::class, 'checkPasswordStatus']);
-    });
+Route::middleware('auth:sanctum')->prefix('dentist')->group(function () {
+  Route::post('/change-password', [DentistPasswordController::class, 'changePassword']);
+  Route::get('/password-status', [DentistPasswordController::class, 'checkPasswordStatus']);
 });
