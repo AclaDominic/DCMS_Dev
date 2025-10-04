@@ -252,7 +252,7 @@ function VisitTrackerManager() {
                     </td>
                     <td>{v.patient?.contact_number || "—"}</td>
                     <td>
-                      {v.status === "completed" && v.note ? (
+                      {v.status === "completed" && v.visit_notes ? (
                         <button
                           className="btn btn-sm btn-outline-info"
                           onClick={() => setViewingNotes(v)}
@@ -260,7 +260,7 @@ function VisitTrackerManager() {
                           🔒 View Notes
                         </button>
                       ) : (
-                        v.note || "—"
+                        "—"
                       )}
                     </td>
                     <td>

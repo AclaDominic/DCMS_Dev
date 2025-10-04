@@ -20,6 +20,7 @@ export default function VisitCompletionModal({ visit, onClose, onComplete }) {
 
   useEffect(() => {
     fetchInventoryItems();
+    fetchDentistNotes();
   }, []);
 
   const fetchInventoryItems = async () => {
@@ -28,6 +29,21 @@ export default function VisitCompletionModal({ visit, onClose, onComplete }) {
       setInventoryItems(res.data.data || []);
     } catch (err) {
       console.error("Failed to load inventory items", err);
+    }
+  };
+
+  const fetchDentistNotes = async () => {
+    try {
+      const res = await api.get(`/api/visits/${visit.id}/dentist-notes`);
+      const notes = res.data;
+      
+      // Pre-fill the form with dentist notes if they exist
+      if (notes.dentist_notes) setDentistNotes(notes.dentist_notes);
+      if (notes.findings) setFindings(notes.findings);
+      if (notes.treatment_plan) setTreatmentPlan(notes.treatment_plan);
+    } catch (err) {
+      // No notes found or error - that's okay, form will start empty
+      console.log("No dentist notes found or error fetching notes:", err?.response?.data?.message);
     }
   };
 

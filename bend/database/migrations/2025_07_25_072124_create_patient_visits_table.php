@@ -22,7 +22,7 @@ return new class extends Migration {
 
             $table->enum('status', ['pending', 'completed', 'rejected', 'inquiry'])->default('pending');
 
-            $table->text('note')->nullable(); // optional: reason for rejection or notes
+            // Note: visit notes are now stored in separate visit_notes table with encryption
 
             $table->timestamps();
         });

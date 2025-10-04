@@ -6,6 +6,7 @@ use App\Models\Patient;
 use App\Models\Payment;
 use App\Models\SystemLog;
 use App\Models\Appointment;
+use App\Models\VisitNote;
 use Illuminate\Support\Str;
 use App\Models\PatientVisit;
 use Illuminate\Http\Request;
@@ -23,7 +24,7 @@ class PatientVisitController extends Controller
     // 🟢 List visits (e.g. for tracker)
     public function index()
     {
-        $visits = PatientVisit::with(['patient', 'service'])
+        $visits = PatientVisit::with(['patient', 'service', 'visitNotes'])
             ->latest('start_time')
             ->take(50)
             ->get();
@@ -218,20 +219,21 @@ class PatientVisitController extends Controller
                 }
             }
 
-            // 2. Update visit with encrypted notes
+            // 2. Create encrypted visit notes
+            $visit->visitNotes()->create([
+                'dentist_notes' => $validated['dentist_notes'] ?? null,
+                'findings' => $validated['findings'] ?? null,
+                'treatment_plan' => $validated['treatment_plan'] ?? null,
+                'created_by' => $userId,
+            ]);
+
+            // 3. Update visit status
             $visit->update([
                 'end_time' => now(),
                 'status' => 'completed',
-                'note' => json_encode([
-                    'dentist_notes' => $validated['dentist_notes'] ?? null,
-                    'findings' => $validated['findings'] ?? null,
-                    'treatment_plan' => $validated['treatment_plan'] ?? null,
-                    'completed_by' => $userId,
-                    'completed_at' => now(),
-                ]),
             ]);
 
-            // 3. Handle payment verification/adjustment
+            // 4. Handle payment verification/adjustment
             $totalPaid = $visit->payments->sum('amount_paid');
             $servicePrice = $visit->service?->price ?? 0;
 
@@ -404,11 +406,11 @@ class PatientVisitController extends Controller
      */
     public function viewNotes(Request $request, $id)
     {
-        $visit = PatientVisit::findOrFail($id);
+        $visit = PatientVisit::with(['patient', 'visitNotes'])->findOrFail($id);
         $user = $request->user();
 
-        if ($visit->status !== 'completed' || !$visit->note) {
-            return response()->json(['message' => 'No encrypted notes available for this visit.'], 404);
+        if (!$visit->visitNotes) {
+            return response()->json(['message' => 'No notes found for this visit.'], 404);
         }
 
         $validated = $request->validate([
@@ -435,12 +437,11 @@ class PatientVisitController extends Controller
         }
 
         try {
-            // Decrypt the notes (they're stored as JSON)
-            $notes = json_decode($visit->note, true);
-
-            if (!$notes) {
-                return response()->json(['message' => 'Failed to decrypt notes.'], 500);
-            }
+            // Access the encrypted notes (Laravel will decrypt automatically)
+            $notes = $visit->visitNotes;
+            
+            // Record access for audit trail
+            $notes->recordAccess($user->id);
 
             // Log successful access
             SystemLog::create([
@@ -448,22 +449,30 @@ class PatientVisitController extends Controller
                 'category' => 'visit_notes',
                 'action' => 'viewed',
                 'subject_id' => $visit->id,
-                'message' => 'Successfully accessed visit notes',
+                'message' => 'Successfully accessed encrypted visit notes',
                 'context' => [
                     'visit_id' => $visit->id,
                     'patient_name' => $visit->patient ? $visit->patient->first_name . ' ' . $visit->patient->last_name : 'Unknown',
                     'accessed_at' => now()->toISOString(),
                     'notes_contained' => [
-                        'dentist_notes' => !empty($notes['dentist_notes']),
-                        'findings' => !empty($notes['findings']),
-                        'treatment_plan' => !empty($notes['treatment_plan']),
+                        'dentist_notes' => !empty($notes->dentist_notes),
+                        'findings' => !empty($notes->findings),
+                        'treatment_plan' => !empty($notes->treatment_plan),
                     ],
                 ],
             ]);
 
             return response()->json([
                 'message' => 'Notes decrypted successfully.',
-                'notes' => $notes,
+                'notes' => [
+                    'dentist_notes' => $notes->dentist_notes,
+                    'findings' => $notes->findings,
+                    'treatment_plan' => $notes->treatment_plan,
+                    'completed_by' => $notes->created_by,
+                    'completed_at' => $notes->created_at->toISOString(),
+                    'last_accessed_at' => $notes->last_accessed_at?->toISOString(),
+                    'last_accessed_by' => $notes->last_accessed_by,
+                ],
             ]);
         } catch (\Exception $e) {
             // Log decryption failure
@@ -483,6 +492,71 @@ class PatientVisitController extends Controller
 
             return response()->json(['message' => 'Failed to decrypt notes.'], 500);
         }
+    }
+
+    /**
+     * POST /api/visits/{id}/save-dentist-notes
+     * Save dentist notes during visit (before completion)
+     */
+    public function saveDentistNotes(Request $request, $id)
+    {
+        $visit = PatientVisit::with(['visitNotes'])->findOrFail($id);
+        
+        if ($visit->status !== 'pending') {
+            return response()->json(['message' => 'Only pending visits can have notes updated.'], 422);
+        }
+
+        $validated = $request->validate([
+            'dentist_notes' => ['nullable', 'string', 'max:2000'],
+            'findings' => ['nullable', 'string', 'max:2000'],
+            'treatment_plan' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        $userId = $request->user()->id;
+
+        // Check if notes already exist for this visit
+        if ($visit->visitNotes) {
+            // Update existing notes
+            $visit->visitNotes->update([
+                'dentist_notes' => $validated['dentist_notes'] ?? $visit->visitNotes->dentist_notes,
+                'findings' => $validated['findings'] ?? $visit->visitNotes->findings,
+                'treatment_plan' => $validated['treatment_plan'] ?? $visit->visitNotes->treatment_plan,
+                'updated_by' => $userId,
+            ]);
+        } else {
+            // Create new notes
+            $visit->visitNotes()->create([
+                'dentist_notes' => $validated['dentist_notes'] ?? null,
+                'findings' => $validated['findings'] ?? null,
+                'treatment_plan' => $validated['treatment_plan'] ?? null,
+                'created_by' => $userId,
+            ]);
+        }
+
+        return response()->json(['message' => 'Dentist notes saved successfully.']);
+    }
+
+    /**
+     * GET /api/visits/{id}/dentist-notes
+     * Get dentist notes for pre-filling staff completion form
+     */
+    public function getDentistNotes(Request $request, $id)
+    {
+        $visit = PatientVisit::with(['visitNotes'])->findOrFail($id);
+        
+        if (!$visit->visitNotes) {
+            return response()->json([
+                'dentist_notes' => null,
+                'findings' => null,
+                'treatment_plan' => null,
+            ]);
+        }
+
+        return response()->json([
+            'dentist_notes' => $visit->visitNotes->dentist_notes,
+            'findings' => $visit->visitNotes->findings,
+            'treatment_plan' => $visit->visitNotes->treatment_plan,
+        ]);
     }
 
 }

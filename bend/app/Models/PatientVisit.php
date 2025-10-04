@@ -16,7 +16,6 @@ class PatientVisit extends Model
         'start_time',
         'end_time',
         'status',
-        'note',
     ];
 
     protected $casts = [
@@ -45,5 +44,16 @@ class PatientVisit extends Model
     public function latestPayment()
     {
         return $this->hasOne(\App\Models\Payment::class)->latestOfMany();
+    }
+
+    public function visitNotes()
+    {
+        return $this->hasOne(VisitNote::class);
+    }
+
+    // Helper method to get encrypted notes
+    public function getEncryptedNotes()
+    {
+        return $this->visitNotes;
     }
 }

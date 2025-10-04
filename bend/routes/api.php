@@ -262,6 +262,8 @@ Route::middleware(['auth:sanctum', EnsureDeviceIsApproved::class])->group(functi
         Route::put('/{id}/update-patient', [PatientVisitController::class, 'updatePatient']);
         Route::post('/{visit}/link-existing', [PatientVisitController::class, 'linkToExistingPatient']);
         Route::post('/{id}/view-notes', [PatientVisitController::class, 'viewNotes']);
+        Route::post('/{id}/save-dentist-notes', [PatientVisitController::class, 'saveDentistNotes']);
+        Route::get('/{id}/dentist-notes', [PatientVisitController::class, 'getDentistNotes']);
     });
 
     // Appointments (staff side)
@@ -297,4 +299,8 @@ Route::get('/maya/return/cancel', [MayaController::class, 'returnCapture'])->def
 Route::middleware('auth:sanctum')->prefix('dentist')->group(function () {
   Route::post('/change-password', [DentistPasswordController::class, 'changePassword']);
   Route::get('/password-status', [DentistPasswordController::class, 'checkPasswordStatus']);
+  
+  // Dentist visit notes
+  Route::post('/visits/{id}/save-notes', [\App\Http\Controllers\Staff\PatientVisitController::class, 'saveDentistNotes']);
+  Route::get('/visits/{id}/notes', [\App\Http\Controllers\Staff\PatientVisitController::class, 'getDentistNotes']);
 });
