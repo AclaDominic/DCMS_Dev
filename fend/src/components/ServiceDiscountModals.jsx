@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
 // 🔹 Modal for selecting a service to create a promo
 export function ServiceSelectModal({ show, services, onSelect, onClose }) {
@@ -8,6 +8,21 @@ export function ServiceSelectModal({ show, services, onSelect, onClose }) {
   React.useEffect(() => {
     if (!show) {
       setSelectedServiceId(null);
+    }
+  }, [show]);
+
+  // Prevent body scroll when modal is open
+  useEffect(() => {
+    if (show) {
+      // Store original overflow style
+      const originalOverflow = document.body.style.overflow;
+      // Allow body to scroll but prevent modal from interfering
+      document.body.style.overflow = 'auto';
+      
+      return () => {
+        // Restore original overflow style
+        document.body.style.overflow = originalOverflow;
+      };
     }
   }, [show]);
 
@@ -33,13 +48,16 @@ export function ServiceSelectModal({ show, services, onSelect, onClose }) {
       left: 0,
       right: 0,
       bottom: 0,
-      overflowY: 'auto' // Allow scrolling when content exceeds viewport
+      overflowY: 'auto',
+      padding: '1.75rem 0',
+      pointerEvents: 'auto'
     }}>
       <div className="modal-dialog modal-dialog-scrollable modal-dialog-centered" style={{ 
         maxHeight: 'calc(100vh - 3.5rem)', 
-        margin: '1.75rem auto',
+        margin: '0 auto',
         display: 'flex',
-        alignItems: 'center'
+        alignItems: 'center',
+        minHeight: 'calc(100vh - 3.5rem)'
       }}>
         <div className="modal-content" style={{ 
           maxHeight: '100%',
@@ -135,6 +153,21 @@ export function EditPromoModal({ show, promo, service, onSave, onCancel, loading
     setErrors({});
   }, [promo]);
 
+  // Prevent body scroll when modal is open
+  useEffect(() => {
+    if (show) {
+      // Store original overflow style
+      const originalOverflow = document.body.style.overflow;
+      // Allow body to scroll but prevent modal from interfering
+      document.body.style.overflow = 'auto';
+      
+      return () => {
+        // Restore original overflow style
+        document.body.style.overflow = originalOverflow;
+      };
+    }
+  }, [show]);
+
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
     // Clear errors when user starts typing
@@ -168,14 +201,16 @@ export function EditPromoModal({ show, promo, service, onSave, onCancel, loading
       left: 0,
       right: 0,
       bottom: 0,
-      overflowY: 'auto' // Allow scrolling when content exceeds viewport
+      overflowY: 'auto',
+      padding: '3rem 0',
+      pointerEvents: 'auto'
     }}>
       <div className="modal-dialog modal-dialog-scrollable modal-dialog-centered" style={{ 
         maxHeight: 'calc(100vh - 6rem)', 
-        margin: '3rem auto',
+        margin: '0 auto',
         display: 'flex',
-        alignItems: 'flex-start',
-        paddingTop: '1rem'
+        alignItems: 'center',
+        minHeight: 'calc(100vh - 6rem)'
       }}>
         <div className="modal-content" style={{ 
           maxHeight: '100%',
@@ -293,6 +328,21 @@ export function EditPromoModal({ show, promo, service, onSave, onCancel, loading
 
 // 🔸 Modal for confirming deletion of a promo
 export function DeletePromoModal({ show, promo, onConfirm, onCancel }) {
+  // Prevent body scroll when modal is open
+  useEffect(() => {
+    if (show) {
+      // Store original overflow style
+      const originalOverflow = document.body.style.overflow;
+      // Allow body to scroll but prevent modal from interfering
+      document.body.style.overflow = 'auto';
+      
+      return () => {
+        // Restore original overflow style
+        document.body.style.overflow = originalOverflow;
+      };
+    }
+  }, [show]);
+
   if (!show || !promo) return null;
 
   return (
@@ -304,13 +354,16 @@ export function DeletePromoModal({ show, promo, onConfirm, onCancel }) {
       right: 0,
       bottom: 0,
       zIndex: 1055,
-      overflowY: 'auto' // Allow scrolling when content exceeds viewport
+      overflowY: 'auto',
+      padding: '1.75rem 0',
+      pointerEvents: 'auto'
     }}>
       <div className="modal-dialog modal-dialog-scrollable modal-dialog-centered" style={{ 
         maxHeight: 'calc(100vh - 3.5rem)', 
-        margin: '1.75rem auto',
+        margin: '0 auto',
         display: 'flex',
-        alignItems: 'center'
+        alignItems: 'center',
+        minHeight: 'calc(100vh - 3.5rem)'
       }}>
         <div className="modal-content" style={{ 
           maxHeight: '100%',
