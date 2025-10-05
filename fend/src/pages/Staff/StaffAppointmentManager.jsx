@@ -237,10 +237,8 @@ export default function StaffAppointmentManager() {
               <>
                 <div className="mb-3 text-sm">
                   <div><strong>Provider:</strong> {revealed.provider_name}</div>
-                  <div><strong>Member ID:</strong> {revealed.member_id || '—'}</div>
-                  <div><strong>Policy No:</strong> {revealed.policy_no || '—'}</div>
-                  <div><strong>Effective:</strong> {onlyDate(revealed.effective_date) || '—'}</div>
-                  <div><strong>Expiry:</strong> {onlyDate(revealed.expiry_date) || '—'}</div>
+                  <div><strong>HMO Number:</strong> {revealed.hmo_number || '—'}</div>
+                  <div><strong>Name on Card:</strong> {revealed.patient_fullname_on_card || '—'}</div>
                 </div>
                 <div className="mb-2">
                   <label className="text-sm">Coverage Amount (₱)</label>

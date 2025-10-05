@@ -94,13 +94,7 @@ class AppointmentController extends Controller
         if (!$hmo || (int)$hmo->patient_id !== (int)$patient->id) {
             return response()->json(['message' => 'Selected HMO does not belong to this patient.'], 422);
         }
-        // effective on the appointment date
-        if ($hmo->effective_date && $hmo->effective_date > $dateStr) {
-            return response()->json(['message' => 'Selected HMO is not yet effective on the appointment date.'], 422);
-        }
-        if ($hmo->expiry_date && $hmo->expiry_date < $dateStr) {
-            return response()->json(['message' => 'Selected HMO is expired on the appointment date.'], 422);
-        }
+        // HMO validation - since we removed date fields, we just verify the HMO exists and belongs to patient
     } else {
         // if not HMO, ignore any stray patient_hmo_id
         $patientHmoId = null;
@@ -570,10 +564,8 @@ class AppointmentController extends Controller
 
         return response()->json([
             'provider_name' => $hmo->provider_name,
-            'member_id'     => $hmo->member_id_encrypted,
-            'policy_no'     => $hmo->policy_no_encrypted,
-            'effective_date'=> $hmo->effective_date,
-            'expiry_date'   => $hmo->expiry_date,
+            'hmo_number'    => $hmo->hmo_number,
+            'patient_fullname_on_card' => $hmo->patient_fullname_on_card,
         ]);
     }
 
