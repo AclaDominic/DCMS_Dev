@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import api from "../../api/api";
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -379,83 +379,120 @@ export default function AdminMonthlyReport() {
     }
   };
 
-  const downloadExcel = () => {
+  const downloadExcel = async () => {
     try {
-      const workbook = XLSX.utils.book_new();
+      const workbook = new ExcelJS.Workbook();
       
       // Overview Sheet
-      const overviewData = [
-        ["Metric", "Value"],
-        ["Total Visits", data?.totals?.visits ?? 0],
-        ["Inquiries This Month", data?.totals?.inquiries ?? 0]
-      ];
+      const overviewSheet = workbook.addWorksheet('Overview');
+      overviewSheet.addRow(['Metric', 'Value']);
+      overviewSheet.addRow(['Total Visits', data?.totals?.visits ?? 0]);
+      overviewSheet.addRow(['Inquiries This Month', data?.totals?.inquiries ?? 0]);
       
-      const overviewSheet = XLSX.utils.aoa_to_sheet(overviewData);
-      XLSX.utils.book_append_sheet(workbook, overviewSheet, "Overview");
+      // Style header row
+      overviewSheet.getRow(1).font = { bold: true };
+      overviewSheet.columns = [
+        { width: 20 },
+        { width: 15 }
+      ];
 
       // Hourly Analysis Sheet
       if (byHour?.length > 0) {
-        const hourlyData = [
-          ["Hour", "Visits", "Walk-ins", "Appointments"],
-          ...byHour.map(hour => [
+        const hourlySheet = workbook.addWorksheet('Hourly Analysis');
+        hourlySheet.addRow(['Hour', 'Visits', 'Walk-ins', 'Appointments']);
+        
+        byHour.forEach(hour => {
+          hourlySheet.addRow([
             hour.label,
             hour.count,
             hour.walkin,
             hour.appointment
-          ])
-        ];
+          ]);
+        });
         
-        const hourlySheet = XLSX.utils.aoa_to_sheet(hourlyData);
-        XLSX.utils.book_append_sheet(workbook, hourlySheet, "Hourly Analysis");
+        // Style header row
+        hourlySheet.getRow(1).font = { bold: true };
+        hourlySheet.columns = [
+          { width: 10 },
+          { width: 12 },
+          { width: 12 },
+          { width: 15 }
+        ];
       }
 
       // Service Analysis Sheet
       if (byService?.length > 0) {
-        const serviceData = [
-          ["Service", "Total Visits", "Walk-ins", "Appointments", "Walk-in %", "Appointment %"],
-          ...byService.map(service => {
-            const totalCount = service.count || 0;
-            const walkinCount = service.walkin || 0;
-            const appointmentCount = service.appointment || 0;
-            
-            // Calculate percentages
-            const walkinPercentage = totalCount > 0 ? ((walkinCount / totalCount) * 100).toFixed(1) : 0;
-            const appointmentPercentage = totalCount > 0 ? ((appointmentCount / totalCount) * 100).toFixed(1) : 0;
-            
-            return [
-              service.label,
-              totalCount,
-              walkinCount,
-              appointmentCount,
-              parseFloat(walkinPercentage),
-              parseFloat(appointmentPercentage)
-            ];
-          })
-        ];
+        const serviceSheet = workbook.addWorksheet('Service Analysis');
+        serviceSheet.addRow(['Service', 'Total Visits', 'Walk-ins', 'Appointments', 'Walk-in %', 'Appointment %']);
         
-        const serviceSheet = XLSX.utils.aoa_to_sheet(serviceData);
-        XLSX.utils.book_append_sheet(workbook, serviceSheet, "Service Analysis");
+        byService.forEach(service => {
+          const totalCount = service.count || 0;
+          const walkinCount = service.walkin || 0;
+          const appointmentCount = service.appointment || 0;
+          
+          // Calculate percentages
+          const walkinPercentage = totalCount > 0 ? ((walkinCount / totalCount) * 100).toFixed(1) : 0;
+          const appointmentPercentage = totalCount > 0 ? ((appointmentCount / totalCount) * 100).toFixed(1) : 0;
+          
+          serviceSheet.addRow([
+            service.label,
+            totalCount,
+            walkinCount,
+            appointmentCount,
+            parseFloat(walkinPercentage),
+            parseFloat(appointmentPercentage)
+          ]);
+        });
+        
+        // Style header row
+        serviceSheet.getRow(1).font = { bold: true };
+        serviceSheet.columns = [
+          { width: 25 },
+          { width: 15 },
+          { width: 12 },
+          { width: 15 },
+          { width: 12 },
+          { width: 15 }
+        ];
       }
 
       // Detailed Visit Data Sheet (if available)
       if (data?.visits?.length > 0) {
-        const visitData = [
-          ["Date", "Time", "Service", "Type", "Patient ID", "Status"],
-          ...data.visits.map(visit => [
+        const visitSheet = workbook.addWorksheet('Visit Details');
+        visitSheet.addRow(['Date', 'Time', 'Service', 'Type', 'Patient ID', 'Status']);
+        
+        data.visits.forEach(visit => {
+          visitSheet.addRow([
             visit.date,
             visit.time,
             visit.service,
             visit.type,
             visit.patient_id,
             visit.status
-          ])
-        ];
+          ]);
+        });
         
-        const visitSheet = XLSX.utils.aoa_to_sheet(visitData);
-        XLSX.utils.book_append_sheet(workbook, visitSheet, "Visit Details");
+        // Style header row
+        visitSheet.getRow(1).font = { bold: true };
+        visitSheet.columns = [
+          { width: 12 },
+          { width: 10 },
+          { width: 20 },
+          { width: 12 },
+          { width: 15 },
+          { width: 12 }
+        ];
       }
 
-      XLSX.writeFile(workbook, `visits-report-${month}.xlsx`);
+      // Save the file
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `visits-report-${month}.xlsx`;
+      link.click();
+      window.URL.revokeObjectURL(url);
     } catch (e) {
       console.error(e);
       alert("Failed to generate Excel file.");

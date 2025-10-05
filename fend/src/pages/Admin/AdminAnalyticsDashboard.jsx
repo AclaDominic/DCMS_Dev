@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import api from "../../api/api";
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 import { addClinicHeader } from "../../utils/pdfHeader";
 import {
   Chart as ChartJS,
@@ -164,67 +164,120 @@ export default function AdminAnalyticsDashboard() {
     }
   };
 
-  const downloadExcel = () => {
+  const downloadExcel = async () => {
     try {
-      const workbook = XLSX.utils.book_new();
+      const workbook = new ExcelJS.Workbook();
       
       // KPI Overview Sheet
-      const kpiData = [
-        ["Metric", "Current Value", "Previous Value", "Change (%)", "Trend Status"],
-        ["Total Visits", k?.total_visits?.value ?? 0, k?.total_visits?.prev ?? 0, k?.total_visits?.pct_change ?? 0, (k?.total_visits?.pct_change ?? 0) >= 0 ? "Positive" : "Negative"],
-        ["Approved Appointments", k?.approved_appointments?.value ?? 0, k?.approved_appointments?.prev ?? 0, k?.approved_appointments?.pct_change ?? 0, (k?.approved_appointments?.pct_change ?? 0) >= 0 ? "Positive" : "Negative"],
-        ["No-shows", k?.no_shows?.value ?? 0, k?.no_shows?.prev ?? 0, k?.no_shows?.pct_change ?? 0, (k?.no_shows?.pct_change ?? 0) >= 0 ? "Concerning" : "Improving"],
-        ["Avg Visit Duration (min)", k?.avg_visit_duration_min?.value ?? 0, k?.avg_visit_duration_min?.prev ?? 0, k?.avg_visit_duration_min?.pct_change ?? 0, (k?.avg_visit_duration_min?.pct_change ?? 0) >= 0 ? "Longer" : "Shorter"],
-        ["Total Revenue", k?.total_revenue?.value ?? 0, k?.total_revenue?.prev ?? 0, k?.total_revenue?.pct_change ?? 0, (k?.total_revenue?.pct_change ?? 0) >= 0 ? "Growth" : "Decline"]
-      ];
+      const kpiSheet = workbook.addWorksheet('KPI Overview');
+      kpiSheet.addRow(['Metric', 'Current Value', 'Previous Value', 'Change (%)', 'Trend Status']);
+      kpiSheet.addRow(['Total Visits', k?.total_visits?.value ?? 0, k?.total_visits?.prev ?? 0, k?.total_visits?.pct_change ?? 0, (k?.total_visits?.pct_change ?? 0) >= 0 ? "Positive" : "Negative"]);
+      kpiSheet.addRow(['Approved Appointments', k?.approved_appointments?.value ?? 0, k?.approved_appointments?.prev ?? 0, k?.approved_appointments?.pct_change ?? 0, (k?.approved_appointments?.pct_change ?? 0) >= 0 ? "Positive" : "Negative"]);
+      kpiSheet.addRow(['No-shows', k?.no_shows?.value ?? 0, k?.no_shows?.prev ?? 0, k?.no_shows?.pct_change ?? 0, 
+        // For no-shows: lower is better, so we need to reverse the logic
+        (() => {
+          const current = k?.no_shows?.value ?? 0;
+          const previous = k?.no_shows?.prev ?? 0;
+          const change = k?.no_shows?.pct_change ?? 0;
+          
+          // If both are 0, it's excellent
+          if (current === 0 && previous === 0) return "Excellent";
+          
+          // If current is 0 but previous was > 0, it's improving
+          if (current === 0 && previous > 0) return "Excellent";
+          
+          // If previous was 0 but current is > 0, it's concerning
+          if (previous === 0 && current > 0) return "Concerning";
+          
+          // For normal cases, increasing no-shows is concerning, decreasing is improving
+          return change >= 0 ? "Concerning" : "Improving";
+        })()
+      ]);
+      kpiSheet.addRow(['Avg Visit Duration (min)', k?.avg_visit_duration_min?.value ?? 0, k?.avg_visit_duration_min?.prev ?? 0, k?.avg_visit_duration_min?.pct_change ?? 0, (k?.avg_visit_duration_min?.pct_change ?? 0) >= 0 ? "Longer" : "Shorter"]);
+      kpiSheet.addRow(['Total Revenue', k?.total_revenue?.value ?? 0, k?.total_revenue?.prev ?? 0, k?.total_revenue?.pct_change ?? 0, (k?.total_revenue?.pct_change ?? 0) >= 0 ? "Growth" : "Decline"]);
       
-      const kpiSheet = XLSX.utils.aoa_to_sheet(kpiData);
-      XLSX.utils.book_append_sheet(workbook, kpiSheet, "KPI Overview");
+      // Style header row
+      kpiSheet.getRow(1).font = { bold: true };
+      kpiSheet.columns = [
+        { width: 25 },
+        { width: 15 },
+        { width: 15 },
+        { width: 12 },
+        { width: 15 }
+      ];
 
       // Payment Method Share Sheet
-      const paymentData = [
-        ["Payment Method", "Count", "Percentage"],
-        ["Cash", k?.payment_method_share?.cash?.count ?? 0, k?.payment_method_share?.cash?.share_pct ?? 0],
-        ["HMO", k?.payment_method_share?.hmo?.count ?? 0, k?.payment_method_share?.hmo?.share_pct ?? 0],
-        ["Maya", k?.payment_method_share?.maya?.count ?? 0, k?.payment_method_share?.maya?.share_pct ?? 0]
-      ];
+      const paymentSheet = workbook.addWorksheet('Payment Methods');
+      paymentSheet.addRow(['Payment Method', 'Count', 'Percentage']);
+      paymentSheet.addRow(['Cash', k?.payment_method_share?.cash?.count ?? 0, k?.payment_method_share?.cash?.share_pct ?? 0]);
+      paymentSheet.addRow(['HMO', k?.payment_method_share?.hmo?.count ?? 0, k?.payment_method_share?.hmo?.share_pct ?? 0]);
+      paymentSheet.addRow(['Maya', k?.payment_method_share?.maya?.count ?? 0, k?.payment_method_share?.maya?.share_pct ?? 0]);
       
-      const paymentSheet = XLSX.utils.aoa_to_sheet(paymentData);
-      XLSX.utils.book_append_sheet(workbook, paymentSheet, "Payment Methods");
+      // Style header row
+      paymentSheet.getRow(1).font = { bold: true };
+      paymentSheet.columns = [
+        { width: 20 },
+        { width: 12 },
+        { width: 12 }
+      ];
 
       // Revenue by Service Sheet
       if (data?.top_revenue_services?.length > 0) {
-        const serviceData = [
-          ["Service", "Current Revenue", "Previous Revenue", "Change (%)"],
-          ...data.top_revenue_services.map(service => [
+        const serviceSheet = workbook.addWorksheet('Revenue by Service');
+        serviceSheet.addRow(['Service', 'Current Revenue', 'Previous Revenue', 'Change (%)']);
+        
+        data.top_revenue_services.forEach(service => {
+          serviceSheet.addRow([
             service.service_name,
             service.revenue,
             service.prev_revenue || 0,
             service.pct_change || 0
-          ])
-        ];
+          ]);
+        });
         
-        const serviceSheet = XLSX.utils.aoa_to_sheet(serviceData);
-        XLSX.utils.book_append_sheet(workbook, serviceSheet, "Revenue by Service");
+        // Style header row
+        serviceSheet.getRow(1).font = { bold: true };
+        serviceSheet.columns = [
+          { width: 30 },
+          { width: 18 },
+          { width: 18 },
+          { width: 12 }
+        ];
       }
 
       // Monthly Trends Sheet
       if (trendData?.labels?.length > 0) {
-        const trendSheetData = [
-          ["Month", "Visits", "Appointments", "Revenue"],
-          ...trendData.labels.map((label, index) => [
+        const trendSheet = workbook.addWorksheet('Monthly Trends');
+        trendSheet.addRow(['Month', 'Visits', 'Appointments', 'Revenue']);
+        
+        trendData.labels.forEach((label, index) => {
+          trendSheet.addRow([
             label,
             trendData.visits?.[index] ?? 0,
             trendData.appointments?.[index] ?? 0,
             trendData.revenue?.[index] ?? 0
-          ])
-        ];
+          ]);
+        });
         
-        const trendSheet = XLSX.utils.aoa_to_sheet(trendSheetData);
-        XLSX.utils.book_append_sheet(workbook, trendSheet, "Monthly Trends");
+        // Style header row
+        trendSheet.getRow(1).font = { bold: true };
+        trendSheet.columns = [
+          { width: 15 },
+          { width: 12 },
+          { width: 15 },
+          { width: 15 }
+        ];
       }
 
-      XLSX.writeFile(workbook, `analytics-report-${month}.xlsx`);
+      // Save the file
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `analytics-report-${month}.xlsx`;
+      link.click();
+      window.URL.revokeObjectURL(url);
     } catch (e) {
       console.error(e);
       alert("Failed to generate Excel file.");
