@@ -1,598 +1,398 @@
-import Modal from "./Modal";
-import LoadingSpinner from "./LoadingSpinner";
-import { useState, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 
-function ServiceSelectionModal({ 
-  isOpen, 
-  onClose, 
-  services, 
-  loading, 
-  error, 
-  onServiceSelect,
-  selectedDate,
-  selectedService 
-}) {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [viewMode, setViewMode] = useState("grid"); // "grid" or "single"
+// 🔹 Modal for selecting a service to create a promo
+export function ServiceSelectModal({ show, services, onSelect, onClose }) {
+  const [selectedServiceId, setSelectedServiceId] = useState(null);
+  
+  // Reset selection when modal opens/closes
+  React.useEffect(() => {
+    if (!show) {
+      setSelectedServiceId(null);
+    }
+  }, [show]);
 
-  const formatDate = (dateStr) => {
-    if (!dateStr) return '';
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
+  // Prevent body scroll when modal is open
+  useEffect(() => {
+    if (show) {
+      // Store original overflow style
+      const originalOverflow = document.body.style.overflow;
+      // Allow body to scroll but prevent modal from interfering
+      document.body.style.overflow = 'auto';
+      
+      return () => {
+        // Restore original overflow style
+        document.body.style.overflow = originalOverflow;
+      };
+    }
+  }, [show]);
+
+  const handleServiceClick = (serviceId) => {
+    setSelectedServiceId(serviceId);
   };
 
-  const filteredServices = useMemo(() => {
-    if (!searchTerm.trim()) return services;
-    return services.filter(service => 
-      service.name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }, [services, searchTerm]);
-
-  const handleSearchChange = (e) => {
-    setSearchTerm(e.target.value);
-  };
-
-  const clearSearch = () => {
-    setSearchTerm("");
-  };
-
-  const handleServiceClick = (service) => {
-    if (selectedService && selectedService.id === service.id) {
-      // If clicking on already selected service, go back to grid view
-      setViewMode("grid");
-    } else {
-      // Select the service and show single view
-      onServiceSelect(service);
-      setViewMode("single");
+  const handleConfirm = () => {
+    if (selectedServiceId) {
+      onSelect(selectedServiceId);
+      setSelectedServiceId(null);
     }
   };
 
-  const handleBackToGrid = () => {
-    setViewMode("grid");
-  };
+  if (!show) return null;
 
   return (
-    <Modal
-      open={isOpen}
-      onClose={onClose}
-      title={
-        <div className="d-flex flex-column">
-          <span className="h3 mb-1 fw-bold">Available Services</span>
-          <small className="text-muted fs-6">{formatDate(selectedDate)}</small>
+    <div className="modal fade show d-block" tabIndex="-1" style={{ 
+      backgroundColor: "rgba(0,0,0,0.5)", 
+      zIndex: 1055,
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      overflowY: 'auto',
+      padding: '1.75rem 0',
+      pointerEvents: 'auto'
+    }}>
+      <div className="modal-dialog modal-dialog-scrollable modal-dialog-centered" style={{ 
+        maxHeight: 'calc(100vh - 3.5rem)', 
+        margin: '0 auto',
+        display: 'flex',
+        alignItems: 'center',
+        minHeight: 'calc(100vh - 3.5rem)'
+      }}>
+        <div className="modal-content" style={{ 
+          maxHeight: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden'
+        }}>
+          <div className="modal-header flex-shrink-0">
+            <h5 className="modal-title">🦷 Select Service</h5>
+            <button type="button" className="btn-close" onClick={onClose}></button>
+          </div>
+          <div className="modal-body flex-grow-1" style={{ 
+            overflowY: 'auto',
+            minHeight: 0,
+            padding: '1rem',
+            maxHeight: 'calc(100vh - 200px)' // Reserve space for header and footer
+          }}>
+            <div className="alert alert-info border-0 mb-3" style={{ borderRadius: '12px' }}>
+              <i className="bi bi-info-circle me-2"></i>
+              Click on a service to select it, then click "Select Service" to confirm.
+            </div>
+            <ul className="list-group">
+              {services.map((s) => (
+                <li
+                  key={s.id}
+                  className={`list-group-item list-group-item-action d-flex justify-content-between align-items-center ${
+                    selectedServiceId === s.id ? 'active' : ''
+                  }`}
+                  onClick={() => handleServiceClick(s.id)}
+                  role="button"
+                  style={{ 
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    borderRadius: selectedServiceId === s.id ? '8px' : '0'
+                  }}
+                >
+                  <div>
+                    <strong>{s.name}</strong>
+                    <br />
+                    <small className="text-muted">{s.description}</small>
+                  </div>
+                  <span className="badge bg-primary">₱{s.price}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div className="modal-footer flex-shrink-0" style={{ 
+            borderTop: '1px solid #dee2e6',
+            padding: '1rem',
+            backgroundColor: '#f8f9fa'
+          }}>
+            <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
+            <button 
+              className="btn btn-primary" 
+              onClick={handleConfirm}
+              disabled={!selectedServiceId}
+            >
+              <i className="bi bi-check-circle me-2"></i>
+              Select Service
+            </button>
+          </div>
         </div>
-      }
-      maxWidth="xl"
-    >
-      <div className="container-fluid px-0">
-        {loading && (
-          <div className="text-center py-5">
-            <LoadingSpinner message="Loading available services..." />
-          </div>
-        )}
-
-        {error && (
-          <div className="alert alert-danger border-0 rounded-3 shadow-sm" role="alert">
-            <div className="d-flex align-items-center">
-              <i className="bi bi-exclamation-triangle-fill me-3 fs-5"></i>
-              <div>
-                <h6 className="alert-heading mb-1">Error Loading Services</h6>
-                <p className="mb-0">{error}</p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {!loading && !error && services.length === 0 && (
-          <div className="text-center py-5">
-            <div className="text-muted">
-              <i className="bi bi-calendar-x display-1 d-block mb-3 text-muted"></i>
-              <h4 className="fw-normal">No services available</h4>
-              <p className="lead">There are no available services for the selected date.</p>
-            </div>
-          </div>
-        )}
-
-        {!loading && !error && services.length > 0 && (
-          <>
-            {viewMode === "single" && selectedService ? (
-              /* Single Service View */
-              <div className="single-service-view">
-                <div className="row mb-4">
-                  <div className="col-12">
-                    <div className="d-flex align-items-center gap-3">
-                      <button 
-                        className="btn btn-outline-primary"
-                        onClick={handleBackToGrid}
-                      >
-                        <i className="bi bi-arrow-left me-2"></i>
-                        Back to All Services
-                      </button>
-                      <div className="alert alert-success border-0 rounded-3 shadow-sm mb-0 flex-grow-1">
-                        <div className="d-flex align-items-center">
-                          <i className="bi bi-check-circle-fill text-success me-3 fs-4"></i>
-                          <div>
-                            <h5 className="alert-heading mb-1 text-success">
-                              Selected Service
-                            </h5>
-                            <p className="mb-0 text-muted">
-                              Click to change or confirm selection
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="row justify-content-center">
-                  <div className="col-12 col-md-8 col-lg-6 col-xl-5">
-                    <div className="card border-0 shadow-lg selected-service-card">
-                      <div className="card-body p-5 text-center">
-                        <div className="mb-4">
-                          <h2 className="card-title fw-bold text-dark mb-4">
-                            {selectedService.name}
-                          </h2>
-
-                          {selectedService.type === "promo" && (
-                            <div className="pricing-section-large">
-                              <div className="d-flex justify-content-center align-items-center mb-3">
-                                <span className="text-muted text-decoration-line-through me-3 fs-5">
-                                  ₱{Number(selectedService.original_price).toLocaleString()}
-                                </span>
-                                <span className="badge bg-danger fs-6">
-                                  {selectedService.discount_percent}% OFF
-                                </span>
-                              </div>
-                              <div className="display-6 text-success fw-bold mb-0">
-                                ₱{Number(selectedService.promo_price).toLocaleString()}
-                              </div>
-                            </div>
-                          )}
-
-                          {selectedService.type === "special" && (
-                            <div className="pricing-section-large">
-                              <div className="display-6 text-info fw-bold mb-3">
-                                ₱{Number(selectedService.price).toLocaleString()}
-                              </div>
-                              <span className="badge bg-info fs-6">Special Service</span>
-                            </div>
-                          )}
-
-                          {selectedService.type === "regular" && (
-                            <div className="pricing-section-large">
-                              <div className="display-6 text-dark fw-bold mb-0">
-                                ₱{Number(selectedService.price).toLocaleString()}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="d-grid gap-2">
-                          <button
-                            className="btn btn-success btn-lg fw-bold"
-                            onClick={() => {
-                              onServiceSelect(selectedService);
-                              onClose();
-                            }}
-                          >
-                            <i className="bi bi-check-circle-fill me-2"></i>
-                            Confirm Selection
-                          </button>
-                          <button
-                            className="btn btn-outline-primary btn-lg"
-                            onClick={handleBackToGrid}
-                          >
-                            <i className="bi bi-arrow-left me-2"></i>
-                            Choose Different Service
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              /* Grid View */
-              <>
-                {/* Header with stats and search */}
-                <div className="row mb-4">
-                  <div className="col-12">
-                    <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
-                      <div className="alert alert-light border-0 rounded-3 shadow-sm mb-0 flex-grow-1">
-                        <div className="d-flex align-items-center">
-                          <i className="bi bi-info-circle-fill text-primary me-3 fs-4"></i>
-                          <div>
-                            <h5 className="alert-heading mb-1 text-primary">
-                              {filteredServices.length} of {services.length} services available
-                            </h5>
-                            <p className="mb-0 text-muted">
-                              For {formatDate(selectedDate)}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Search Bar */}
-                <div className="row mb-4">
-                  <div className="col-12">
-                    <div className="position-relative">
-                      <div className="input-group input-group-lg">
-                        <span className="input-group-text bg-light border-end-0">
-                          <i className="bi bi-search text-muted"></i>
-                        </span>
-                        <input
-                          type="text"
-                          className="form-control border-start-0 ps-0"
-                          placeholder="Search services by name..."
-                          value={searchTerm}
-                          onChange={handleSearchChange}
-                          style={{ fontSize: '1.1rem' }}
-                        />
-                        {searchTerm && (
-                          <button
-                            className="btn btn-outline-secondary border-start-0"
-                            type="button"
-                            onClick={clearSearch}
-                            title="Clear search"
-                          >
-                            <i className="bi bi-x-lg"></i>
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Services Grid */}
-                {filteredServices.length === 0 && searchTerm ? (
-                  <div className="text-center py-5">
-                    <i className="bi bi-search display-4 text-muted d-block mb-3"></i>
-                    <h4 className="text-muted">No services found</h4>
-                    <p className="text-muted fs-5">Try adjusting your search terms</p>
-                    <button 
-                      className="btn btn-outline-primary btn-lg"
-                      onClick={clearSearch}
-                    >
-                      Clear Search
-                    </button>
-                  </div>
-                ) : (
-                  <div className="row g-3">
-                    {filteredServices.map((service) => (
-                      <div 
-                        className="col-12" 
-                        key={`${service.id}-${service.type}`}
-                      >
-                        <div className="card border-0 shadow-sm service-card">
-                          <div className="card-body d-flex align-items-center p-4">
-                            <div className="flex-grow-1 me-4">
-                              <h4 className="card-title fw-bold text-dark mb-2">
-                                {service.name}
-                              </h4>
-
-                              {service.type === "promo" && (
-                                <div className="d-flex align-items-center">
-                                  <span className="text-muted text-decoration-line-through me-3">
-                                    ₱{Number(service.original_price).toLocaleString()}
-                                  </span>
-                                  <span className="badge bg-danger me-3">
-                                    {service.discount_percent}% OFF
-                                  </span>
-                                  <div className="h4 text-success fw-bold mb-0">
-                                    ₱{Number(service.promo_price).toLocaleString()}
-                                  </div>
-                                </div>
-                              )}
-
-                              {service.type === "special" && (
-                                <div className="d-flex align-items-center">
-                                  <div className="h4 text-info fw-bold me-3">
-                                    ₱{Number(service.price).toLocaleString()}
-                                  </div>
-                                  <span className="badge bg-info">Special Service</span>
-                                </div>
-                              )}
-
-                              {service.type === "regular" && (
-                                <div className="h4 text-dark fw-bold mb-0">
-                                  ₱{Number(service.price).toLocaleString()}
-                                </div>
-                              )}
-                            </div>
-
-                            <div className="flex-shrink-0">
-                              <button
-                                className="btn btn-primary btn-lg fw-semibold px-4"
-                                onClick={() => handleServiceClick(service)}
-                              >
-                                <i className="bi bi-check-circle-fill me-2"></i>
-                                Select Service
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Footer */}
-                <div className="row mt-5 pt-4 border-top">
-                  <div className="col-12">
-                    <div className="d-flex justify-content-between align-items-center">
-                      <div className="text-muted">
-                        Showing {filteredServices.length} of {services.length} services
-                      </div>
-                      <button 
-                        type="button" 
-                        className="btn btn-outline-secondary btn-lg"
-                        onClick={onClose}
-                      >
-                        <i className="bi bi-x-circle me-2"></i>
-                        Close
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </>
-            )}
-          </>
-        )}
       </div>
-
-      <style jsx>{`
-        .service-card {
-          transition: all 0.3s ease-in-out;
-          border-radius: 16px;
-          overflow: hidden;
-          cursor: pointer;
-          min-height: 100px;
-        }
-        
-        .service-card:hover {
-          transform: translateY(-4px);
-          box-shadow: 0 12px 40px rgba(0,0,0,0.15) !important;
-        }
-        
-        .selected-service-card {
-          border-radius: 20px;
-          background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-        }
-        
-        .pricing-section {
-          min-height: 60px;
-          display: flex;
-          flex-direction: column;
-          justify-content: center;
-        }
-        
-        .pricing-section-large {
-          min-height: 120px;
-          display: flex;
-          flex-direction: column;
-          justify-content: center;
-        }
-        
-        .card-title {
-          font-size: 1.3rem;
-          line-height: 1.4;
-          margin-bottom: 0.5rem;
-        }
-        
-        .btn-primary {
-          background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%);
-          border: none;
-          border-radius: 12px;
-          padding: 14px 28px;
-          font-weight: 600;
-          letter-spacing: 0.5px;
-          font-size: 1rem;
-        }
-        
-        .btn-primary:hover {
-          background: linear-gradient(135deg, #0b5ed7 0%, #0a58ca 100%);
-          transform: translateY(-2px);
-        }
-        
-        .btn-lg {
-          padding: 16px 32px;
-          font-size: 1.1rem;
-          border-radius: 14px;
-        }
-        
-        .input-group-lg .form-control {
-          border-radius: 14px;
-          border: 2px solid #e9ecef;
-          transition: all 0.3s ease;
-          font-size: 1.1rem;
-          padding: 16px 20px;
-        }
-        
-        .input-group-lg .form-control:focus {
-          border-color: #0d6efd;
-          box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
-        }
-        
-        .input-group-text {
-          border-radius: 14px 0 0 14px;
-          border: 2px solid #e9ecef;
-          border-right: none;
-          background: #f8f9fa;
-          padding: 16px 20px;
-        }
-        
-        .alert-light {
-          background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-        }
-        
-        .badge {
-          font-size: 0.8rem;
-          padding: 0.6rem 0.9rem;
-          border-radius: 10px;
-          font-weight: 600;
-        }
-        
-        /* Dynamic sizing based on screen width */
-        @media (max-width: 576px) {
-          .service-card .card-body {
-            padding: 1.5rem;
-            flex-direction: column;
-            align-items: flex-start;
-          }
-          
-          .service-card .flex-grow-1 {
-            margin-right: 0;
-            margin-bottom: 1rem;
-          }
-          
-          .card-title {
-            font-size: 1.1rem;
-          }
-          
-          .h4 {
-            font-size: 1.2rem;
-          }
-          
-          .btn-lg {
-            padding: 12px 24px;
-            font-size: 0.95rem;
-            width: 100%;
-          }
-          
-          .input-group-lg .form-control {
-            font-size: 1rem;
-            padding: 14px 18px;
-          }
-          
-          .input-group-text {
-            padding: 14px 18px;
-          }
-        }
-        
-        @media (min-width: 577px) and (max-width: 768px) {
-          .service-card .card-body {
-            padding: 1.75rem;
-          }
-          
-          .card-title {
-            font-size: 1.2rem;
-          }
-          
-          .h4 {
-            font-size: 1.3rem;
-          }
-        }
-        
-        @media (min-width: 769px) and (max-width: 992px) {
-          .service-card .card-body {
-            padding: 2rem;
-          }
-          
-          .card-title {
-            font-size: 1.3rem;
-          }
-          
-          .h4 {
-            font-size: 1.4rem;
-          }
-        }
-        
-        @media (min-width: 993px) and (max-width: 1199px) {
-          .service-card .card-body {
-            padding: 2.25rem;
-          }
-          
-          .card-title {
-            font-size: 1.4rem;
-          }
-          
-          .h4 {
-            font-size: 1.5rem;
-          }
-        }
-        
-        @media (min-width: 1200px) {
-          .service-card .card-body {
-            padding: 2.5rem;
-          }
-          
-          .card-title {
-            font-size: 1.5rem;
-          }
-          
-          .h4 {
-            font-size: 1.6rem;
-          }
-          
-          .btn-lg {
-            padding: 18px 36px;
-            font-size: 1.15rem;
-          }
-        }
-        
-        @media (min-width: 1400px) {
-          .service-card .card-body {
-            padding: 3rem;
-          }
-          
-          .card-title {
-            font-size: 1.6rem;
-          }
-          
-          .h4 {
-            font-size: 1.7rem;
-          }
-          
-          .btn-lg {
-            padding: 20px 40px;
-            font-size: 1.2rem;
-          }
-        }
-        
-        /* Single service view responsive */
-        .single-service-view .selected-service-card {
-          max-width: 600px;
-          margin: 0 auto;
-        }
-        
-        @media (max-width: 768px) {
-          .single-service-view .selected-service-card .card-body {
-            padding: 2rem !important;
-          }
-          
-          .single-service-view h2 {
-            font-size: 1.5rem;
-          }
-          
-          .single-service-view .display-6 {
-            font-size: 2rem;
-          }
-        }
-        
-        @media (min-width: 769px) {
-          .single-service-view .selected-service-card .card-body {
-            padding: 3rem !important;
-          }
-          
-          .single-service-view h2 {
-            font-size: 2rem;
-          }
-          
-          .single-service-view .display-6 {
-            font-size: 2.5rem;
-          }
-        }
-      `}</style>
-    </Modal>
+    </div>
   );
 }
 
-export default ServiceSelectionModal;
+// 🔸 Modal for editing a promo
+export function EditPromoModal({ show, promo, service, onSave, onCancel, loading, isCreatingNew = false }) {
+  const [form, setForm] = useState({
+    start_date: "",
+    end_date: "",
+    discounted_price: "",
+  });
+  const [errors, setErrors] = useState({});
+
+  // Update form when promo changes
+  React.useEffect(() => {
+    if (promo) {
+      setForm({
+        start_date: promo.start_date,
+        end_date: promo.end_date,
+        discounted_price: promo.discounted_price,
+      });
+    } else {
+      // Reset form for new promo creation
+      setForm({
+        start_date: "",
+        end_date: "",
+        discounted_price: "",
+      });
+    }
+    setErrors({});
+  }, [promo]);
+
+  // Prevent body scroll when modal is open
+  useEffect(() => {
+    if (show) {
+      // Store original overflow style
+      const originalOverflow = document.body.style.overflow;
+      // Allow body to scroll but prevent modal from interfering
+      document.body.style.overflow = 'auto';
+      
+      return () => {
+        // Restore original overflow style
+        document.body.style.overflow = originalOverflow;
+      };
+    }
+  }, [show]);
+
+  const handleChange = (e) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+    // Clear errors when user starts typing
+    if (errors[e.target.name]) {
+      setErrors({ ...errors, [e.target.name]: null });
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setErrors({});
+    
+    try {
+      await onSave(form);
+    } catch (err) {
+      if (err.response?.status === 422) {
+        const fieldErrors = err.response.data.errors;
+        setErrors(fieldErrors || {});
+      }
+    }
+  };
+
+  if (!show) return null;
+
+  return (
+    <div className="modal fade show d-block" tabIndex="-1" style={{ 
+      backgroundColor: "rgba(0,0,0,0.5)", 
+      zIndex: 1055,
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      overflowY: 'auto',
+      padding: '3rem 0',
+      pointerEvents: 'auto'
+    }}>
+      <div className="modal-dialog modal-dialog-scrollable modal-dialog-centered" style={{ 
+        maxHeight: 'calc(100vh - 6rem)', 
+        margin: '0 auto',
+        display: 'flex',
+        alignItems: 'center',
+        minHeight: 'calc(100vh - 6rem)'
+      }}>
+        <div className="modal-content" style={{ 
+          maxHeight: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden'
+        }}>
+          <div className={`modal-header ${isCreatingNew ? 'bg-success' : 'bg-info'} text-white flex-shrink-0`}>
+            <h5 className="modal-title">
+              <i className={`bi ${isCreatingNew ? 'bi-plus-circle' : 'bi-pencil'} me-2`}></i>
+              {isCreatingNew ? 'Create New Promo' : 'Edit Promo'}
+            </h5>
+            <button type="button" className="btn-close" onClick={onCancel}></button>
+          </div>
+          <form onSubmit={handleSubmit} className="d-flex flex-column h-100">
+            <div className="modal-body flex-grow-1" style={{ 
+              overflowY: 'auto',
+              minHeight: 0,
+              padding: '1rem',
+              maxHeight: 'calc(100vh - 280px)' // Reserve much more space for header and footer
+            }}>
+              <div className="alert alert-info">
+                <strong>Service:</strong> {service?.name}<br />
+                <strong>Original Price:</strong> ₱{service?.price}
+              </div>
+
+              <div className="row g-3">
+                <div className="col-12">
+                  <label className="form-label">Start Date</label>
+                  <input
+                    name="start_date"
+                    type="date"
+                    className={`form-control ${errors.start_date ? 'is-invalid' : ''}`}
+                    value={form.start_date}
+                    onChange={handleChange}
+                    required
+                  />
+                  {errors.start_date && (
+                    <div className="invalid-feedback">{errors.start_date[0]}</div>
+                  )}
+                </div>
+                <div className="col-12">
+                  <label className="form-label">End Date</label>
+                  <input
+                    name="end_date"
+                    type="date"
+                    className={`form-control ${errors.end_date ? 'is-invalid' : ''}`}
+                    value={form.end_date}
+                    onChange={handleChange}
+                    required
+                  />
+                  {errors.end_date && (
+                    <div className="invalid-feedback">{errors.end_date[0]}</div>
+                  )}
+                </div>
+                <div className="col-12">
+                  <label className="form-label">Discounted Price (₱)</label>
+                  <input
+                    name="discounted_price"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max={service?.price}
+                    className={`form-control ${errors.discounted_price ? 'is-invalid' : ''}`}
+                    value={form.discounted_price}
+                    onChange={handleChange}
+                    required
+                  />
+                  {errors.discounted_price && (
+                    <div className="invalid-feedback">{errors.discounted_price[0]}</div>
+                  )}
+                  <div className="form-text">
+                    Maximum: ₱{service?.price}
+                  </div>
+                </div>
+              </div>
+
+              {errors.message && (
+                <div className="alert alert-danger mt-3">
+                  <i className="bi bi-exclamation-triangle me-1"></i>
+                  {errors.message}
+                </div>
+              )}
+            </div>
+            <div className="modal-footer flex-shrink-0" style={{ 
+              borderTop: '1px solid #dee2e6',
+              padding: '1rem',
+              backgroundColor: '#f8f9fa',
+              position: 'relative',
+              zIndex: 10
+            }}>
+              <button type="button" className="btn btn-secondary" onClick={onCancel} disabled={loading}>
+                Cancel
+              </button>
+              <button type="submit" className={`btn ${isCreatingNew ? 'btn-success' : 'btn-primary'}`} disabled={loading}>
+                {loading ? (
+                  <>
+                    <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                    {isCreatingNew ? 'Creating...' : 'Updating...'}
+                  </>
+                ) : (
+                  <>
+                    <i className={`bi ${isCreatingNew ? 'bi-plus-circle' : 'bi-check-circle'} me-1`}></i>
+                    {isCreatingNew ? 'Create Promo' : 'Update Promo'}
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// 🔸 Modal for confirming deletion of a promo
+export function DeletePromoModal({ show, promo, onConfirm, onCancel }) {
+  // Prevent body scroll when modal is open
+  useEffect(() => {
+    if (show) {
+      // Store original overflow style
+      const originalOverflow = document.body.style.overflow;
+      // Allow body to scroll but prevent modal from interfering
+      document.body.style.overflow = 'auto';
+      
+      return () => {
+        // Restore original overflow style
+        document.body.style.overflow = originalOverflow;
+      };
+    }
+  }, [show]);
+
+  if (!show || !promo) return null;
+
+  return (
+    <div className="modal d-block" tabIndex="-1" style={{ 
+      backgroundColor: "rgba(0,0,0,0.5)",
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      zIndex: 1055,
+      overflowY: 'auto',
+      padding: '1.75rem 0',
+      pointerEvents: 'auto'
+    }}>
+      <div className="modal-dialog modal-dialog-scrollable modal-dialog-centered" style={{ 
+        maxHeight: 'calc(100vh - 3.5rem)', 
+        margin: '0 auto',
+        display: 'flex',
+        alignItems: 'center',
+        minHeight: 'calc(100vh - 3.5rem)'
+      }}>
+        <div className="modal-content" style={{ 
+          maxHeight: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden'
+        }}>
+          <div className="modal-header bg-danger text-white flex-shrink-0">
+            <h5 className="modal-title">⚠️ Confirm Promo Deletion</h5>
+            <button type="button" className="btn-close" onClick={onCancel}></button>
+          </div>
+          <div className="modal-body flex-grow-1" style={{ 
+            overflowY: 'auto',
+            minHeight: 0,
+            padding: '1rem',
+            maxHeight: 'calc(100vh - 200px)' // Reserve space for header and footer
+          }}>
+            <p>
+              Delete promo for <strong>{promo.start_date}</strong> to{" "}
+              <strong>{promo.end_date}</strong>?<br />
+              <span className="text-danger">This action is permanent.</span>
+            </p>
+          </div>
+          <div className="modal-footer flex-shrink-0">
+            <button className="btn btn-secondary" onClick={onCancel}>Cancel</button>
+            <button className="btn btn-danger" onClick={onConfirm}>Yes, Delete Promo</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

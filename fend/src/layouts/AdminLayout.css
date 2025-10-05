@@ -16,7 +16,7 @@
   background: #121a23 !important; /* deeper than default .bg-dark */
   color: #fff;
   transition: width 0.3s ease-in-out, transform 0.3s ease-in-out;
-  z-index: 1040;
+  z-index: 1050;
   display: flex;
   flex-direction: column;
   will-change: width, transform;
@@ -74,6 +74,16 @@
   transition: none;
   transform: translateZ(0);
   backface-visibility: hidden;
+  position: relative;
+}
+
+/* Device Approvals specific content area */
+.content-area:has(.device-approvals-page) {
+  overflow: hidden;
+}
+
+.content-area.device-approvals-content {
+  overflow: hidden;
 }
 
 /* Ensure main content area has clean white background */
@@ -81,6 +91,16 @@
   background: #f8f9fa !important;
   width: 100% !important;
   max-width: none !important;
+  position: relative !important;
+  min-height: calc(100vh - 56px) !important;
+}
+
+/* Device Approvals specific main layout */
+.content-area main.device-approvals-main {
+  position: static !important;
+  min-height: 100vh !important;
+  padding: 0 !important;
+  margin: 0 !important;
 }
 
 /* Ensure full width utilization for admin pages */
@@ -313,7 +333,7 @@ html {
   border-bottom: 1px solid #fff;
   position: sticky;
   top: 0;
-  z-index: 10;
+  z-index: 1040;
   padding: .5rem .75rem;
 }
 
@@ -567,12 +587,16 @@ html {
 
 /* Admin Dashboard - Full responsive layout */
 .admin-dashboard-page {
-  width: 100% !important;
+  width: 100vw !important;
   max-width: none !important;
   margin: 0 !important;
   padding: 1.5rem !important;
   box-sizing: border-box !important;
   overflow-x: hidden !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  z-index: 1 !important;
   contain: layout style paint;
   transform: translateZ(0);
   backface-visibility: hidden;
@@ -618,9 +642,17 @@ html {
 /* Ensure dashboard adapts to sidebar state changes */
 .admin-shell.sidebar-closed .admin-dashboard-page,
 .admin-shell.sidebar-open .admin-dashboard-page {
-  width: 100% !important;
+  width: 100vw !important;
   max-width: none !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
   transition: none !important;
+}
+
+/* Ensure other pages don't inherit absolute positioning */
+.content-area main > *:not(.admin-dashboard-page):not(.device-approvals-page) {
+  position: relative !important;
 }
 
 /* Mobile responsive adjustments for dashboard */
@@ -659,6 +691,430 @@ html {
   width: 100% !important;
   max-width: 100% !important;
   transition: none !important;
+}
+
+/* Device Approvals Page - Full width responsive layout */
+.device-approvals-page {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 1.5rem !important;
+  box-sizing: border-box !important;
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%) !important;
+  min-height: calc(100vh - 56px) !important;
+  position: relative !important;
+  overflow-x: hidden !important;
+  contain: layout style paint;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+/* Force all cards to use full width */
+.device-approvals-page .card {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+}
+
+.device-approvals-page .card-body {
+  width: 100% !important;
+  max-width: none !important;
+  padding: 0 !important;
+}
+
+/* Device Approvals Empty State */
+.device-empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  width: 100% !important;
+  max-width: none !important;
+  padding: 2rem;
+}
+
+.device-empty-content {
+  text-align: center;
+  max-width: none !important;
+  width: 100% !important;
+  padding: 0 2rem;
+}
+
+.device-empty-icon {
+  width: 120px;
+  height: 120px;
+  background: #f8f9fa;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 3rem;
+  margin: 0 auto 1.5rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  flex-shrink: 0;
+}
+
+.device-empty-title {
+  color: #6c757d;
+  font-size: 1.75rem;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+  line-height: 1.3;
+}
+
+.device-empty-description {
+  color: #6c757d;
+  font-size: 1.2rem;
+  margin-bottom: 0;
+  line-height: 1.4;
+  max-width: 700px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Device Approvals Table Improvements */
+.device-table-container {
+  width: 100% !important;
+  max-width: none !important;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.device-table {
+  width: 100% !important;
+  max-width: none !important;
+  table-layout: fixed;
+  min-width: 800px;
+}
+
+.device-table-row {
+  height: 60px;
+}
+
+.device-table th,
+.device-table td {
+  font-size: 1rem;
+  vertical-align: middle;
+}
+
+/* Ensure Device Approvals adapts to sidebar state changes */
+.admin-shell.sidebar-closed .device-approvals-page,
+.admin-shell.sidebar-open .device-approvals-page {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 1.5rem !important;
+  position: relative !important;
+  transition: none !important;
+}
+
+/* Device Approvals Table - Fixed column widths for full width utilization */
+.device-approvals-page .device-table-col-index {
+  width: 8% !important;
+  min-width: 60px;
+  max-width: 80px;
+}
+
+.device-approvals-page .device-table-col-staff {
+  width: 20% !important;
+  min-width: 180px;
+  max-width: 250px;
+}
+
+.device-approvals-page .device-table-col-fingerprint {
+  width: 25% !important;
+  min-width: 200px;
+  max-width: 350px;
+}
+
+.device-approvals-page .device-table-col-code {
+  width: 12% !important;
+  min-width: 100px;
+  max-width: 150px;
+}
+
+.device-approvals-page .device-table-col-device {
+  width: 25% !important;
+  min-width: 150px;
+  max-width: none;
+}
+
+.device-approvals-page .device-table-col-actions {
+  width: 10% !important;
+  min-width: 100px;
+  max-width: 150px;
+}
+
+/* Device Approvals responsive elements */
+.device-approvals-page .device-staff-avatar {
+  width: 32px !important;
+  height: 32px !important;
+  font-size: 1rem !important;
+  flex-shrink: 0;
+}
+
+.device-approvals-page .device-staff-info {
+  min-width: 0;
+  flex: 1;
+}
+
+.device-approvals-page .device-fingerprint {
+  max-width: 100% !important;
+}
+
+.device-approvals-page .device-name-input {
+  border-radius: 8px !important;
+  padding: 8px 12px !important;
+  font-size: 0.9rem !important;
+  min-width: 0;
+}
+
+.device-approvals-page .device-actions {
+  flex-wrap: nowrap;
+}
+
+.device-approvals-page .device-actions .btn {
+  border-radius: 8px !important;
+  padding: 6px 8px !important;
+  font-size: 0.875rem !important;
+}
+
+/* Device Approvals Responsive Breakpoints */
+@media (max-width: 1199.98px) {
+  .device-approvals-page {
+    padding: 1rem !important;
+  }
+  
+  .device-approvals-page .device-table-col-index {
+    width: 10% !important;
+  }
+  
+  .device-approvals-page .device-table-col-staff {
+    width: 22% !important;
+    min-width: 160px;
+    max-width: 200px;
+  }
+  
+  .device-approvals-page .device-table-col-fingerprint {
+    width: 28% !important;
+    min-width: 150px;
+    max-width: 250px;
+  }
+  
+  .device-approvals-page .device-table-col-code {
+    width: 15% !important;
+  }
+  
+  .device-approvals-page .device-table-col-device {
+    width: 20% !important;
+    min-width: 120px;
+    max-width: 200px;
+  }
+  
+  .device-approvals-page .device-table-col-actions {
+    width: 5% !important;
+  }
+  
+  .device-empty-content {
+    max-width: none !important;
+    width: 100% !important;
+  }
+}
+
+@media (max-width: 991.98px) {
+  .device-approvals-page {
+    padding: 0.75rem !important;
+  }
+  
+  .device-approvals-page .device-table-col-index {
+    width: 12% !important;
+  }
+  
+  .device-approvals-page .device-table-col-staff {
+    width: 25% !important;
+    min-width: 140px;
+    max-width: 180px;
+  }
+  
+  .device-approvals-page .device-table-col-fingerprint {
+    width: 30% !important;
+  }
+  
+  .device-approvals-page .device-table-col-code {
+    width: 18% !important;
+  }
+  
+  .device-approvals-page .device-table-col-device {
+    width: 10% !important;
+    min-width: 100px;
+    max-width: 160px;
+  }
+  
+  .device-approvals-page .device-table-col-actions {
+    width: 5% !important;
+  }
+  
+  .device-approvals-page .device-staff-avatar {
+    width: 28px !important;
+    height: 28px !important;
+    font-size: 0.875rem !important;
+  }
+  
+  .device-approvals-page .device-name-input {
+    padding: 6px 8px !important;
+    font-size: 0.8rem !important;
+  }
+  
+  .device-approvals-page .device-actions .btn {
+    padding: 4px 6px !important;
+    font-size: 0.75rem !important;
+  }
+  
+  .device-empty-content {
+    max-width: none !important;
+    width: 100% !important;
+  }
+  
+  .device-empty-icon {
+    width: 100px;
+    height: 100px;
+    font-size: 2.5rem;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .device-approvals-page {
+    padding: 0.5rem !important;
+  }
+  
+  .device-approvals-page .device-table-col-index {
+    width: 50px;
+    min-width: 50px;
+    max-width: 60px;
+  }
+  
+  .device-approvals-page .device-table-col-staff {
+    min-width: 120px;
+    max-width: 150px;
+  }
+  
+  .device-approvals-page .device-table-col-code {
+    width: 100px;
+    min-width: 80px;
+    max-width: 120px;
+  }
+  
+  .device-approvals-page .device-table-col-device {
+    min-width: 80px;
+    max-width: 120px;
+  }
+  
+  .device-approvals-page .device-table-col-actions {
+    width: 100px;
+    min-width: 80px;
+    max-width: 120px;
+  }
+  
+  .device-approvals-page .device-staff-avatar {
+    width: 24px !important;
+    height: 24px !important;
+    font-size: 0.75rem !important;
+  }
+  
+  .device-approvals-page .device-name-input {
+    padding: 4px 6px !important;
+    font-size: 0.75rem !important;
+  }
+  
+  .device-approvals-page .device-actions .btn {
+    padding: 3px 5px !important;
+    font-size: 0.7rem !important;
+  }
+  
+  .device-approvals-page .table th,
+  .device-approvals-page .table td {
+    padding: 0.5rem 0.25rem !important;
+    font-size: 0.8rem !important;
+  }
+  
+  .device-empty-content {
+    max-width: none !important;
+    width: 100% !important;
+    padding: 1rem;
+  }
+  
+  .device-empty-icon {
+    width: 80px;
+    height: 80px;
+    font-size: 2rem;
+  }
+  
+  .device-empty-title {
+    font-size: 1.5rem;
+  }
+  
+  .device-empty-description {
+    font-size: 1.1rem;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .device-approvals-page {
+    padding: 0.25rem !important;
+  }
+  
+  .device-approvals-page .device-table-col-staff {
+    min-width: 100px;
+    max-width: 120px;
+  }
+  
+  .device-approvals-page .device-table-col-device {
+    min-width: 60px;
+    max-width: 100px;
+  }
+  
+  .device-approvals-page .device-table-col-actions {
+    width: 80px;
+    min-width: 70px;
+    max-width: 90px;
+  }
+  
+  .device-approvals-page .table th,
+  .device-approvals-page .table td {
+    padding: 0.25rem 0.125rem !important;
+    font-size: 0.7rem !important;
+  }
+  
+  .device-approvals-page .device-actions {
+    flex-direction: column;
+    gap: 2px;
+  }
+  
+  .device-approvals-page .device-actions .btn {
+    width: 100%;
+    padding: 2px 4px !important;
+    font-size: 0.65rem !important;
+  }
+  
+  .device-empty-content {
+    max-width: none !important;
+    width: 100% !important;
+    padding: 0.75rem;
+  }
+  
+  .device-empty-icon {
+    width: 60px;
+    height: 60px;
+    font-size: 1.5rem;
+  }
+  
+  .device-empty-title {
+    font-size: 1.3rem;
+  }
+  
+  .device-empty-description {
+    font-size: 1rem;
+  }
 }
 
 /* Calendar Override specific optimizations */
