@@ -1,92 +1,69 @@
-import { useState } from "react";
-import api from "../../api/api";
+import { Link } from "react-router-dom";
+import { useAuth } from "../../hooks/useAuth";
 
 function DentistHomepage() {
-  const [visitCode, setVisitCode] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState("");
-
-  const handleVisitCodeSubmit = async (e) => {
-    e.preventDefault();
-    if (!visitCode.trim()) {
-      setMessage("Please enter a visit code.");
-      return;
-    }
-
-    setLoading(true);
-    setMessage("");
-    
-    try {
-      // TODO: Implement visit code processing
-      console.log("Visit code submitted:", visitCode);
-      setMessage("Visit code processing will be implemented soon.");
-    } catch (err) {
-      setMessage("Error processing visit code. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { user } = useAuth();
 
   return (
     <div className="dentist-homepage">
-      {/* Visit Code Section */}
-      <div className="container py-5">
-        <div className="row justify-content-center">
-          <div className="col-md-6 col-lg-4">
-            <div className="card shadow">
-              <div className="card-header bg-primary text-white text-center">
-                <h4 className="mb-0">
-                  <i className="bi bi-qr-code me-2"></i>
-                  Enter Visit Code
-                </h4>
-              </div>
-              <div className="card-body">
-                <form onSubmit={handleVisitCodeSubmit}>
-                  <div className="mb-3">
-                    <label htmlFor="visitCode" className="form-label">
-                      Visit Code
-                    </label>
-                    <input
-                      type="text"
-                      className="form-control form-control-lg"
-                      id="visitCode"
-                      value={visitCode}
-                      onChange={(e) => setVisitCode(e.target.value)}
-                      placeholder="Enter visit code"
-                      autoFocus
-                    />
-                  </div>
-                  <div className="d-grid">
-                    <button
-                      type="submit"
-                      className="btn btn-primary btn-lg"
-                      disabled={loading}
-                    >
-                      {loading ? (
-                        <>
-                          <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                          Processing...
-                        </>
-                      ) : (
-                        <>
-                          <i className="bi bi-search me-2"></i>
-                          Process Visit
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </form>
-                
-                {message && (
-                  <div className={`alert ${message.includes("Error") ? "alert-danger" : "alert-info"} mt-3 mb-0`}>
-                    <i className={`bi ${message.includes("Error") ? "bi-exclamation-triangle" : "bi-info-circle"} me-2`}></i>
-                    {message}
-                  </div>
-                )}
+      {/* Welcome Section */}
+      <div className="container py-4">
+        <div className="row">
+          <div className="col-12">
+            <div className="d-flex justify-content-between align-items-center mb-4">
+              <h2 className="h3 mb-0">🦷 Dentist Dashboard</h2>
+              <div className="text-muted">
+                Welcome, Dr. {user?.name || 'Dentist'}
               </div>
             </div>
           </div>
         </div>
+
+        {/* Quick Actions */}
+        <div className="row mb-4">
+          <div className="col-12">
+            <h2 className="h4 mb-3">Quick Actions</h2>
+          </div>
+          <div className="col-md-6 mb-3">
+            <Link to="/dentist/dashboard" className="text-decoration-none">
+              <div className="card h-100 border-0 shadow-sm hover-lift">
+                <div className="card-body text-center p-4">
+                  <div className="mb-3">
+                    <i className="bi bi-key fs-1 text-primary"></i>
+                  </div>
+                  <h5 className="card-title text-dark">Process Visit</h5>
+                  <p className="card-text text-muted">
+                    Enter visit codes to start patient consultations
+                  </p>
+                  <div className="btn btn-primary">
+                    <i className="bi bi-qr-code me-2"></i>
+                    Visit Codes
+                  </div>
+                </div>
+              </div>
+            </Link>
+          </div>
+          <div className="col-md-6 mb-3">
+            <Link to="/dentist/schedule" className="text-decoration-none">
+              <div className="card h-100 border-0 shadow-sm hover-lift">
+                <div className="card-body text-center p-4">
+                  <div className="mb-3">
+                    <i className="bi bi-calendar3 fs-1 text-success"></i>
+                  </div>
+                  <h5 className="card-title text-dark">View Schedule</h5>
+                  <p className="card-text text-muted">
+                    View your clinic schedule and working hours
+                  </p>
+                  <div className="btn btn-success">
+                    <i className="bi bi-calendar-check me-2"></i>
+                    View Schedule
+                  </div>
+                </div>
+              </div>
+            </Link>
+          </div>
+        </div>
+
       </div>
     </div>
   );

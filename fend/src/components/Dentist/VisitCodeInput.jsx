@@ -50,7 +50,16 @@ function VisitCodeInput() {
     setSaving(true);
     try {
       await api.post(`/api/visits/${visitData.visit.id}/save-dentist-notes`, notes);
-      alert("Notes saved successfully!");
+      
+      // Show popup asking if dentist wants to finish consultation
+      const shouldFinish = confirm(
+        "Notes saved successfully!\n\n" +
+        "Do you want to finish this consultation and return to the visit codes page?"
+      );
+      
+      if (shouldFinish) {
+        handleReset();
+      }
     } catch (err) {
       alert("Failed to save notes: " + (err.response?.data?.message || "Unknown error"));
     } finally {

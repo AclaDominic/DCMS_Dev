@@ -60,6 +60,7 @@ import DentistLayout from "../layouts/DentistLayout";
 import DentistHomepage from "../pages/Dentist/DentistHomepage";
 import DentistProfile from "../pages/Dentist/DentistProfile";
 import DentistDashboard from "../pages/Dentist/DentistDashboard";
+import DentistSchedule from "../pages/Dentist/DentistSchedule";
 
 //
 import NotificationsPage from "../pages/NotificationsPage";
@@ -179,6 +180,7 @@ export default function AppRouter() {
           <Route index element={<DentistHomepage />} />
           <Route path="dashboard" element={<DentistDashboard />} />
           <Route path="profile" element={<DentistProfile />} />
+          <Route path="schedule" element={<DentistSchedule />} />
         </Route>
         {/* Payment Result Routes */}
         <Route path="/pay/success" element={<PaySuccess />} />

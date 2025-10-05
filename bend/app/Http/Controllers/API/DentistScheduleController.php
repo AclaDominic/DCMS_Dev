@@ -55,6 +55,26 @@ class DentistScheduleController extends Controller
         return response()->noContent(); // 204
     }
 
+    /**
+     * Get the current authenticated dentist's schedule
+     */
+    public function mySchedule(Request $request)
+    {
+        $user = $request->user();
+        
+        if (!$user || $user->role !== 'dentist') {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $dentistSchedule = DentistSchedule::where('email', $user->email)->first();
+        
+        if (!$dentistSchedule) {
+            return response()->json(['message' => 'Dentist schedule not found'], 404);
+        }
+
+        return response()->json($dentistSchedule);
+    }
+
     private function validatedData(Request $request, bool $isUpdate, ?int $currentId = null): array
     {
         $days = ['sun','mon','tue','wed','thu','fri','sat'];

@@ -81,6 +81,18 @@ function DentistNavbar() {
                 </Link>
               </li>
 
+              {/* Schedule Link */}
+              <li className="nav-item">
+                <Link
+                  className="nav-link"
+                  to="/dentist/schedule"
+                  style={{ fontWeight: "500" }}
+                >
+                  <i className="bi bi-calendar3 me-1"></i>
+                  Schedule
+                </Link>
+              </li>
+
               {/* Profile Link */}
               <li className="nav-item">
                 <Link

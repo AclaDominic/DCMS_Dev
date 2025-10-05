@@ -1,6 +1,8 @@
 import VisitCodeInput from "../../components/Dentist/VisitCodeInput";
+import { useAuth } from "../../hooks/useAuth";
 
 const DentistDashboard = () => {
+  const { user } = useAuth();
   return (
     <div>
       <div className="container-fluid">
@@ -9,7 +11,7 @@ const DentistDashboard = () => {
             <div className="d-flex justify-content-between align-items-center mb-4">
               <h2>🦷 Dentist Dashboard</h2>
               <div className="text-muted">
-                Welcome, Dr. {localStorage.getItem('userName') || 'Dentist'}
+                Welcome, Dr. {user?.name || 'Dentist'}
               </div>
             </div>
             

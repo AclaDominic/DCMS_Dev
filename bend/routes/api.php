@@ -304,6 +304,10 @@ Route::middleware('auth:sanctum')->prefix('dentist')->group(function () {
   Route::post('/change-password', [DentistPasswordController::class, 'changePassword']);
   Route::get('/password-status', [DentistPasswordController::class, 'checkPasswordStatus']);
   
+  // Dentist schedule
+  Route::get('/my-schedule', [DentistScheduleController::class, 'mySchedule']);
+  Route::get('/clinic-schedule', [ClinicWeeklyScheduleController::class, 'index']);
+  
   // Dentist visit notes
   Route::post('/visits/{id}/save-notes', [\App\Http\Controllers\Staff\PatientVisitController::class, 'saveDentistNotes']);
   Route::get('/visits/{id}/notes', [\App\Http\Controllers\Staff\PatientVisitController::class, 'getDentistNotes']);
