@@ -186,8 +186,10 @@ function StaffLayout() {
 </div>
 
 
-        <main className="p-4">
-          <Outlet />
+        <main className="flex-grow-1 p-4 overflow-auto">
+          <div className="container-fluid h-100">
+            <Outlet />
+          </div>
         </main>
       </div>
 

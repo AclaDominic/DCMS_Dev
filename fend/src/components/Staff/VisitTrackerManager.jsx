@@ -214,7 +214,7 @@ function VisitTrackerManager() {
   };
 
   return (
-    <div>
+    <div className="h-100 d-flex flex-column">
       <h3>📝 Patient Visit Tracker</h3>
 
       <div className="card p-3 mb-4">
@@ -274,12 +274,12 @@ function VisitTrackerManager() {
       {loading ? (
         <LoadingSpinner message="Loading patient visits..." />
       ) : (
-        <div>
-          <div className="d-flex justify-content-between align-items-center mb-2">
+        <div className="flex-grow-1 d-flex flex-column">
+          <div className="d-flex justify-content-between align-items-center mb-3">
             <h5>Ongoing Visits ({visits.length} total, {visits.filter(v => v.status === 'pending').length} pending)</h5>
-            <div>
+            <div className="d-flex gap-2">
               <button
-                className="btn btn-sm btn-outline-primary me-2"
+                className="btn btn-sm btn-outline-primary"
                 onClick={fetchVisits}
               >
                 🔄 Refresh
@@ -294,20 +294,21 @@ function VisitTrackerManager() {
               </button>
             </div>
           </div>
-          <table className="table table-bordered">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Contact</th>
-                <th>Visit Code</th>
-                <th>Service</th>
-                <th>Note</th>
-                <th>Started At</th>
-                <th>Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
+          <div className="table-responsive flex-grow-1">
+            <table className="table table-bordered table-hover mb-0">
+              <thead className="table-light sticky-top">
+                <tr>
+                  <th>Name</th>
+                  <th>Contact</th>
+                  <th>Visit Code</th>
+                  <th>Service</th>
+                  <th>Note</th>
+                  <th>Started At</th>
+                  <th>Status</th>
+                  <th style={{minWidth: '200px'}}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
               {(() => {
                 const filteredVisits = visits.filter((v) => showAllVisits || v.status === "pending");
                 console.log("All visits:", visits);
@@ -364,9 +365,9 @@ function VisitTrackerManager() {
                     <td>{v.status}</td>
                     <td>
                       {v.status === "pending" && (
-                        <>
+                        <div className="d-flex gap-1 flex-wrap">
                           <button
-                            className={`btn btn-sm me-1 ${
+                            className={`btn btn-sm ${
                               v.service_id ? "btn-success" : "btn-outline-secondary"
                             }`}
                             onClick={() => handleAction(v.id, "finish")}
@@ -387,7 +388,7 @@ function VisitTrackerManager() {
                             )}
                           </button>
                           <button
-                            className="btn btn-warning btn-sm me-1"
+                            className="btn btn-warning btn-sm"
                             onClick={() => handleEditClick(v)}
                           >
                             Edit
@@ -403,14 +404,15 @@ function VisitTrackerManager() {
                           >
                             Reject
                           </button>
-                        </>
+                        </div>
                       )}
                     </td>
                   </tr>
                   );
                 })}
             </tbody>
-          </table>
+            </table>
+          </div>
         </div>
       )}
 
