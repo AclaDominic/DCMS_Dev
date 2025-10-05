@@ -1,6 +1,6 @@
 
 import { useEffect, useState } from "react";
-import { Outlet, useNavigate, NavLink } from "react-router-dom";
+import { Outlet, useNavigate, NavLink, useLocation } from "react-router-dom";
 import api from "../api/api";
 import { useAuth } from "../hooks/useAuth";
 import "./AdminLayout.css";
@@ -8,6 +8,7 @@ import NotificationsBell from "../components/NotificationBell";
 
 function AdminLayout() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(() => window.innerWidth >= 992);
 
@@ -216,7 +217,7 @@ function AdminLayout() {
       </aside>
 
       {/* Main area */}
-      <div className="content-area">
+      <div className={`content-area ${location.pathname === '/admin/device-approvals' ? 'device-approvals-content' : ''}`}>
 {/* Topbar */}
 <div className="topbar d-flex align-items-center pe-0">
   <button
@@ -235,7 +236,7 @@ function AdminLayout() {
 
 
         {/* Routed content */}
-        <main className="flex-grow-1">
+        <main className={`flex-grow-1 ${location.pathname === '/admin/device-approvals' ? 'device-approvals-main' : ''}`}>
           <Outlet />
         </main>
       </div>
