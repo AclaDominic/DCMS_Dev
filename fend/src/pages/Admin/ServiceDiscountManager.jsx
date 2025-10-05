@@ -368,8 +368,9 @@ export default function ServiceDiscountManager() {
                   <th className="fw-semibold px-4 py-3 border-0" style={{ fontSize: '1.1rem' }}>
                     <i className="bi bi-calendar-x me-2"></i>End Date
                   </th>
+                  
                   <th className="fw-semibold px-4 py-3 border-0" style={{ fontSize: '1.1rem' }}>
-                    <i className="bi bi-currency-dollar me-2"></i>Discounted Price
+                    <i className="bi  me-2"></i>Discounted Price
                   </th>
                   <th className="fw-semibold px-4 py-3 border-0" style={{ fontSize: '1.1rem' }}>
                     <i className="bi bi-activity me-2"></i>Status

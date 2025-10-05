@@ -130,11 +130,16 @@ function ServiceSelectionModal({
                 </div>
 
                 <div className="row justify-content-center">
-                  <div className="col-12 col-md-8 col-lg-6 col-xl-5">
+                  <div className="col-12 col-md-10 col-lg-8 col-xl-6">
                     <div className="card border-0 shadow-lg selected-service-card">
-                      <div className="card-body p-5 text-center">
+                      <div className="card-body p-4 p-md-5 text-center">
                         <div className="mb-4">
-                          <h2 className="card-title fw-bold text-dark mb-4">
+                          <h2 className="card-title fw-bold text-dark mb-4" style={{
+                            fontSize: 'clamp(1.5rem, 4vw, 2.5rem)',
+                            lineHeight: '1.3',
+                            wordWrap: 'break-word',
+                            overflowWrap: 'break-word'
+                          }}>
                             {selectedService.name}
                           </h2>
 
@@ -148,7 +153,11 @@ function ServiceSelectionModal({
                                   {selectedService.discount_percent}% OFF
                                 </span>
                               </div>
-                              <div className="display-6 text-success fw-bold mb-0">
+                              <div className="display-6 text-success fw-bold mb-0" style={{
+                                fontSize: 'clamp(2rem, 5vw, 3rem)',
+                                lineHeight: '1.2',
+                                wordWrap: 'break-word'
+                              }}>
                                 ₱{Number(selectedService.promo_price).toLocaleString()}
                               </div>
                             </div>
@@ -156,7 +165,11 @@ function ServiceSelectionModal({
 
                           {selectedService.type === "special" && (
                             <div className="pricing-section-large">
-                              <div className="display-6 text-info fw-bold mb-3">
+                              <div className="display-6 text-info fw-bold mb-3" style={{
+                                fontSize: 'clamp(2rem, 5vw, 3rem)',
+                                lineHeight: '1.2',
+                                wordWrap: 'break-word'
+                              }}>
                                 ₱{Number(selectedService.price).toLocaleString()}
                               </div>
                               <span className="badge bg-info fs-6">Special Service</span>
@@ -165,19 +178,29 @@ function ServiceSelectionModal({
 
                           {selectedService.type === "regular" && (
                             <div className="pricing-section-large">
-                              <div className="display-6 text-dark fw-bold mb-0">
+                              <div className="display-6 text-dark fw-bold mb-0" style={{
+                                fontSize: 'clamp(2rem, 5vw, 3rem)',
+                                lineHeight: '1.2',
+                                wordWrap: 'break-word'
+                              }}>
                                 ₱{Number(selectedService.price).toLocaleString()}
                               </div>
                             </div>
                           )}
                         </div>
 
-                        <div className="d-grid gap-2">
+                        <div className="d-grid gap-3">
                           <button
                             className="btn btn-success btn-lg fw-bold"
                             onClick={() => {
                               onServiceSelect(selectedService);
                               onClose();
+                            }}
+                            style={{
+                              padding: '1rem 2rem',
+                              fontSize: '1.1rem',
+                              borderRadius: '12px',
+                              whiteSpace: 'nowrap'
                             }}
                           >
                             <i className="bi bi-check-circle-fill me-2"></i>
@@ -186,6 +209,12 @@ function ServiceSelectionModal({
                           <button
                             className="btn btn-outline-primary btn-lg"
                             onClick={handleBackToGrid}
+                            style={{
+                              padding: '0.8rem 1.5rem',
+                              fontSize: '1rem',
+                              borderRadius: '12px',
+                              whiteSpace: 'nowrap'
+                            }}
                           >
                             <i className="bi bi-arrow-left me-2"></i>
                             Choose Different Service
@@ -559,35 +588,78 @@ function ServiceSelectionModal({
         
         /* Single service view responsive */
         .single-service-view .selected-service-card {
-          max-width: 600px;
+          max-width: 700px;
           margin: 0 auto;
+          min-height: 400px;
         }
         
-        @media (max-width: 768px) {
+        .selected-service-card .card-body {
+          min-height: 350px;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+        }
+        
+        .pricing-section-large {
+          min-height: 100px;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          align-items: center;
+        }
+        
+        @media (max-width: 576px) {
           .single-service-view .selected-service-card .card-body {
-            padding: 2rem !important;
+            padding: 1.5rem !important;
+            min-height: 300px;
           }
           
           .single-service-view h2 {
-            font-size: 1.5rem;
+            font-size: 1.3rem !important;
+            line-height: 1.4 !important;
           }
           
           .single-service-view .display-6 {
-            font-size: 2rem;
+            font-size: 1.8rem !important;
+            line-height: 1.3 !important;
+          }
+          
+          .pricing-section-large {
+            min-height: 80px;
+          }
+        }
+        
+        @media (min-width: 577px) and (max-width: 768px) {
+          .single-service-view .selected-service-card .card-body {
+            padding: 2rem !important;
+            min-height: 350px;
+          }
+          
+          .single-service-view h2 {
+            font-size: 1.6rem !important;
+            line-height: 1.3 !important;
+          }
+          
+          .single-service-view .display-6 {
+            font-size: 2.2rem !important;
+            line-height: 1.2 !important;
           }
         }
         
         @media (min-width: 769px) {
           .single-service-view .selected-service-card .card-body {
             padding: 3rem !important;
+            min-height: 400px;
           }
           
           .single-service-view h2 {
-            font-size: 2rem;
+            font-size: 2rem !important;
+            line-height: 1.3 !important;
           }
           
           .single-service-view .display-6 {
-            font-size: 2.5rem;
+            font-size: 2.8rem !important;
+            line-height: 1.2 !important;
           }
         }
       `}</style>

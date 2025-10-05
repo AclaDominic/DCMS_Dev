@@ -62,15 +62,36 @@ export default function NotificationBell() {
       <button
         ref={btnRef}
         onClick={toggle}
-        className="btn btn-light d-inline-flex align-items-center"
+        className="btn d-inline-flex align-items-center"
         title="Notifications"
         aria-label="Notifications"
+        style={{
+          background: 'linear-gradient(135deg, #00b4d8 0%, #0077b6 100%)',
+          border: 'none',
+          color: 'white',
+          borderRadius: '8px',
+          padding: '0.5rem 0.75rem',
+          transition: 'all 0.3s ease'
+        }}
+        onMouseEnter={(e) => {
+          e.target.style.background = 'linear-gradient(135deg, #0096c7 0%, #0056b3 100%)';
+          e.target.style.transform = 'translateY(-1px)';
+        }}
+        onMouseLeave={(e) => {
+          e.target.style.background = 'linear-gradient(135deg, #00b4d8 0%, #0077b6 100%)';
+          e.target.style.transform = 'translateY(0)';
+        }}
       >
         <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
           <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/>
         </svg>
         {unread > 0 && (
-          <span className="badge bg-danger ms-2">
+          <span className="badge ms-2" style={{
+            backgroundColor: '#dc3545',
+            color: 'white',
+            fontSize: '0.7rem',
+            fontWeight: '600'
+          }}>
             {unread > 99 ? "99+" : unread}
           </span>
         )}
@@ -90,45 +111,136 @@ export default function NotificationBell() {
             maxWidth: "calc(100vw - 16px)",
           }}
         >
-          <div className="card shadow">
-            <div className="card-header py-2 d-flex align-items-center justify-content-between">
+          <div className="card shadow" style={{ borderRadius: '12px', border: 'none' }}>
+            <div className="card-header py-3 d-flex align-items-center justify-content-between" style={{
+              background: 'linear-gradient(135deg, #00b4d8 0%, #0077b6 100%)',
+              color: 'white',
+              borderRadius: '12px 12px 0 0'
+            }}>
               <div>
-                <strong>Notifications</strong>
-                <div className="small text-muted">Clinic updates &amp; alerts</div>
+                <strong style={{ fontSize: '1.1rem' }}>Notifications</strong>
+                <div className="small" style={{ opacity: 0.9 }}>Clinic updates &amp; alerts</div>
               </div>
-              <button className="btn btn-link btn-sm p-0" onClick={() => setOpen(false)}>Close</button>
+              <button 
+                className="btn btn-sm p-0" 
+                onClick={() => setOpen(false)}
+                style={{
+                  color: 'white',
+                  background: 'rgba(255,255,255,0.2)',
+                  border: 'none',
+                  borderRadius: '6px',
+                  padding: '0.25rem 0.5rem',
+                  fontSize: '0.8rem',
+                  fontWeight: '600'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.background = 'rgba(255,255,255,0.3)';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.background = 'rgba(255,255,255,0.2)';
+                }}
+              >
+                Close
+              </button>
             </div>
 
             <div className="list-group list-group-flush" style={{ maxHeight: 340, overflow: "auto" }}>
-              {loading && <div className="list-group-item small text-muted">Loading…</div>}
-              {error && !loading && <div className="list-group-item small text-danger">{error}</div>}
+              {loading && (
+                <div className="list-group-item small text-muted p-3" style={{ textAlign: 'center' }}>
+                  <i className="bi bi-hourglass-split me-2"></i>Loading…
+                </div>
+              )}
+              {error && !loading && (
+                <div className="list-group-item small text-danger p-3" style={{ textAlign: 'center' }}>
+                  <i className="bi bi-exclamation-triangle me-2"></i>{error}
+                </div>
+              )}
               {!loading && !error && items.length === 0 && (
-                <div className="list-group-item small text-muted">No notifications.</div>
+                <div className="list-group-item small text-muted p-4" style={{ textAlign: 'center' }}>
+                  <i className="bi bi-bell-slash display-6 d-block mb-2 text-muted"></i>
+                  No notifications.
+                </div>
               )}
               {!loading && !error && items.map((n) => (
-                <div key={n.id} className="list-group-item small">
+                <div key={n.id} className="list-group-item small p-3" style={{
+                  borderLeft: 'none',
+                  borderRight: 'none',
+                  borderBottom: '1px solid #f1f3f4',
+                  transition: 'background-color 0.2s ease'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.backgroundColor = '#f8f9fa';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.backgroundColor = 'transparent';
+                }}
+                >
                   <div className="d-flex justify-content-between align-items-start">
-                    <div className="me-2">
-                      <div className="fw-semibold">
+                    <div className="me-3 flex-grow-1">
+                      <div className="fw-semibold mb-1" style={{ color: '#1e293b', fontSize: '0.9rem' }}>
                         {n.title || "Notification"}
-                        {n.severity === "danger"  && <span className="badge bg-danger ms-2">Important</span>}
-                        {n.severity === "warning" && <span className="badge bg-warning text-dark ms-2">Warning</span>}
-                        {n.severity === "info"    && <span className="badge bg-info text-dark ms-2">Info</span>}
+                        {n.severity === "danger"  && <span className="badge ms-2" style={{ backgroundColor: '#dc3545', color: 'white', fontSize: '0.65rem' }}>Important</span>}
+                        {n.severity === "warning" && <span className="badge ms-2" style={{ backgroundColor: '#ffc107', color: '#000', fontSize: '0.65rem' }}>Warning</span>}
+                        {n.severity === "info"    && <span className="badge ms-2" style={{ backgroundColor: '#00b4d8', color: 'white', fontSize: '0.65rem' }}>Info</span>}
                       </div>
-                      {n.body && <div className="text-muted mt-1">{n.body}</div>}
-                      {n.data?.date && <div className="text-muted">Date: {n.data.date}</div>}
+                      {n.body && <div className="text-muted mt-1" style={{ fontSize: '0.8rem', lineHeight: '1.4' }}>{n.body}</div>}
+                      {n.data?.date && <div className="text-muted mt-1" style={{ fontSize: '0.75rem' }}>Date: {n.data.date}</div>}
                     </div>
-                    <small className="text-muted">
-                      {n.created_at ? new Date(n.created_at).toLocaleString() : ""}
+                    <small className="text-muted" style={{ fontSize: '0.7rem', whiteSpace: 'nowrap' }}>
+                      {n.created_at ? new Date(n.created_at).toLocaleDateString() : ""}
+                      <br />
+                      {n.created_at ? new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ""}
                     </small>
                   </div>
                 </div>
               ))}
             </div>
 
-            <div className="card-footer py-2 d-flex justify-content-between">
-              <Link to="/notifications" className="btn btn-link btn-sm p-0">See all</Link>
-              <button className="btn btn-link btn-sm p-0" onClick={() => setOpen(false)}>Close</button>
+            <div className="card-footer py-3 d-flex justify-content-between" style={{
+              background: '#f8f9fa',
+              borderRadius: '0 0 12px 12px',
+              borderTop: '1px solid #e9ecef'
+            }}>
+              <Link 
+                to="/notifications" 
+                className="btn btn-sm p-0"
+                style={{
+                  color: '#00b4d8',
+                  background: 'transparent',
+                  border: 'none',
+                  fontWeight: '600',
+                  fontSize: '0.8rem'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.color = '#0077b6';
+                  e.target.style.textDecoration = 'underline';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.color = '#00b4d8';
+                  e.target.style.textDecoration = 'none';
+                }}
+              >
+                See all
+              </Link>
+              <button 
+                className="btn btn-sm p-0" 
+                onClick={() => setOpen(false)}
+                style={{
+                  color: '#6c757d',
+                  background: 'transparent',
+                  border: 'none',
+                  fontWeight: '600',
+                  fontSize: '0.8rem'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.color = '#495057';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.color = '#6c757d';
+                }}
+              >
+                Close
+              </button>
             </div>
           </div>
         </div>

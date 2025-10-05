@@ -111,96 +111,220 @@ export default function StaffAppointmentManager() {
   if (loading) return <LoadingSpinner />;
 
   return (
-    <div className="p-4">
-      <h1 className="text-xl font-bold mb-4">Pending Appointments</h1>
-      {appointments.length === 0 ? (
-        <p>No pending appointments.</p>
-      ) : (
-        <div className="overflow-x-auto">
-          <table className="table-auto w-full border text-sm">
-            <thead>
-              <tr className="bg-gray-100">
-                <th className="p-2 border">#</th>
-                <th className="p-2 border">Service</th>
-                <th className="p-2 border">Date</th>
-                <th className="p-2 border">Time</th>
-                <th className="p-2 border">Payment</th>
-                <th className="p-2 border">Status</th>
-                <th className="p-2 border">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {appointments.map((appt, i) => (
-                <tr key={appt.id} className="text-center">
-                  <td className="p-2 border">{i + 1}</td>
-                  <td className="p-2 border">{appt.service?.name}</td>
-                  <td className="p-2 border">{appt.date}</td>
-                  <td className="p-2 border">{appt.time_slot}</td>
-                  <td className="p-2 border">{appt.payment_method}</td>
-                  <td className="p-2 border capitalize">{appt.status}</td>
-                  <td className="p-2 border">
-                    <div className="flex justify-center gap-2">
-                      <button
-                        onClick={() => approve(appt.id)}
-                        disabled={processingId === appt.id}
-                        className="px-2 py-1 bg-green-600 text-white rounded text-xs disabled:opacity-50"
-                      >
-                        {processingId === appt.id ? "Approving..." : "Approve"}
-                      </button>
+    <div className="w-100" style={{ padding: 0, margin: 0 }}>
+      <div className="container-fluid px-0 py-0">
+        <div className="row g-0">
+          <div className="col-12">
+            <div className="bg-white p-4" style={{ minHeight: '100vh' }}>
+              <h1 className="h3 fw-bold mb-4" style={{ color: '#1e293b' }}>Pending Appointments</h1>
+              {appointments.length === 0 ? (
+                <div className="d-flex flex-column justify-content-center align-items-center" style={{ minHeight: '60vh' }}>
+                  <i className="bi bi-calendar-x display-1 d-block mb-3 text-muted"></i>
+                  <h4 className="fw-normal text-muted">No pending appointments</h4>
+                  <p className="text-muted">All appointments have been processed.</p>
+                </div>
+              ) : (
+                <div className="table-responsive">
+                  <table className="table table-hover mb-0" style={{ borderRadius: '12px', overflow: 'hidden', boxShadow: '0 2px 10px rgba(0,0,0,0.1)' }}>
+                    <thead style={{ background: 'linear-gradient(135deg, #00b4d8 0%, #0077b6 100%)', color: 'white' }}>
+                      <tr>
+                        <th className="border-0 py-3 px-4 fw-semibold">#</th>
+                        <th className="border-0 py-3 px-4 fw-semibold">Service</th>
+                        <th className="border-0 py-3 px-4 fw-semibold">Date</th>
+                        <th className="border-0 py-3 px-4 fw-semibold">Time</th>
+                        <th className="border-0 py-3 px-4 fw-semibold">Payment</th>
+                        <th className="border-0 py-3 px-4 fw-semibold">Status</th>
+                        <th className="border-0 py-3 px-4 fw-semibold text-center">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {appointments.map((appt, i) => (
+                        <tr key={appt.id} style={{ 
+                          borderBottom: '1px solid #f1f3f4',
+                          transition: 'background-color 0.2s ease'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.target.style.backgroundColor = '#f8f9fa';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.target.style.backgroundColor = 'transparent';
+                        }}
+                        >
+                          <td className="py-3 px-4 fw-semibold" style={{ color: '#6c757d' }}>{i + 1}</td>
+                          <td className="py-3 px-4 fw-semibold" style={{ color: '#1e293b' }}>{appt.service?.name}</td>
+                          <td className="py-3 px-4" style={{ color: '#495057' }}>{appt.date}</td>
+                          <td className="py-3 px-4" style={{ color: '#495057' }}>{appt.time_slot}</td>
+                          <td className="py-3 px-4">
+                            <span className="badge" style={{
+                              backgroundColor: appt.payment_method === 'hmo' ? '#6366f1' : '#00b4d8',
+                              color: 'white',
+                              fontSize: '0.75rem',
+                              fontWeight: '600',
+                              padding: '0.4rem 0.8rem',
+                              borderRadius: '20px'
+                            }}>
+                              {appt.payment_method?.toUpperCase()}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4">
+                            <span className="badge" style={{
+                              backgroundColor: '#ffc107',
+                              color: '#000',
+                              fontSize: '0.75rem',
+                              fontWeight: '600',
+                              padding: '0.4rem 0.8rem',
+                              borderRadius: '20px'
+                            }}>
+                              {appt.status?.toUpperCase()}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 text-center">
+                            <div className="d-flex justify-content-center gap-2 flex-wrap">
+                              <button
+                                onClick={() => approve(appt.id)}
+                                disabled={processingId === appt.id}
+                                className="btn btn-sm text-white rounded-pill disabled:opacity-50"
+                                style={{
+                                  background: 'linear-gradient(135deg, #00b4d8 0%, #0077b6 100%)',
+                                  border: 'none',
+                                  fontWeight: '600',
+                                  transition: 'all 0.3s ease',
+                                  padding: '0.5rem 1rem',
+                                  fontSize: '0.8rem'
+                                }}
+                                onMouseEnter={(e) => {
+                                  if (!e.target.disabled) {
+                                    e.target.style.background = 'linear-gradient(135deg, #0096c7 0%, #0056b3 100%)';
+                                    e.target.style.transform = 'translateY(-1px)';
+                                  }
+                                }}
+                                onMouseLeave={(e) => {
+                                  if (!e.target.disabled) {
+                                    e.target.style.background = 'linear-gradient(135deg, #00b4d8 0%, #0077b6 100%)';
+                                    e.target.style.transform = 'translateY(0)';
+                                  }
+                                }}
+                              >
+                                <i className="bi bi-check-circle me-1"></i>
+                                {processingId === appt.id ? "Approving..." : "Approve"}
+                              </button>
 
-                    {appt.payment_method === "hmo" && (
-                      <button
-                        onClick={() => openVerify(appt)}
-                        className="px-2 py-1 bg-indigo-600 text-white rounded text-xs"
-                      >
-                        Verify HMO
-                      </button>
-                    )}
+                              {appt.payment_method === "hmo" && (
+                                <button
+                                  onClick={() => openVerify(appt)}
+                                  className="btn btn-sm text-white rounded-pill"
+                                  style={{
+                                    background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
+                                    border: 'none',
+                                    fontWeight: '600',
+                                    transition: 'all 0.3s ease',
+                                    padding: '0.5rem 1rem',
+                                    fontSize: '0.8rem'
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    e.target.style.background = 'linear-gradient(135deg, #5b5bd6 0%, #4338ca 100%)';
+                                    e.target.style.transform = 'translateY(-1px)';
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.target.style.background = 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)';
+                                    e.target.style.transform = 'translateY(0)';
+                                  }}
+                                >
+                                  <i className="bi bi-shield-check me-1"></i>
+                                  Verify HMO
+                                </button>
+                              )}
 
-                      <button
-                        onClick={() => setSelected(appt)}
-                        disabled={processingId === appt.id}
-                        className="px-2 py-1 bg-red-600 text-white rounded text-xs disabled:opacity-50"
-                      >
-                        {processingId === appt.id ? "Rejecting..." : "Reject"}
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                              <button
+                                onClick={() => setSelected(appt)}
+                                disabled={processingId === appt.id}
+                                className="btn btn-sm text-white rounded-pill disabled:opacity-50"
+                                style={{
+                                  background: 'linear-gradient(135deg, #dc3545 0%, #c82333 100%)',
+                                  border: 'none',
+                                  fontWeight: '600',
+                                  transition: 'all 0.3s ease',
+                                  padding: '0.5rem 1rem',
+                                  fontSize: '0.8rem'
+                                }}
+                                onMouseEnter={(e) => {
+                                  if (!e.target.disabled) {
+                                    e.target.style.background = 'linear-gradient(135deg, #c82333 0%, #a71e2a 100%)';
+                                    e.target.style.transform = 'translateY(-1px)';
+                                  }
+                                }}
+                                onMouseLeave={(e) => {
+                                  if (!e.target.disabled) {
+                                    e.target.style.background = 'linear-gradient(135deg, #dc3545 0%, #c82333 100%)';
+                                    e.target.style.transform = 'translateY(0)';
+                                  }
+                                }}
+                              >
+                                <i className="bi bi-x-circle me-1"></i>
+                                {processingId === appt.id ? "Rejecting..." : "Reject"}
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
-      )}
+      </div>
 
-      {/* Reject Modal */}
-      {selected && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-10">
-          <div className="bg-white p-6 rounded w-96 shadow-lg">
-            <h2 className="text-lg font-bold mb-2">Reject Appointment</h2>
-            <p className="text-sm mb-2">
-              Enter reason for rejecting appointment on {selected.date} at{" "}
-              {selected.time_slot}
-            </p>
-            <textarea
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              className="w-full border p-2 mb-2"
-              rows={3}
-            />
-            <div className="flex justify-end gap-2">
-              <button
-                className="px-3 py-1 bg-gray-300 rounded"
-                onClick={() => setSelected(null)}
-              >
-                Cancel
-              </button>
-              <button
-                className="px-3 py-1 bg-red-600 text-white rounded"
-                onClick={reject}
-              >
-                Reject
-              </button>
+    {/* Reject Modal */}
+    {selected && (
+        <div className="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style={{ 
+          backgroundColor: 'rgba(0,0,0,0.5)', 
+          zIndex: 1050 
+        }}>
+          <div className="bg-white rounded-3 shadow-lg" style={{ width: '400px', maxWidth: '90vw' }}>
+            <div className="p-4">
+              <h2 className="h4 fw-bold mb-3" style={{ color: '#1e293b' }}>Reject Appointment</h2>
+              <p className="text-muted mb-3">
+                Enter reason for rejecting appointment on <strong>{selected.date}</strong> at{" "}
+                <strong>{selected.time_slot}</strong>
+              </p>
+              <textarea
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                className="form-control mb-3"
+                rows={3}
+                placeholder="Enter rejection reason..."
+                style={{ borderRadius: '8px', border: '2px solid #e9ecef' }}
+              />
+              <div className="d-flex justify-content-end gap-2">
+                <button
+                  className="btn btn-outline-secondary"
+                  onClick={() => setSelected(null)}
+                  style={{ borderRadius: '8px', fontWeight: '600' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="btn text-white"
+                  onClick={reject}
+                  style={{
+                    background: 'linear-gradient(135deg, #dc3545 0%, #c82333 100%)',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontWeight: '600'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.background = 'linear-gradient(135deg, #c82333 0%, #a71e2a 100%)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.background = 'linear-gradient(135deg, #dc3545 0%, #c82333 100%)';
+                  }}
+                >
+                  <i className="bi bi-x-circle me-1"></i>
+                  Reject
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -208,69 +332,130 @@ export default function StaffAppointmentManager() {
 
       {/* HMO Verify Modal */}
       {verifyId && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-20">
-          <div className="bg-white p-6 rounded w-[520px] shadow-lg">
-            <h2 className="text-lg font-bold mb-3">HMO Verification</h2>
-            {verifyAppt && (
-              <div className="mb-3 text-sm">
-                <div><strong>Service:</strong> {verifyAppt.service?.name || '—'}</div>
-                <div><strong>Service Price:</strong> ₱{Number(verifyAppt.service?.price ?? 0).toLocaleString()}</div>
-                <div><strong>Appointment Date:</strong> {onlyDate(verifyAppt.date)}</div>
-              </div>
-            )}
-            {!revealed ? (
-              <>
-                <p className="text-sm mb-2">Enter your password to reveal patient HMO details.</p>
-                <input
-                  type="password"
-                  className="w-full border p-2 mb-3"
-                  value={verifyPwd}
-                  onChange={(e) => setVerifyPwd(e.target.value)}
-                  placeholder="Your password"
-                />
-                <div className="flex justify-end gap-2">
-                  <button className="px-3 py-1 bg-gray-300 rounded" onClick={() => setVerifyId(null)}>Cancel</button>
-                  <button className="px-3 py-1 bg-indigo-600 text-white rounded" onClick={revealHmo}>Reveal</button>
+        <div className="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style={{ 
+          backgroundColor: 'rgba(0,0,0,0.5)', 
+          zIndex: 1060 
+        }}>
+          <div className="bg-white rounded-3 shadow-lg" style={{ width: '520px', maxWidth: '90vw' }}>
+            <div className="p-4">
+              <h2 className="h4 fw-bold mb-3" style={{ color: '#1e293b' }}>HMO Verification</h2>
+              {verifyAppt && (
+                <div className="mb-3 p-3 rounded" style={{ backgroundColor: '#f8f9fa' }}>
+                  <div className="row">
+                    <div className="col-6"><strong>Service:</strong> {verifyAppt.service?.name || '—'}</div>
+                    <div className="col-6"><strong>Price:</strong> ₱{Number(verifyAppt.service?.price ?? 0).toLocaleString()}</div>
+                    <div className="col-12 mt-2"><strong>Date:</strong> {onlyDate(verifyAppt.date)}</div>
+                  </div>
                 </div>
-              </>
-            ) : (
-              <>
-                <div className="mb-3 text-sm">
-                  <div><strong>Provider:</strong> {revealed.provider_name}</div>
-                  <div><strong>HMO Number:</strong> {revealed.hmo_number || '—'}</div>
-                  <div><strong>Name on Card:</strong> {revealed.patient_fullname_on_card || '—'}</div>
-                </div>
-                <div className="mb-2">
-                  <label className="text-sm">Coverage Amount (₱)</label>
+              )}
+              {!revealed ? (
+                <>
+                  <p className="text-muted mb-3">Enter your password to reveal patient HMO details.</p>
                   <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    className="w-full border p-2"
-                    value={coverage}
-                    onChange={(e) => setCoverage(e.target.value)}
+                    type="password"
+                    className="form-control mb-3"
+                    value={verifyPwd}
+                    onChange={(e) => setVerifyPwd(e.target.value)}
+                    placeholder="Your password"
+                    style={{ borderRadius: '8px', border: '2px solid #e9ecef' }}
                   />
-                  {verifyAppt && coverage && (
-                    <div className="text-xs text-zinc-600 mt-1">
-                      Estimated balance: ₱{Math.max(0, Number(verifyAppt.service?.price ?? 0) - Number(coverage || 0)).toLocaleString()}
+                  <div className="d-flex justify-content-end gap-2">
+                    <button 
+                      className="btn btn-outline-secondary" 
+                      onClick={() => setVerifyId(null)}
+                      style={{ borderRadius: '8px', fontWeight: '600' }}
+                    >
+                      Cancel
+                    </button>
+                    <button 
+                      className="btn text-white" 
+                      onClick={revealHmo}
+                      style={{
+                        background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
+                        border: 'none',
+                        borderRadius: '8px',
+                        fontWeight: '600'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.target.style.background = 'linear-gradient(135deg, #5b5bd6 0%, #4338ca 100%)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.target.style.background = 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)';
+                      }}
+                    >
+                      <i className="bi bi-eye me-1"></i>
+                      Reveal
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="mb-3 p-3 rounded" style={{ backgroundColor: '#f8f9fa' }}>
+                    <div className="row">
+                      <div className="col-6"><strong>Provider:</strong> {revealed.provider_name}</div>
+                      <div className="col-6"><strong>HMO Number:</strong> {revealed.hmo_number || '—'}</div>
+                      <div className="col-12 mt-2"><strong>Name on Card:</strong> {revealed.patient_fullname_on_card || '—'}</div>
                     </div>
-                  )}
-                </div>
-                <div className="mb-2">
-                  <label className="text-sm">Note to patient (what coverage means, balance, etc.)</label>
-                  <textarea
-                    className="w-full border p-2"
-                    rows={3}
-                    value={note}
-                    onChange={(e) => setNote(e.target.value)}
-                  />
-                </div>
-                <div className="flex justify-end gap-2">
-                  <button className="px-3 py-1 bg-gray-300 rounded" onClick={() => { setVerifyId(null); setVerifyAppt(null); }}>Close</button>
-                  <button className="px-3 py-1 bg-green-600 text-white rounded" onClick={notifyCoverage}>Send & Approve</button>
-                </div>
-              </>
-            )}
+                  </div>
+                  <div className="mb-3">
+                    <label className="form-label fw-semibold">Coverage Amount (₱)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      className="form-control"
+                      value={coverage}
+                      onChange={(e) => setCoverage(e.target.value)}
+                      style={{ borderRadius: '8px', border: '2px solid #e9ecef' }}
+                    />
+                    {verifyAppt && coverage && (
+                      <div className="text-muted mt-1 small">
+                        Estimated balance: ₱{Math.max(0, Number(verifyAppt.service?.price ?? 0) - Number(coverage || 0)).toLocaleString()}
+                      </div>
+                    )}
+                  </div>
+                  <div className="mb-3">
+                    <label className="form-label fw-semibold">Note to patient</label>
+                    <textarea
+                      className="form-control"
+                      rows={3}
+                      value={note}
+                      onChange={(e) => setNote(e.target.value)}
+                      placeholder="What coverage means, balance, etc."
+                      style={{ borderRadius: '8px', border: '2px solid #e9ecef' }}
+                    />
+                  </div>
+                  <div className="d-flex justify-content-end gap-2">
+                    <button 
+                      className="btn btn-outline-secondary" 
+                      onClick={() => { setVerifyId(null); setVerifyAppt(null); }}
+                      style={{ borderRadius: '8px', fontWeight: '600' }}
+                    >
+                      Close
+                    </button>
+                    <button 
+                      className="btn text-white" 
+                      onClick={notifyCoverage}
+                      style={{
+                        background: 'linear-gradient(135deg, #00b4d8 0%, #0077b6 100%)',
+                        border: 'none',
+                        borderRadius: '8px',
+                        fontWeight: '600'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.target.style.background = 'linear-gradient(135deg, #0096c7 0%, #0056b3 100%)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.target.style.background = 'linear-gradient(135deg, #00b4d8 0%, #0077b6 100%)';
+                      }}
+                    >
+                      <i className="bi bi-send me-1"></i>
+                      Send & Approve
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </div>
       )}

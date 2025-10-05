@@ -22,12 +22,10 @@ function DentistLayout() {
         </main>
       ) : (
         // Full-width responsive layout for all other pages
-        <main className="flex-grow-1 py-4">
-          <div className="container-fluid px-2 px-md-3 px-lg-4">
-            <DentistPasswordGate>
-              <Outlet />
-            </DentistPasswordGate>
-          </div>
+        <main className="flex-grow-1">
+          <DentistPasswordGate>
+            <Outlet />
+          </DentistPasswordGate>
         </main>
       )}
     </div>

@@ -106,7 +106,7 @@ function PatientHomepage() {
       {/* Welcome Section */}
       <div className="row mb-4">
         <div className="col-12">
-          <div className="card border-0 shadow-sm bg-primary text-white">
+          <div className="card border-0 shadow-sm" style={{background: 'linear-gradient(135deg, #00b4d8 0%, #0077b6 100%)', color: 'white'}}>
             <div className="card-body p-4">
               <div className="row align-items-center">
                 <div className="col-md-8">
@@ -150,7 +150,7 @@ function PatientHomepage() {
                 <p className="card-text text-muted">
                   Schedule your next dental visit with our experienced team
                 </p>
-                <div className="btn btn-primary">
+                <div className="btn" style={{background: 'linear-gradient(135deg, #00b4d8 0%, #0077b6 100%)', color: 'white', border: 'none'}}>
                   <i className="bi bi-plus-circle me-2"></i>
                   Book Now
                 </div>
@@ -169,7 +169,7 @@ function PatientHomepage() {
                 <p className="card-text text-muted">
                   View and manage your upcoming and past appointments
                 </p>
-                <div className="btn btn-success">
+                <div className="btn" style={{background: 'linear-gradient(135deg, #00b4d8 0%, #0077b6 100%)', color: 'white', border: 'none'}}>
                   <i className="bi bi-list-ul me-2"></i>
                   View All
                 </div>
@@ -188,7 +188,7 @@ function PatientHomepage() {
                 <p className="card-text text-muted">
                   Update your personal information and HMO details
                 </p>
-                <div className="btn btn-info">
+                <div className="btn" style={{background: 'linear-gradient(135deg, #00b4d8 0%, #0077b6 100%)', color: 'white', border: 'none'}}>
                   <i className="bi bi-gear me-2"></i>
                   Manage
                 </div>
@@ -205,7 +205,7 @@ function PatientHomepage() {
             <div className="card-header bg-white border-0 pb-0">
               <div className="d-flex justify-content-between align-items-center">
                 <h3 className="h5 mb-0">Recent Appointments</h3>
-                <Link to="/patient/appointments" className="btn btn-outline-primary btn-sm">
+                <Link to="/patient/appointments" className="btn btn-sm" style={{border: '2px solid #00b4d8', color: '#00b4d8', background: 'transparent'}}>
                   View All
                 </Link>
               </div>
@@ -222,7 +222,7 @@ function PatientHomepage() {
                 <div className="text-center py-4">
                   <i className="bi bi-calendar-x fs-1 text-muted"></i>
                   <p className="mt-2 text-muted">No appointments yet</p>
-                  <Link to="/patient/appointment" className="btn btn-primary">
+                  <Link to="/patient/appointment" className="btn" style={{background: 'linear-gradient(135deg, #00b4d8 0%, #0077b6 100%)', color: 'white', border: 'none'}}>
                     Book Your First Appointment
                   </Link>
                 </div>
@@ -313,7 +313,7 @@ function PatientHomepage() {
                   </p>
                 </div>
                 <div className="col-md-4 text-md-end">
-                  <i className="bi bi-tooth fs-1 text-primary opacity-25"></i>
+                  <i className="bi bi-tooth fs-1 opacity-25" style={{color: '#00b4d8'}}></i>
                 </div>
               </div>
             </div>

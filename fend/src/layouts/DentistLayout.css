@@ -1,11 +1,21 @@
+:root {
+  --brand: #00b4d8;
+  --brand-dark: #0077b6;
+  --ink: #0f172a;
+  --muted: #667085;
+}
+
 .dentist-layout {
-  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  background: 
+    radial-gradient(1200px 500px at 10% -10%, rgba(0,180,216,.14), transparent 60%),
+    radial-gradient(900px 500px at 110% 0%, rgba(0,119,182,.12), transparent 60%),
+    linear-gradient(180deg, #ffffff, #f6f9fc);
   min-height: 100vh;
 }
 
 .dentist-layout .navbar {
-  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
-  box-shadow: 0 2px 10px rgba(0, 123, 255, 0.1);
+  background: linear-gradient(135deg, var(--brand) 0%, var(--brand-dark) 100%);
+  box-shadow: 0 2px 10px rgba(0, 119, 182, 0.1);
 }
 
 .dentist-layout .navbar-brand {
@@ -42,7 +52,7 @@
 
 .dentist-layout .btn-outline-light:hover {
   background-color: white;
-  color: #007bff;
+  color: var(--brand-dark);
   border-color: white;
   transform: translateY(-1px);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
@@ -80,7 +90,36 @@
 }
 
 .dentist-layout .container-fluid {
-  max-width: 1400px;
+  max-width: 100% !important;
+  width: 100% !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  margin: 0 !important;
+}
+
+/* Ensure full width utilization for all dentist pages */
+.dentist-layout {
+  width: 100vw;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* Force full width for dentist page cards */
+.dentist-page-card {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+}
+
+/* Override any Bootstrap container constraints for dentist pages */
+.dentist-layout .container,
+.dentist-layout .container-fluid {
+  max-width: none !important;
+  width: 100% !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  margin: 0 !important;
 }
 
 /* Responsive adjustments */
@@ -93,30 +132,116 @@
     padding: 0.4rem 0.8rem !important;
     margin: 0.1rem 0;
   }
+  
+  .dentist-layout .container-fluid {
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+  }
+}
+
+/* Better screen width utilization */
+@media (min-width: 1200px) {
+  .dentist-layout .container-fluid {
+    padding-left: 1.5rem !important;
+    padding-right: 1.5rem !important;
+  }
+}
+
+@media (min-width: 1400px) {
+  .dentist-layout .container-fluid {
+    padding-left: 2rem !important;
+    padding-right: 2rem !important;
+  }
+}
+
+@media (min-width: 1600px) {
+  .dentist-layout .container-fluid {
+    padding-left: 2.5rem !important;
+    padding-right: 2.5rem !important;
+  }
+}
+
+/* Enhanced responsive design for cards and content */
+@media (min-width: 768px) {
+  .dentist-layout .card {
+    width: 100%;
+    max-width: none;
+  }
+}
+
+/* Better table responsiveness */
+.dentist-layout .table-responsive {
+  width: 100%;
+}
+
+/* Ensure tables utilize full width */
+.dentist-layout .table {
+  width: 100%;
+  table-layout: auto;
+}
+
+/* Better column distribution for appointment tables */
+@media (min-width: 1200px) {
+  .dentist-layout .table th,
+  .dentist-layout .table td {
+    padding: 0.75rem 1rem;
+  }
+}
+
+@media (min-width: 1400px) {
+  .dentist-layout .table th,
+  .dentist-layout .table td {
+    padding: 0.75rem 1.25rem;
+  }
+}
+
+/* Ensure forms and inputs utilize available space */
+.dentist-layout .form-control,
+.dentist-layout .form-select {
+  width: 100%;
+}
+
+/* Enhanced button responsiveness */
+.dentist-layout .btn {
+  min-width: auto;
+}
+
+@media (max-width: 576px) {
+  .dentist-layout .btn {
+    width: 100%;
+  }
+}
+
+/* Ensure mobile cards utilize full width */
+@media (max-width: 991px) {
+  .dentist-layout .card {
+    margin-left: 0;
+    margin-right: 0;
+  }
 }
 
 /* Card styling for dentist pages */
 .dentist-layout .card {
   border: none;
-  box-shadow: 0 4px 15px rgba(0, 123, 255, 0.1);
+  box-shadow: 0 4px 15px rgba(0, 119, 182, 0.1);
   border-radius: 0.75rem;
   transition: all 0.3s ease;
 }
 
 .dentist-layout .card:hover {
-  box-shadow: 0 8px 25px rgba(0, 123, 255, 0.15);
+  box-shadow: 0 8px 25px rgba(0, 119, 182, 0.15);
   transform: translateY(-2px);
 }
 
 .dentist-layout .card-header {
-  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+  background: linear-gradient(135deg, var(--brand) 0%, var(--brand-dark) 100%);
   color: white;
   border-radius: 0.75rem 0.75rem 0 0 !important;
   border: none;
 }
 
 .dentist-layout .btn-primary {
-  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+  background: linear-gradient(135deg, var(--brand) 0%, var(--brand-dark) 100%);
   border: none;
   border-radius: 0.5rem;
   padding: 0.6rem 1.5rem;
@@ -125,14 +250,14 @@
 }
 
 .dentist-layout .btn-primary:hover {
-  background: linear-gradient(135deg, #0056b3 0%, #004085 100%);
+  background: linear-gradient(135deg, var(--brand-dark) 0%, #004085 100%);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+  box-shadow: 0 4px 12px rgba(0, 119, 182, 0.3);
 }
 
 .dentist-layout .btn-outline-primary {
-  border-color: #007bff;
-  color: #007bff;
+  border-color: var(--brand);
+  color: var(--brand);
   border-radius: 0.5rem;
   padding: 0.6rem 1.5rem;
   font-weight: 500;
@@ -140,9 +265,9 @@
 }
 
 .dentist-layout .btn-outline-primary:hover {
-  background-color: #007bff;
-  border-color: #007bff;
+  background-color: var(--brand);
+  border-color: var(--brand);
   color: white;
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+  box-shadow: 0 4px 12px rgba(0, 119, 182, 0.3);
 }

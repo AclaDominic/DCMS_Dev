@@ -4,8 +4,8 @@ import { useAuth } from "../../hooks/useAuth";
 const DentistDashboard = () => {
   const { user } = useAuth();
   return (
-    <div>
-      <div className="container-fluid">
+    <div className="w-100">
+      <div className="container-fluid px-4 py-4">
         <div className="row">
           <div className="col-12">
             <div className="d-flex justify-content-between align-items-center mb-4">

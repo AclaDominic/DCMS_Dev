@@ -24,7 +24,7 @@ function PatientNavbar() {
 
   return (
     <>
-   <nav className="navbar navbar-expand-lg navbar-light bg-white shadow-sm px-3">
+   <nav className="navbar navbar-expand-lg navbar-light shadow-sm px-3" style={{background: 'linear-gradient(135deg, #00b4d8 0%, #0077b6 100%)'}}>
   <div className="container-fluid">
     {/* Left: Logo */}
     <Link className="navbar-brand d-flex align-items-center" to="/patient">
@@ -38,7 +38,7 @@ function PatientNavbar() {
           marginRight: "8px",
         }}
       />
-      <span className="fst-bold">Kreative Dental & Orthodontics</span>
+      <span className="fst-bold" style={{color: 'white'}}>Kreative Dental & Orthodontics</span>
     </Link>
 
     {/* ✅ Toggle for mobile menu */}
@@ -57,19 +57,19 @@ function PatientNavbar() {
     {/* Right: Navigation Items (collapsible) */}
     <div className="collapse navbar-collapse" id="patientNavbarNav">
       <div className="navbar-nav ms-auto align-items-lg-center">
-        <Link to="/patient" className="nav-link">
+        <Link to="/patient" className="nav-link" style={{color: 'white'}}>
           <i className="bi bi-house me-1"></i>
           <span  >Home</span>
         </Link>
-        <Link to="/patient/appointment" className="nav-link">
+        <Link to="/patient/appointment" className="nav-link" style={{color: 'white'}}>
           <i className="bi bi-calendar-plus me-1"></i>
           <span  >Book</span>
         </Link>
-        <Link to="/patient/appointments" className="nav-link">
+        <Link to="/patient/appointments" className="nav-link" style={{color: 'white'}}>
           <i className="bi bi-calendar3 me-1"></i>
           <span  >Appointments</span>
         </Link>
-        <Link to="/patient/profile" className="nav-link">
+        <Link to="/patient/profile" className="nav-link" style={{color: 'white'}}>
           <i className="bi bi-person me-1"></i>
           <span  >Profile</span>
         </Link>
@@ -77,10 +77,32 @@ function PatientNavbar() {
         {user && (
           <button
             onClick={handleLogout}
-            className="btn btn-outline-danger btn-sm ms-lg-3 mt-2 mt-lg-0"
+            className="btn btn-sm ms-lg-3 mt-2 mt-lg-0 d-flex align-items-center"
+            style={{
+              background: 'linear-gradient(90deg, #0077b6 0%, #00b4d8 100%)',
+              color: 'white',
+              border: 'none',
+              fontWeight: '600',
+              padding: '0.5rem 1.2rem',
+              borderRadius: '50px',
+              boxShadow: '0 4px 12px rgba(0, 119, 182, 0.3)',
+              transition: 'all 0.3s ease',
+              fontSize: '0.9rem',
+              letterSpacing: '0.5px'
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.background = 'linear-gradient(90deg, #0056b3 0%, #0096c7 100%)';
+              e.target.style.transform = 'translateY(-2px)';
+              e.target.style.boxShadow = '0 6px 16px rgba(0, 119, 182, 0.4)';
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.background = 'linear-gradient(90deg, #0077b6 0%, #00b4d8 100%)';
+              e.target.style.transform = 'translateY(0)';
+              e.target.style.boxShadow = '0 4px 12px rgba(0, 119, 182, 0.3)';
+            }}
           >
-            <i className="bi bi-box-arrow-right me-1"></i>
-            <span  >Logout</span>
+            <i className="bi bi-lock-fill me-2" style={{fontSize: '0.9rem', color: '#dc3545'}}></i>
+            <span>LOG OUT</span>
           </button>
         )}
       </div>

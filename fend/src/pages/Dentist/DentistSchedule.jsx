@@ -68,7 +68,7 @@ function DentistSchedule() {
 
   if (error) {
     return (
-      <div className="container py-4">
+      <div className="container-fluid px-4 py-4">
         <div className="alert alert-danger">
           <i className="bi bi-exclamation-triangle me-2"></i>
           {error}
@@ -78,8 +78,8 @@ function DentistSchedule() {
   }
 
   return (
-    <div className="dentist-schedule">
-      <div className="container py-4">
+    <div className="dentist-schedule w-100">
+      <div className="container-fluid px-4 py-4">
         <div className="row">
           <div className="col-12">
             <div className="d-flex justify-content-between align-items-center mb-4">

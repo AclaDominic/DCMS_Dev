@@ -92,15 +92,16 @@ const DentistProfile = () => {
 
   return (
     <div className="w-100">
-      <div className="card border-0 shadow-lg w-100 dentist-page-card">
-        <div className="card-header bg-gradient bg-primary text-white text-center py-4">
-          <h2 className="h3 mb-2">
-            <i className="bi bi-person-circle me-2"></i>
-            My Account
-          </h2>
-          <p className="mb-0 opacity-75">Manage your personal information and account settings</p>
-        </div>
-        <div className="card-body p-5">
+      <div className="container-fluid px-4 py-4">
+        <div className="card border-0 shadow-lg w-100 dentist-page-card">
+          <div className="card-header bg-gradient bg-primary text-white text-center py-4">
+            <h2 className="h3 mb-2">
+              <i className="bi bi-person-circle me-2"></i>
+              My Account
+            </h2>
+            <p className="mb-0 opacity-75">Manage your personal information and account settings</p>
+          </div>
+          <div className="card-body p-5">
           {/* Personal Information Section */}
           <div className="row mb-5">
             <div className="col-12">
@@ -289,6 +290,7 @@ const DentistProfile = () => {
             </div>
           )}
 
+          </div>
         </div>
       </div>
     </div>
