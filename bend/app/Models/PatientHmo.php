@@ -14,24 +14,14 @@ class PatientHmo extends Model
     protected $fillable = [
         'patient_id',
         'provider_name',
-        'member_id_encrypted',
-        'policy_no_encrypted',
-        'effective_date',
-        'expiry_date',
+        'hmo_number',
+        'patient_fullname_on_card',
         'is_primary',
-        'notes_encrypted',
         'author_id',
     ];
 
-    // Laravel's built-in encrypted cast (AES-256 using APP_KEY)
-    // We keep the DB columns *_encrypted but expose clean accessors below.
     protected $casts = [
-        'effective_date' => 'date',
-        'expiry_date'    => 'date',
-        'is_primary'     => 'boolean',
-        'member_id_encrypted' => 'encrypted',
-        'policy_no_encrypted' => 'encrypted',
-        'notes_encrypted'     => 'encrypted',
+        'is_primary' => 'boolean',
     ];
 
     public function patient()

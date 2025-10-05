@@ -9,6 +9,9 @@ use App\Models\ServiceBundleItem;
 use App\Models\ServiceDiscount;
 use App\Models\Patient;
 use App\Models\PatientVisit;
+use App\Models\VisitNote;
+use App\Models\PatientHmo;
+use App\Models\User;
 use Carbon\Carbon;
 
 class PerformanceGoalTestSeeder extends Seeder
@@ -234,7 +237,6 @@ class PerformanceGoalTestSeeder extends Seeder
                 'start_time' => $visitDate->copy()->setTime(rand(8, 16), [0, 30][rand(0, 1)]),
                 'end_time' => $visitDate->copy()->setTime(rand(8, 16), [0, 30][rand(0, 1)])->addMinutes($service->estimated_minutes ?? 60),
                 'status' => 'completed',
-                'note' => 'Test visit for performance goals',
             ];
         }
         
@@ -251,7 +253,6 @@ class PerformanceGoalTestSeeder extends Seeder
                 'start_time' => null, // Not completed yet
                 'end_time' => null,
                 'status' => 'pending',
-                'note' => 'Pending test visit',
             ];
         }
         
@@ -273,7 +274,6 @@ class PerformanceGoalTestSeeder extends Seeder
                     'start_time' => $visitDate->copy()->setTime(rand(8, 16), [0, 30][rand(0, 1)]),
                     'end_time' => $visitDate->copy()->setTime(rand(8, 16), [0, 30][rand(0, 1)])->addMinutes(60),
                     'status' => 'completed',
-                    'note' => 'Cleaning service test visit',
                 ];
             }
         }
@@ -291,7 +291,6 @@ class PerformanceGoalTestSeeder extends Seeder
                     'start_time' => $visitDate->copy()->setTime(rand(8, 16), [0, 30][rand(0, 1)]),
                     'end_time' => $visitDate->copy()->setTime(rand(8, 16), [0, 30][rand(0, 1)])->addMinutes(120),
                     'status' => 'completed',
-                    'note' => 'Package service test visit',
                 ];
             }
         }
@@ -310,19 +309,140 @@ class PerformanceGoalTestSeeder extends Seeder
                     'start_time' => $visitDate->copy()->setTime(rand(8, 16), [0, 30][rand(0, 1)]),
                     'end_time' => $visitDate->copy()->setTime(rand(8, 16), [0, 30][rand(0, 1)])->addMinutes(90),
                     'status' => 'completed',
-                    'note' => 'Whitening promo test visit',
                 ];
             }
         }
         
         // Insert all visits
-        foreach ($visitsData as $visit) {
-            PatientVisit::updateOrCreate([
-                'patient_id' => $visit['patient_id'],
-                'service_id' => $visit['service_id'],
-                'visit_date' => $visit['visit_date'],
-                'start_time' => $visit['start_time'],
-            ], $visit);
+        foreach ($visitsData as $visitData) {
+            $visit = PatientVisit::updateOrCreate([
+                'patient_id' => $visitData['patient_id'],
+                'service_id' => $visitData['service_id'],
+                'visit_date' => $visitData['visit_date'],
+                'start_time' => $visitData['start_time'],
+            ], $visitData);
+            
+            // Create visit notes for completed visits to simulate real-world usage
+            if ($visit->status === 'completed') {
+                $this->createVisitNote($visit, $visitData);
+            }
+        }
+        
+        // Create sample HMO data for patients to simulate real-world usage
+        $this->createSampleHmoData();
+    }
+    
+    /**
+     * Create realistic visit notes for completed visits
+     */
+    private function createVisitNote(PatientVisit $visit, array $visitData): void
+    {
+        // Get a random dentist user for the notes
+        $dentist = User::where('role', 'staff')->inRandomOrder()->first();
+        
+        if (!$dentist) {
+            return; // Skip if no dentist available
+        }
+        
+        $serviceName = $visit->service->name ?? 'General Service';
+        $patientName = $visit->patient->first_name . ' ' . $visit->patient->last_name;
+        
+        // Create realistic notes based on the service type
+        $notes = $this->generateRealisticNotes($serviceName, $patientName);
+        
+        VisitNote::updateOrCreate(
+            ['patient_visit_id' => $visit->id],
+            [
+                'dentist_notes_encrypted' => $notes['dentist_notes'],
+                'findings_encrypted' => $notes['findings'],
+                'treatment_plan_encrypted' => $notes['treatment_plan'],
+                'created_by' => $dentist->id,
+                'updated_by' => $dentist->id,
+                'last_accessed_at' => now(),
+                'last_accessed_by' => $dentist->id,
+            ]
+        );
+    }
+    
+    /**
+     * Generate realistic notes based on service type
+     */
+    private function generateRealisticNotes(string $serviceName, string $patientName): array
+    {
+        $notes = [
+            'dentist_notes' => '',
+            'findings' => '',
+            'treatment_plan' => ''
+        ];
+        
+        // Service-specific note templates
+        if (str_contains($serviceName, 'Cleaning')) {
+            $notes['dentist_notes'] = "Performed routine dental cleaning for {$patientName}. Patient showed good oral hygiene habits.";
+            $notes['findings'] = "Mild plaque buildup in posterior teeth. No signs of gum disease. Overall oral health is good.";
+            $notes['treatment_plan'] = "Continue regular brushing and flossing. Schedule next cleaning in 6 months.";
+        } elseif (str_contains($serviceName, 'Checkup')) {
+            $notes['dentist_notes'] = "Comprehensive dental examination completed for {$patientName}. Patient was cooperative during examination.";
+            $notes['findings'] = "No cavities detected. Gum health is within normal parameters. All teeth are stable.";
+            $notes['treatment_plan'] = "Maintain current oral hygiene routine. Return for regular checkup in 6 months.";
+        } elseif (str_contains($serviceName, 'Package')) {
+            $notes['dentist_notes'] = "Complete dental package service provided to {$patientName}. All procedures completed successfully.";
+            $notes['findings'] = "Patient responded well to treatment. No complications during procedures.";
+            $notes['treatment_plan'] = "Follow-up appointment scheduled. Patient advised on post-treatment care.";
+        } elseif (str_contains($serviceName, 'Whitening')) {
+            $notes['dentist_notes'] = "Teeth whitening procedure completed for {$patientName}. Patient satisfied with results.";
+            $notes['findings'] = "Good candidate for whitening treatment. No sensitivity issues reported.";
+            $notes['treatment_plan'] = "Avoid staining foods for 48 hours. Use provided maintenance products.";
+        } else {
+            // Generic notes for other services
+            $notes['dentist_notes'] = "Dental service completed for {$patientName}. Procedure went smoothly.";
+            $notes['findings'] = "Patient responded well to treatment. No adverse reactions observed.";
+            $notes['treatment_plan'] = "Continue regular oral hygiene. Follow any specific post-treatment instructions provided.";
+        }
+        
+        return $notes;
+    }
+    
+    /**
+     * Create sample HMO data for patients
+     */
+    private function createSampleHmoData(): void
+    {
+        $hmoProviders = [
+            'Maxicare Healthcare Corporation',
+            'PhilHealth',
+            'Intellicare',
+            'Medicard Philippines',
+            'EastWest Health Care',
+            'Caritas Health Shield',
+            'Health Maintenance Inc.',
+            'Value Care Health System'
+        ];
+        
+        $patients = Patient::all();
+        $staffUser = User::where('role', 'staff')->first();
+        
+        foreach ($patients as $patient) {
+            // Randomly assign 1-2 HMOs per patient
+            $numHmos = rand(1, 2);
+            
+            for ($i = 0; $i < $numHmos; $i++) {
+                $provider = $hmoProviders[array_rand($hmoProviders)];
+                $hmoNumber = 'HMO' . str_pad(rand(100000, 999999), 6, '0', STR_PAD_LEFT);
+                $patientNameOnCard = $patient->first_name . ' ' . $patient->last_name;
+                
+                PatientHmo::updateOrCreate(
+                    [
+                        'patient_id' => $patient->id,
+                        'provider_name' => $provider,
+                        'hmo_number' => $hmoNumber,
+                    ],
+                    [
+                        'patient_fullname_on_card' => $patientNameOnCard,
+                        'is_primary' => $i === 0, // First HMO is primary
+                        'author_id' => $staffUser?->id,
+                    ]
+                );
+            }
         }
     }
 }

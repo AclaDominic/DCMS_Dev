@@ -3,7 +3,6 @@ import api from "../api/api";
 
 export default function HmoPicker({
   patientId,
-  appointmentDate,  // "YYYY-MM-DD" string (required for filtering)
   value,             // selected patient_hmo_id (number | null)
   onChange,          // (id | null) => void
   disabled = false,
@@ -33,19 +32,13 @@ export default function HmoPicker({
 
   const options = useMemo(() => {
     const list = Array.isArray(items) ? items : [];
-    // filter by effectiveness relative to appointmentDate
-    const filtered = list.filter((h) => {
-      const effOk = !h.effective_date || onlyDate(h.effective_date) <= appointmentDate;
-      const expOk = !h.expiry_date || onlyDate(h.expiry_date) >= appointmentDate;
-      return effOk && expOk;
-    });
     // sort: primary first, then provider name
-    return filtered.sort((a, b) => {
+    return list.sort((a, b) => {
       if (a.is_primary && !b.is_primary) return -1;
       if (!a.is_primary && b.is_primary) return 1;
       return (a.provider_name || "").localeCompare(b.provider_name || "");
     });
-  }, [items, appointmentDate]);
+  }, [items]);
 
   return (
     <div>
@@ -67,16 +60,16 @@ export default function HmoPicker({
             <option value="">— Self-pay / No HMO —</option>
             {options.map((h) => (
               <option key={h.id} value={h.id}>
-                {h.provider_name}
+                {h.provider_name} - {h.hmo_number}
                 {h.is_primary ? " (Primary)" : ""}
-                {maskSuffix(h)}
+                {h.patient_fullname_on_card ? ` - ${h.patient_fullname_on_card}` : ""}
               </option>
             ))}
           </select>
         )}
         {options.length === 0 && !loading && !err && (
           <div className="text-xs mt-1 text-zinc-500">
-            No valid HMO for {appointmentDate}. Add or update HMO in profile first.
+            No HMO available. Add or update HMO in profile first.
           </div>
         )}
       </div>
@@ -84,23 +77,6 @@ export default function HmoPicker({
   );
 }
 
-function onlyDate(v) {
-  if (!v) return "";
-  const s = String(v);
-  return s.includes("T") ? s.split("T")[0] : s;
-}
-
 function parseErr(e) {
   return e?.response?.data?.message || e?.message || "Request failed";
-}
-
-// Optional: mask ID/policy suffix to help the patient distinguish entries without exposing full values
-function maskSuffix(h) {
-  const member = (h.member_id_encrypted || "").toString();
-  const policy = (h.policy_no_encrypted || "").toString();
-  const tail = (str) => (str.length > 4 ? str.slice(-4) : str);
-  const parts = [];
-  if (member) parts.push(`ID••${tail(member)}`);
-  if (policy) parts.push(`P#••${tail(policy)}`);
-  return parts.length ? ` — ${parts.join(" / ")}` : "";
 }

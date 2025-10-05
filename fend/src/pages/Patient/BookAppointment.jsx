@@ -313,7 +313,6 @@ function BookAppointment() {
                             ) : myPatientId ? (
                               <HmoPicker
                                 patientId={myPatientId}
-                                appointmentDate={selectedDate}
                                 value={patientHmoId}
                                 onChange={setPatientHmoId}
                                 required

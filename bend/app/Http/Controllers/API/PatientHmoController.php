@@ -45,10 +45,8 @@ class PatientHmoController extends Controller
 
         $validated = $request->validate([
             'provider_name' => ['required', 'string', 'max:255'],
-            'member_id' => ['nullable', 'string', 'max:255'],
-            'policy_no' => ['nullable', 'string', 'max:255'],
-            'effective_date' => ['nullable', 'date'],
-            'expiry_date' => ['nullable', 'date', 'after_or_equal:effective_date'],
+            'hmo_number' => ['required', 'string', 'max:255'],
+            'patient_fullname_on_card' => ['required', 'string', 'max:255'],
             'is_primary' => ['sometimes', 'boolean'],
         ]);
 
@@ -59,10 +57,8 @@ class PatientHmoController extends Controller
         $hmo = PatientHmo::create([
             'patient_id' => $patient,
             'provider_name' => $validated['provider_name'],
-            'member_id_encrypted' => $validated['member_id'] ?? null,
-            'policy_no_encrypted' => $validated['policy_no'] ?? null,
-            'effective_date' => $validated['effective_date'] ?? null,
-            'expiry_date' => $validated['expiry_date'] ?? null,
+            'hmo_number' => $validated['hmo_number'],
+            'patient_fullname_on_card' => $validated['patient_fullname_on_card'],
             'is_primary' => (bool) ($validated['is_primary'] ?? false),
             'author_id' => $request->user()?->id,
         ]);
@@ -81,10 +77,8 @@ class PatientHmoController extends Controller
 
         $validated = $request->validate([
             'provider_name' => ['sometimes', 'string', 'max:255'],
-            'member_id' => ['nullable', 'string', 'max:255'],
-            'policy_no' => ['nullable', 'string', 'max:255'],
-            'effective_date' => ['nullable', 'date'],
-            'expiry_date' => ['nullable', 'date', 'after_or_equal:effective_date'],
+            'hmo_number' => ['sometimes', 'string', 'max:255'],
+            'patient_fullname_on_card' => ['sometimes', 'string', 'max:255'],
             'is_primary' => ['sometimes', 'boolean'],
         ]);
 
@@ -94,10 +88,8 @@ class PatientHmoController extends Controller
 
         $record->fill([
             'provider_name' => $validated['provider_name'] ?? $record->provider_name,
-            'member_id_encrypted' => array_key_exists('member_id', $validated) ? $validated['member_id'] : $record->member_id_encrypted,
-            'policy_no_encrypted' => array_key_exists('policy_no', $validated) ? $validated['policy_no'] : $record->policy_no_encrypted,
-            'effective_date' => array_key_exists('effective_date', $validated) ? $validated['effective_date'] : $record->effective_date,
-            'expiry_date' => array_key_exists('expiry_date', $validated) ? $validated['expiry_date'] : $record->expiry_date,
+            'hmo_number' => $validated['hmo_number'] ?? $record->hmo_number,
+            'patient_fullname_on_card' => $validated['patient_fullname_on_card'] ?? $record->patient_fullname_on_card,
             'is_primary' => array_key_exists('is_primary', $validated) ? (bool) $validated['is_primary'] : $record->is_primary,
         ]);
 

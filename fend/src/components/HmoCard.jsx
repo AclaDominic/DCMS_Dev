@@ -173,22 +173,15 @@ function HmoItemCard({ item, onEdit, onAskDelete, canManage }) {
               </span>
             ) : null}
           </div>
-          <div className="text-xs mt-1 text-zinc-500">
-            {formatDates(item.effective_date, item.expiry_date)}
-          </div>
           <div className="text-sm mt-2 space-y-1">
-            {item.member_id_encrypted && (
-              <div>
-                <span className="text-zinc-500">Member ID:</span>{" "}
-                {item.member_id_encrypted}
-              </div>
-            )}
-            {item.policy_no_encrypted && (
-              <div>
-                <span className="text-zinc-500">Policy #:</span>{" "}
-                {item.policy_no_encrypted}
-              </div>
-            )}
+            <div>
+              <span className="text-zinc-500">HMO Number:</span>{" "}
+              {item.hmo_number}
+            </div>
+            <div>
+              <span className="text-zinc-500">Name on Card:</span>{" "}
+              {item.patient_fullname_on_card}
+            </div>
           </div>
         </div>
         {canManage && (
@@ -216,10 +209,8 @@ function HmoFormModal({ onClose, onSaved, patientId, initial }) {
   const isEdit = !!initial;
   const [form, setForm] = useState(() => ({
     provider_name: initial?.provider_name || "",
-    member_id: initial?.member_id_encrypted || "",
-    policy_no: initial?.policy_no_encrypted || "",
-    effective_date: onlyDate(initial?.effective_date) || "",
-    expiry_date: onlyDate(initial?.expiry_date) || "",
+    hmo_number: initial?.hmo_number || "",
+    patient_fullname_on_card: initial?.patient_fullname_on_card || "",
     is_primary: !!initial?.is_primary,
   }));
   const [submitting, setSubmitting] = useState(false);
@@ -232,10 +223,8 @@ function HmoFormModal({ onClose, onSaved, patientId, initial }) {
       let res;
       const payload = {
         provider_name: form.provider_name,
-        member_id: form.member_id,
-        policy_no: form.policy_no,
-        effective_date: form.effective_date,
-        expiry_date: form.expiry_date,
+        hmo_number: form.hmo_number,
+        patient_fullname_on_card: form.patient_fullname_on_card,
         is_primary: form.is_primary,
       };
       if (isEdit) {
@@ -268,7 +257,7 @@ function HmoFormModal({ onClose, onSaved, patientId, initial }) {
 
         {err && <div className="mb-3 text-sm text-red-600">{err}</div>}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3">
           <TextField
             label="Provider Name"
             required
@@ -276,24 +265,16 @@ function HmoFormModal({ onClose, onSaved, patientId, initial }) {
             onChange={(v) => setForm({ ...form, provider_name: v })}
           />
           <TextField
-            label="Member ID"
-            value={form.member_id}
-            onChange={(v) => setForm({ ...form, member_id: v })}
+            label="HMO Number"
+            required
+            value={form.hmo_number}
+            onChange={(v) => setForm({ ...form, hmo_number: v })}
           />
           <TextField
-            label="Policy #"
-            value={form.policy_no}
-            onChange={(v) => setForm({ ...form, policy_no: v })}
-          />
-          <DateField
-            label="Effective Date"
-            value={form.effective_date}
-            onChange={(v) => setForm({ ...form, effective_date: v })}
-          />
-          <DateField
-            label="Expiry Date"
-            value={form.expiry_date}
-            onChange={(v) => setForm({ ...form, expiry_date: v })}
+            label="Patient Full Name on Card"
+            required
+            value={form.patient_fullname_on_card}
+            onChange={(v) => setForm({ ...form, patient_fullname_on_card: v })}
           />
           <div className="flex items-center gap-2 pt-2">
             <input
@@ -318,7 +299,7 @@ function HmoFormModal({ onClose, onSaved, patientId, initial }) {
           </button>
           <button
             onClick={save}
-            disabled={submitting || !form.provider_name}
+            disabled={submitting || !form.provider_name || !form.hmo_number || !form.patient_fullname_on_card}
             className="px-3 py-1.5 text-sm rounded-xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 disabled:opacity-50"
           >
             {submitting ? "Saving…" : isEdit ? "Save Changes" : "Create"}
@@ -369,20 +350,6 @@ function TextField({ label, value, onChange, required }) {
   );
 }
 
-function DateField({ label, value, onChange }) {
-  return (
-    <div>
-      <Label>{label}</Label>
-      <input
-        type="date"
-        className="w-full mt-1 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-transparent p-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-400"
-        value={onlyDate(value)}
-        onChange={(e) => onChange(e.target.value)}
-        min={label === 'Expiry Date' ? tomorrow() : undefined}
-      />
-    </div>
-  );
-}
 
 function Label({ children, required = false }) {
   return (
@@ -392,17 +359,6 @@ function Label({ children, required = false }) {
   );
 }
 
-function onlyDate(v) {
-  if (!v) return "";
-  const s = String(v);
-  return s.includes("T") ? s.split("T")[0] : s;
-}
-
-function tomorrow() {
-  const d = new Date();
-  d.setDate(d.getDate() + 1);
-  return d.toISOString().slice(0, 10);
-}
 
 function parseErr(e) {
   const msg = e?.response?.data?.message || e?.message || "Request failed";
@@ -427,12 +383,3 @@ function normalizeAndSort(list) {
   });
 }
 
-function formatDates(start, end) {
-  const s = onlyDate(start);
-  const e = onlyDate(end);
-  if (!s && !e) return "No validity dates";
-  if (s && e) return `Valid ${s} → ${e}`;
-  if (s && !e) return `Effective ${s}`;
-  if (!s && e) return `Until ${e}`;
-  return "";
-}

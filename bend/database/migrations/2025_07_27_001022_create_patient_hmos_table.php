@@ -20,19 +20,14 @@ return new class extends Migration
             // Required: HMO provider name (patient-typed)
             $table->string('provider_name');
 
-            // Optional details (kept minimal; encrypted via casts in Model)
-            $table->text('member_id_encrypted')->nullable();
-            $table->text('policy_no_encrypted')->nullable();
+            // Required: HMO number/ID
+            $table->string('hmo_number');
 
-            // Optional validity range
-            $table->date('effective_date')->nullable();
-            $table->date('expiry_date')->nullable();
+            // Required: Patient full name as it appears on the HMO card
+            $table->string('patient_fullname_on_card');
 
             // Mark one as primary if patient stores multiple later
             $table->boolean('is_primary')->default(false);
-
-            // Free-form internal notes (e.g., “presented physical card at front desk”)
-            $table->text('notes_encrypted')->nullable();
 
             // Audit: who encoded/edited last (users.id); nullable to allow system actions
             $table->unsignedBigInteger('author_id')->nullable()->index();
@@ -44,8 +39,8 @@ return new class extends Migration
             $table->foreign('author_id')->references('id')->on('users')->nullOnDelete();
 
             // A patient may have multiple HMOs; allow multiple provider names.
-            // But keep (patient_id, provider_name, member_id_encrypted) unique-ish if you prefer:
-            // $table->unique(['patient_id','provider_name']);
+            // But keep (patient_id, provider_name, hmo_number) unique-ish if you prefer:
+            // $table->unique(['patient_id','provider_name','hmo_number']);
         });
     }
 
