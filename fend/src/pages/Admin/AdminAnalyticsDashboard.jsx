@@ -35,6 +35,7 @@ export default function AdminAnalyticsDashboard() {
     new Date().toISOString().slice(0, 7)
   );
   const [trendRange, setTrendRange] = useState(6);
+  const [selectedMetric, setSelectedMetric] = useState('visits');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [data, setData] = useState(null);
@@ -248,14 +249,15 @@ export default function AdminAnalyticsDashboard() {
       // Monthly Trends Sheet
       if (trendData?.labels?.length > 0) {
         const trendSheet = workbook.addWorksheet('Monthly Trends');
-        trendSheet.addRow(['Month', 'Visits', 'Appointments', 'Revenue']);
+        trendSheet.addRow(['Month', 'Visits', 'Appointments', 'Revenue', 'Loss']);
         
         trendData.labels.forEach((label, index) => {
           trendSheet.addRow([
             label,
             trendData.visits?.[index] ?? 0,
             trendData.appointments?.[index] ?? 0,
-            trendData.revenue?.[index] ?? 0
+            trendData.revenue?.[index] ?? 0,
+            trendData.loss?.[index] ?? 0
           ]);
         });
         
@@ -265,7 +267,8 @@ export default function AdminAnalyticsDashboard() {
           { width: 15 },
           { width: 12 },
           { width: 15 },
-          { width: 15 }
+          { width: 15 },
+          { width: 12 }
         ];
       }
 
@@ -742,46 +745,56 @@ export default function AdminAnalyticsDashboard() {
   const trendChartData = useMemo(() => {
     if (!trendData) return null;
     
+    const metricConfig = {
+      visits: {
+        label: "Visits",
+        data: trendData.visits,
+        borderColor: "#3b82f6",
+        backgroundColor: "rgba(59, 130, 246, 0.1)",
+        yAxisID: "y"
+      },
+      appointments: {
+        label: "Appointments", 
+        data: trendData.appointments,
+        borderColor: "#10b981",
+        backgroundColor: "rgba(16, 185, 129, 0.1)",
+        yAxisID: "y"
+      },
+      revenue: {
+        label: "Revenue",
+        data: trendData.revenue,
+        borderColor: "#f59e0b",
+        backgroundColor: "rgba(245, 158, 11, 0.1)",
+        yAxisID: "y1"
+      },
+      loss: {
+        label: "Loss",
+        data: trendData.loss || [],
+        borderColor: "#ef4444",
+        backgroundColor: "rgba(239, 68, 68, 0.1)",
+        yAxisID: "y1"
+      }
+    };
+    
+    const selected = metricConfig[selectedMetric];
+    if (!selected) return null;
+    
     return {
       labels: trendData.labels,
-      datasets: [
-        {
-          label: "Visits",
-          data: trendData.visits,
-          borderColor: "#3b82f6",
-          backgroundColor: "rgba(59, 130, 246, 0.1)",
-          tension: 0.4,
-          pointRadius: 4,
-          pointHoverRadius: 6,
-          borderWidth: 3,
-          fill: false,
-        },
-        {
-          label: "Appointments",
-          data: trendData.appointments,
-          borderColor: "#10b981",
-          backgroundColor: "rgba(16, 185, 129, 0.1)",
-          tension: 0.4,
-          pointRadius: 4,
-          pointHoverRadius: 6,
-          borderWidth: 3,
-          fill: false,
-        },
-        {
-          label: "Revenue",
-          data: trendData.revenue,
-          borderColor: "#f59e0b",
-          backgroundColor: "rgba(245, 158, 11, 0.1)",
-          tension: 0.4,
-          pointRadius: 4,
-          pointHoverRadius: 6,
-          borderWidth: 3,
-          fill: false,
-          yAxisID: "y1",
-        },
-      ],
+      datasets: [{
+        label: selected.label,
+        data: selected.data,
+        borderColor: selected.borderColor,
+        backgroundColor: selected.backgroundColor,
+        tension: 0.4,
+        pointRadius: 4,
+        pointHoverRadius: 6,
+        borderWidth: 3,
+        fill: false,
+        yAxisID: selected.yAxisID,
+      }],
     };
-  }, [trendData]);
+  }, [trendData, selectedMetric]);
 
   const trendChartOptions = useMemo(
     () => ({
@@ -811,6 +824,8 @@ export default function AdminAnalyticsDashboard() {
               const label = context.dataset.label;
               const value = context.parsed.y;
               if (label === "Revenue") {
+                return `${label}: ₱${value.toLocaleString()}`;
+              } else if (label === "Loss") {
                 return `${label}: ₱${value.toLocaleString()}`;
               }
               return `${label}: ${value}`;
@@ -1495,16 +1510,29 @@ export default function AdminAnalyticsDashboard() {
                           <span className="me-2">📈</span>
                           Monthly Trends
                         </h5>
-                        <select 
-                          value={trendRange} 
-                          onChange={(e) => setTrendRange(Number(e.target.value))} 
-                          className="form-select form-select-sm" 
-                          style={{ width: 140 }}
-                        >
-                          <option value={6}>Last 6 months</option>
-                          <option value={12}>Last 1 year</option>
-                          <option value={24}>Last 2 years</option>
-                        </select>
+                        <div className="d-flex gap-2">
+                          <select 
+                            value={selectedMetric} 
+                            onChange={(e) => setSelectedMetric(e.target.value)} 
+                            className="form-select form-select-sm" 
+                            style={{ width: 140 }}
+                          >
+                            <option value="visits">Visits</option>
+                            <option value="appointments">Appointments</option>
+                            <option value="revenue">Revenue</option>
+                            <option value="loss">Loss</option>
+                          </select>
+                          <select 
+                            value={trendRange} 
+                            onChange={(e) => setTrendRange(Number(e.target.value))} 
+                            className="form-select form-select-sm" 
+                            style={{ width: 140 }}
+                          >
+                            <option value={6}>Last 6 months</option>
+                            <option value={12}>Last 1 year</option>
+                            <option value={24}>Last 2 years</option>
+                          </select>
+                        </div>
                       </div>
                     </div>
                     <div className="card-body pt-0">

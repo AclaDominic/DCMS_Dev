@@ -11,6 +11,10 @@ use App\Models\GoalProgressSnapshot;
 use App\Models\Service;
 use App\Models\User;
 use App\Models\VisitNote;
+use App\Models\InventoryItem;
+use App\Models\InventoryBatch;
+use App\Models\InventoryMovement;
+use App\Models\Supplier;
 use App\Services\ClinicDateResolverService;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
@@ -32,6 +36,9 @@ class AnalyticsSeeder extends Seeder
         $patients = $this->ensurePatients();
         $services = $this->ensureServices();
         $adminUser = User::where('role', 'admin')->first();
+        
+        // Setup inventory for loss tracking
+        $this->setupInventory($adminUser);
 
         if (!$adminUser) {
             $this->command->error('No admin user found. Please run UserSeeder first.');
@@ -51,6 +58,7 @@ class AnalyticsSeeder extends Seeder
         $current = $startDate->copy();
         while ($current->lte($endDate)) {
             $this->generateMonthData($current, $patients, $services, $adminUser);
+            $this->generateInventoryLoss($current, $adminUser);
             $current->addMonth();
         }
 
@@ -71,6 +79,10 @@ class AnalyticsSeeder extends Seeder
         Payment::truncate();
         GoalProgressSnapshot::truncate();
         PerformanceGoal::truncate();
+        InventoryMovement::truncate();
+        InventoryBatch::truncate();
+        InventoryItem::truncate();
+        Supplier::truncate();
         DB::statement('SET FOREIGN_KEY_CHECKS=1;');
     }
 
@@ -625,10 +637,152 @@ class AnalyticsSeeder extends Seeder
         $this->command->info('Total Performance Goals: ' . PerformanceGoal::count());
         $this->command->info('Total Goal Snapshots: ' . GoalProgressSnapshot::count());
         $this->command->info('Total Visit Notes: ' . VisitNote::count());
+        $this->command->info('Total Inventory Items: ' . InventoryItem::count());
+        $this->command->info('Total Inventory Batches: ' . InventoryBatch::count());
+        $this->command->info('Total Inventory Movements: ' . InventoryMovement::count());
         
         $revenue = Payment::where('status', 'paid')->sum('amount_paid');
         $this->command->info('Total Revenue: ₱' . number_format($revenue, 2));
         
+        $lossCost = DB::table('inventory_movements as im')
+            ->join('inventory_batches as ib', 'im.batch_id', '=', 'ib.id')
+            ->where('im.type', 'adjust')
+            ->whereIn('im.adjust_reason', ['expired', 'theft'])
+            ->selectRaw('SUM(im.quantity * ib.cost_per_unit) as total_cost')
+            ->value('total_cost');
+        $this->command->info('Total Inventory Loss Cost: ₱' . number_format($lossCost, 2));
+        
         $this->command->info('=== Analytics Seeder Complete ===');
+    }
+
+    private function setupInventory(User $adminUser): void
+    {
+        $this->command->info('Setting up inventory for loss tracking...');
+        
+        // Create a supplier if none exists
+        $supplier = Supplier::first();
+        if (!$supplier) {
+            $supplier = Supplier::create([
+                'name' => 'Medical Supply Co.',
+                'contact_person' => 'John Doe',
+                'email' => 'supplies@medical.com',
+                'phone' => '+1234567890',
+                'address' => '123 Supply St, City',
+            ]);
+        }
+        
+        // Create inventory items with realistic costs
+        $items = [
+            [
+                'name' => 'Dental Anesthetic',
+                'sku_code' => 'ANEST-001',
+                'type' => 'drug',
+                'unit' => 'ml',
+                'low_stock_threshold' => 10,
+                'is_controlled' => true,
+                'created_by' => $adminUser->id,
+            ],
+            [
+                'name' => 'Dental Composite',
+                'sku_code' => 'COMP-001',
+                'type' => 'supply',
+                'unit' => 'g',
+                'low_stock_threshold' => 5,
+                'is_controlled' => false,
+                'created_by' => $adminUser->id,
+            ],
+            [
+                'name' => 'Dental Floss',
+                'sku_code' => 'FLOSS-001',
+                'type' => 'supply',
+                'unit' => 'pcs',
+                'low_stock_threshold' => 50,
+                'is_controlled' => false,
+                'created_by' => $adminUser->id,
+            ],
+            [
+                'name' => 'Dental X-Ray Film',
+                'sku_code' => 'XRAY-001',
+                'type' => 'supply',
+                'unit' => 'pcs',
+                'low_stock_threshold' => 20,
+                'is_controlled' => false,
+                'created_by' => $adminUser->id,
+            ],
+        ];
+        
+        foreach ($items as $index => $itemData) {
+            $item = InventoryItem::create($itemData);
+            
+            // Define realistic cost ranges for each item type
+            $costRanges = [
+                'Dental Anesthetic' => [150, 300], // ₱150-300 per ml
+                'Dental Composite' => [200, 500],  // ₱200-500 per g
+                'Dental Floss' => [5, 15],        // ₱5-15 per piece
+                'Dental X-Ray Film' => [25, 50],  // ₱25-50 per piece
+            ];
+            
+            $costRange = $costRanges[$item->name] ?? [10, 100];
+            
+            // Create initial batches for each item
+            $batchCount = rand(2, 4);
+            for ($i = 0; $i < $batchCount; $i++) {
+                $receivedAt = Carbon::now()->subMonths(rand(1, 12))->subDays(rand(0, 30));
+                $expiryDate = $item->type === 'drug' ? $receivedAt->copy()->addMonths(rand(12, 36)) : null;
+                
+                InventoryBatch::create([
+                    'item_id' => $item->id,
+                    'lot_number' => 'LOT' . strtoupper(uniqid()),
+                    'batch_number' => 'BATCH' . strtoupper(uniqid()),
+                    'expiry_date' => $expiryDate,
+                    'qty_received' => rand(50, 200),
+                    'qty_on_hand' => rand(20, 150),
+                    'cost_per_unit' => rand($costRange[0], $costRange[1]),
+                    'supplier_id' => $supplier->id,
+                    'invoice_no' => 'INV' . strtoupper(uniqid()),
+                    'invoice_date' => $receivedAt->toDateString(),
+                    'received_at' => $receivedAt,
+                    'received_by' => $adminUser->id,
+                ]);
+            }
+        }
+    }
+
+    private function generateInventoryLoss(Carbon $month, User $adminUser): void
+    {
+        $startOfMonth = $month->copy()->startOfMonth();
+        $endOfMonth = $month->copy()->endOfMonth();
+        
+        // Get all inventory items
+        $items = InventoryItem::with('batches')->get();
+        
+        // Generate 2-5 loss events per month
+        $lossEvents = rand(2, 5);
+        
+        for ($i = 0; $i < $lossEvents; $i++) {
+            $item = $items->random();
+            $batch = $item->batches->where('qty_on_hand', '>', 0)->random();
+            
+            if (!$batch) continue;
+            
+            $lossQuantity = min(rand(1, 10), $batch->qty_on_hand);
+            $lossReason = rand(1, 100) <= 70 ? 'expired' : 'theft'; // 70% expired, 30% theft
+            
+            // Create inventory movement for loss
+            InventoryMovement::create([
+                'item_id' => $item->id,
+                'batch_id' => $batch->id,
+                'type' => 'adjust',
+                'quantity' => $lossQuantity,
+                'adjust_reason' => $lossReason,
+                'user_id' => $adminUser->id,
+                'notes' => $lossReason === 'expired' ? 'Item expired and disposed' : 'Item reported stolen',
+                'created_at' => $startOfMonth->copy()->addDays(rand(1, 28))->addHours(rand(8, 17)),
+            ]);
+            
+            // Update batch quantity
+            $batch->qty_on_hand -= $lossQuantity;
+            $batch->save();
+        }
     }
 }

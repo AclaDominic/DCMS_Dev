@@ -617,6 +617,7 @@ class ReportController extends Controller
         $visits = [];
         $appointments = [];
         $revenue = [];
+        $loss = [];
 
         for ($i = 0; $i < $months; $i++) {
             $monthStart = (clone $start)->addMonths($i)->startOfMonth();
@@ -644,6 +645,16 @@ class ReportController extends Controller
                 ->whereBetween('paid_at', [$monthStart, $monthEnd])
                 ->sum('amount_paid');
             $revenue[] = round((float) $monthRevenue, 2);
+            
+            // Loss cost for this month (expired + theft inventory adjustments)
+            $monthLossCost = DB::table('inventory_movements as im')
+                ->join('inventory_batches as ib', 'im.batch_id', '=', 'ib.id')
+                ->where('im.type', 'adjust')
+                ->whereIn('im.adjust_reason', ['expired', 'theft'])
+                ->whereBetween('im.created_at', [$monthStart, $monthEnd])
+                ->selectRaw('SUM(im.quantity * ib.cost_per_unit) as total_cost')
+                ->value('total_cost');
+            $loss[] = round((float) $monthLossCost, 2);
         }
 
         return response()->json([
@@ -651,6 +662,7 @@ class ReportController extends Controller
             'visits' => $visits,
             'appointments' => $appointments,
             'revenue' => $revenue,
+            'loss' => $loss,
         ]);
     }
 }
