@@ -54,11 +54,27 @@ export default function AdminAnalyticsDashboard() {
         }),
       ]);
       
-      setData(summaryRes.data || null);
-      setTrendData(trendRes.data || null);
+      // Validate and sanitize the data
+      const summaryData = summaryRes.data || null;
+      const trendData = trendRes.data || null;
+      
+      // Debug logging
+      console.log("Analytics API Response:", summaryData);
+      console.log("Has insights:", summaryData?.insights ? "Yes" : "No");
+      console.log("Insights count:", summaryData?.insights?.length || 0);
+      
+      // Ensure insights is an array if it exists
+      if (summaryData && summaryData.insights && !Array.isArray(summaryData.insights)) {
+        console.warn("Insights data is not an array, converting...");
+        summaryData.insights = [];
+      }
+      
+      setData(summaryData);
+      setTrendData(trendData);
     } catch (e) {
-      console.error(e);
-      setError(e?.response?.data?.message || "Failed to load analytics.");
+      console.error("Analytics loading error:", e);
+      console.error("Error response:", e?.response?.data);
+      setError(e?.response?.data?.message || e?.message || "Failed to load analytics.");
     } finally {
       setLoading(false);
     }
@@ -1539,6 +1555,161 @@ export default function AdminAnalyticsDashboard() {
                     <div className="px-1 px-md-2" style={{ height: "300px" }}>
                       <Line data={trendChartData} options={trendChartOptions} />
                     </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Actionable Insights Section */}
+            {data && (
+              <div className="mt-4">
+                <div
+                  className="card border-0 shadow-sm"
+                  style={{
+                    background:
+                      "linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)",
+                    borderRadius: "16px",
+                  }}
+                >
+                  <div className="card-header border-0 bg-transparent py-4">
+                    <h5
+                      className="mb-0 fw-bold d-flex align-items-center"
+                      style={{ color: "#1e293b" }}
+                    >
+                      <span className="me-2">💡</span>
+                      Actionable Insights & Recommendations
+                    </h5>
+                    <p className="mb-0 mt-2 text-muted small">
+                      Data-driven recommendations to improve your clinic's performance
+                    </p>
+                  </div>
+                  <div className="card-body pt-0">
+                    <div className="row g-3">
+                      {data.insights && data.insights.length > 0 ? data.insights.map((insight, idx) => (
+                        <div key={idx} className="col-12 col-lg-6">
+                          <div
+                            className="card h-100 border-0"
+                            style={{
+                              background: insight.priority === 'high' 
+                                ? "linear-gradient(135deg, rgba(239, 68, 68, 0.05) 0%, rgba(254, 226, 226, 0.1) 100%)"
+                                : insight.priority === 'medium'
+                                ? "linear-gradient(135deg, rgba(245, 158, 11, 0.05) 0%, rgba(254, 243, 199, 0.1) 100%)"
+                                : "linear-gradient(135deg, rgba(16, 185, 129, 0.05) 0%, rgba(209, 250, 229, 0.1) 100%)",
+                              borderRadius: "12px",
+                              border: insight.priority === 'high' 
+                                ? "1px solid rgba(239, 68, 68, 0.2)"
+                                : insight.priority === 'medium'
+                                ? "1px solid rgba(245, 158, 11, 0.2)"
+                                : "1px solid rgba(16, 185, 129, 0.2)",
+                            }}
+                          >
+                            <div className="card-body p-4">
+                              <div className="d-flex align-items-start justify-content-between mb-3">
+                                <div className="d-flex align-items-center">
+                                  <div
+                                    className="me-3 d-flex align-items-center justify-content-center rounded-circle"
+                                    style={{
+                                      width: "40px",
+                                      height: "40px",
+                                      background: insight.priority === 'high' 
+                                        ? "linear-gradient(135deg, #EF4444 0%, #DC2626 100%)"
+                                        : insight.priority === 'medium'
+                                        ? "linear-gradient(135deg, #F59E0B 0%, #D97706 100%)"
+                                        : "linear-gradient(135deg, #10B981 0%, #059669 100%)",
+                                      color: "white",
+                                      fontSize: "18px",
+                                    }}
+                                  >
+                                    {insight.priority === 'high' ? '🚨' : insight.priority === 'medium' ? '⚠️' : '✅'}
+                                  </div>
+                                  <div>
+                                    <h6 className="mb-1 fw-bold" style={{ color: "#1e293b" }}>
+                                      {insight.title}
+                                    </h6>
+                                    <span
+                                      className={`badge px-2 py-1 ${
+                                        insight.priority === 'high' 
+                                          ? 'bg-danger' 
+                                          : insight.priority === 'medium'
+                                          ? 'bg-warning'
+                                          : 'bg-success'
+                                      }`}
+                                      style={{ fontSize: "0.7rem" }}
+                                    >
+                                      {insight.priority.toUpperCase()} PRIORITY
+                                    </span>
+                                  </div>
+                                </div>
+                                <div className="text-end">
+                                  <small className="text-muted d-block" style={{ fontSize: "0.7rem" }}>
+                                    {insight.category.replace('_', ' ').toUpperCase()}
+                                  </small>
+                                </div>
+                              </div>
+                              
+                              <p className="text-muted mb-3" style={{ fontSize: "0.9rem", lineHeight: "1.5" }}>
+                                {insight.description}
+                              </p>
+                              
+                              <div className="mb-3">
+                                <h6 className="fw-semibold mb-2" style={{ color: "#374151", fontSize: "0.85rem" }}>
+                                  Recommended Actions:
+                                </h6>
+                                <ul className="list-unstyled mb-0">
+                                  {insight.actions.slice(0, 3).map((action, actionIdx) => (
+                                    <li key={actionIdx} className="d-flex align-items-start mb-1">
+                                      <span className="me-2 text-primary" style={{ fontSize: "0.8rem" }}>•</span>
+                                      <span style={{ fontSize: "0.8rem", color: "#6b7280" }}>{action}</span>
+                                    </li>
+                                  ))}
+                                  {insight.actions.length > 3 && (
+                                    <li className="text-muted" style={{ fontSize: "0.75rem" }}>
+                                      +{insight.actions.length - 3} more recommendations
+                                    </li>
+                                  )}
+                                </ul>
+                              </div>
+                              
+                              <div className="d-flex justify-content-between align-items-center">
+                                <small className="text-muted" style={{ fontSize: "0.75rem" }}>
+                                  Impact: {insight.impact}
+                                </small>
+                                <button
+                                  className="btn btn-sm border-0"
+                                  style={{
+                                    background: "linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)",
+                                    color: "white",
+                                    borderRadius: "8px",
+                                    fontSize: "0.75rem",
+                                    padding: "4px 12px",
+                                  }}
+                                  onClick={() => {
+                                    // Copy actions to clipboard or show detailed view
+                                    const actionsText = insight.actions.join('\n• ');
+                                    navigator.clipboard.writeText(`Actions for ${insight.title}:\n• ${actionsText}`);
+                                    alert('Actions copied to clipboard!');
+                                  }}
+                                >
+                                  Copy Actions
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )) : (
+                        <div className="col-12">
+                          <div className="text-center py-4">
+                            <div className="fs-1 mb-3">🔍</div>
+                            <p className="text-muted mb-0 fw-medium">
+                              No actionable insights available
+                            </p>
+                            <small className="text-muted">
+                              Insights will appear here when data patterns are detected
+                            </small>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>

@@ -152,6 +152,8 @@ Route::middleware(['auth:sanctum', AdminOnly::class])->group(function () {
     Route::get('/analytics/summary', [ReportController::class, 'analyticsSummary']);
     Route::get('/analytics/comparison', [ReportController::class, 'analyticsComparison']);
     Route::get('/analytics/trend', [ReportController::class, 'analyticsTrend']);
+    Route::get('/analytics/promotion-opportunities', [ReportController::class, 'promotionOpportunities']);
+    Route::get('/analytics/test-insights', [ReportController::class, 'testInsights']);
 
     // Performance goals
     Route::prefix('goals')->group(function () {

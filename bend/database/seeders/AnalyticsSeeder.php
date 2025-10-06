@@ -24,6 +24,13 @@ class AnalyticsSeeder extends Seeder
 {
     /**
      * Seed comprehensive analytics data for 1 year to test admin analytics and monthly reports.
+     * 
+     * This seeder respects the system's clinic schedule and visit flow:
+     * - Only creates visits on days when clinic is open (via ClinicDateResolverService)
+     * - No pending visits are created (visits are resolved immediately)
+     * - Proper visit codes are generated for completed visits
+     * - Appointments and visits are properly linked
+     * - Payments are correctly linked to completed visits
      */
     public function run(): void
     {
@@ -205,17 +212,13 @@ class AnalyticsSeeder extends Seeder
         for ($day = 1; $day <= $daysInMonth; $day++) {
             $currentDay = $startOfMonth->copy()->addDays($day - 1);
             
-            // Skip Sundays (clinic closed)
-            if ($currentDay->isSunday()) {
-                continue;
-            }
-            
-            // Get clinic capacity for this day
+            // Get clinic capacity for this day using the system's date resolver
             $resolver = app(ClinicDateResolverService::class);
             $snap = $resolver->resolve($currentDay);
             
+            // Only generate visits on days when clinic is actually open
             if (!$snap['is_open']) {
-                continue; // Skip if clinic is closed
+                continue; // Skip if clinic is closed according to system configuration
             }
             
             $capacity = (int) $snap['effective_capacity'];
@@ -248,6 +251,12 @@ class AnalyticsSeeder extends Seeder
                 // Determine visit status
                 $status = $this->getVisitStatus($currentDay);
                 
+                // Generate visit code for completed visits (as they would have been processed)
+                $visitCode = null;
+                if ($status === 'completed') {
+                    $visitCode = PatientVisit::generateVisitCode();
+                }
+                
                 // Create visit
                 $visitData = [
                     'patient_id' => $patientId,
@@ -256,22 +265,25 @@ class AnalyticsSeeder extends Seeder
                     'start_time' => $startTime->toDateTimeString(),
                     'end_time' => $endTime->toDateTimeString(),
                     'status' => $status,
+                    'visit_code' => $visitCode,
                     'created_at' => now()->toDateTimeString(),
                     'updated_at' => now()->toDateTimeString(),
                 ];
                 
                 $visitRows[] = $visitData;
                 
-                // Create appointment for 60% of visits
+                // Create appointment for 60% of visits (appointments should be created before visits)
                 if (rand(1, 100) <= 60) {
                     $appointmentStatus = $this->getAppointmentStatus($status);
+                    $referenceCode = 'APT' . strtoupper(uniqid());
+                    
                     $appointmentData = [
                         'patient_id' => $patientId,
                         'service_id' => $serviceId,
                         'patient_hmo_id' => null,
                         'date' => $currentDay->toDateString(),
                         'time_slot' => $timeSlot['slot'],
-                        'reference_code' => 'APT' . strtoupper(uniqid()),
+                        'reference_code' => $referenceCode,
                         'status' => $appointmentStatus,
                         'payment_method' => $this->getPaymentMethod(),
                         'payment_status' => $this->getPaymentStatus($appointmentStatus),
@@ -281,6 +293,11 @@ class AnalyticsSeeder extends Seeder
                     ];
                     
                     $appointmentRows[] = $appointmentData;
+                    
+                    // If appointment was completed, clear the reference code (as per system logic)
+                    if ($appointmentStatus === 'completed') {
+                        $appointmentData['reference_code'] = null;
+                    }
                 }
                 
                 // Create payment for completed visits
@@ -321,7 +338,7 @@ class AnalyticsSeeder extends Seeder
             Appointment::insert($chunk);
         }
         
-        // Create payments and link them to visits
+        // Create payments and link them to visits after visits are created
         $this->createPaymentsForVisits($paymentRows, $startOfMonth, $endOfMonth);
         
         $this->command->info("Generated {$month->format('Y-m')}: " . count($visitRows) . " visits, " . count($appointmentRows) . " appointments");
@@ -438,10 +455,10 @@ class AnalyticsSeeder extends Seeder
 
     private function getVisitStatus(Carbon $day): string
     {
-        // 77% completed, 10% pending, 8% inquiry, 5% rejected
+        // 85% completed, 10% inquiry, 5% rejected
+        // No pending visits - they should be resolved immediately
         $rand = rand(1, 100);
-        if ($rand <= 77) return 'completed';
-        if ($rand <= 87) return 'pending';
+        if ($rand <= 85) return 'completed';
         if ($rand <= 95) return 'inquiry';
         return 'rejected';
     }
@@ -529,11 +546,13 @@ class AnalyticsSeeder extends Seeder
 
     private function createPaymentsForVisits(array $paymentRows, Carbon $startOfMonth, Carbon $endOfMonth): void
     {
-        // Get completed visits for the month
+        // Get completed visits for the month, ordered by creation time to match payment rows
         $visits = PatientVisit::whereBetween('start_time', [$startOfMonth, $endOfMonth])
             ->where('status', 'completed')
+            ->orderBy('created_at', 'asc')
             ->get();
         
+        // Create payments for each completed visit
         foreach ($visits as $index => $visit) {
             if ($index < count($paymentRows)) {
                 $paymentData = $paymentRows[$index];
@@ -605,7 +624,7 @@ class AnalyticsSeeder extends Seeder
 
     private function createVisitNotes(): void
     {
-        // Get all visits that need notes (inquiry status or completed visits with notes)
+        // Get all visits that need notes (inquiry status, completed visits, or rejected visits)
         $visits = PatientVisit::whereIn('status', ['inquiry', 'completed', 'rejected'])
             ->whereDoesntHave('visitNotes')
             ->get();
@@ -613,18 +632,21 @@ class AnalyticsSeeder extends Seeder
         foreach ($visits as $visit) {
             $noteContent = $this->generateVisitNote($visit->status);
             
-            VisitNote::create([
-                'patient_visit_id' => $visit->id,
-                'dentist_notes_encrypted' => $noteContent,
-                'findings_encrypted' => $visit->status === 'completed' ? 'Patient examination completed successfully.' : null,
-                'treatment_plan_encrypted' => $visit->status === 'completed' ? 'Follow-up recommended in 6 months.' : null,
-                'created_by' => null,
-                'updated_by' => null,
-                'last_accessed_at' => null,
-                'last_accessed_by' => null,
-                'created_at' => $visit->created_at,
-                'updated_at' => $visit->updated_at,
-            ]);
+            // Only create notes if there's actual content
+            if ($noteContent || $visit->status === 'completed') {
+                VisitNote::create([
+                    'patient_visit_id' => $visit->id,
+                    'dentist_notes_encrypted' => $noteContent,
+                    'findings_encrypted' => $visit->status === 'completed' ? 'Patient examination completed successfully.' : null,
+                    'treatment_plan_encrypted' => $visit->status === 'completed' ? 'Follow-up recommended in 6 months.' : null,
+                    'created_by' => null,
+                    'updated_by' => null,
+                    'last_accessed_at' => null,
+                    'last_accessed_by' => null,
+                    'created_at' => $visit->created_at,
+                    'updated_at' => $visit->updated_at,
+                ]);
+            }
         }
     }
 
@@ -632,6 +654,16 @@ class AnalyticsSeeder extends Seeder
     {
         $this->command->info('=== Analytics Data Summary ===');
         $this->command->info('Total Patient Visits: ' . PatientVisit::count());
+        
+        // Show visit status breakdown
+        $visitStatuses = PatientVisit::selectRaw('status, COUNT(*) as count')
+            ->groupBy('status')
+            ->pluck('count', 'status')
+            ->toArray();
+        foreach ($visitStatuses as $status => $count) {
+            $this->command->info("  - {$status}: {$count}");
+        }
+        
         $this->command->info('Total Appointments: ' . Appointment::count());
         $this->command->info('Total Payments: ' . Payment::count());
         $this->command->info('Total Performance Goals: ' . PerformanceGoal::count());
