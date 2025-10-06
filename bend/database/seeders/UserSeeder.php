@@ -45,14 +45,14 @@ class UserSeeder extends Seeder
             ],
             [
                 'name' => 'Dr. A',
-                'email' => 'dr.a@kreativedental.com',
+                'email' => 'd@gmail.com',
                 'password' => Hash::make('password'),
                 'role' => 'dentist',
                 'email_verified_at' => now(),
             ],
             [
                 'name' => 'Dr. B',
-                'email' => 'dr.b@kreativedental.com',
+                'email' => 'dr@gmail.com',
                 'password' => Hash::make('temp789012'),
                 'role' => 'dentist',
                 'email_verified_at' => null,
