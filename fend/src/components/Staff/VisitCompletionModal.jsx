@@ -12,6 +12,7 @@ export default function VisitCompletionModal({ visit, onClose, onComplete }) {
   const [dentistNotes, setDentistNotes] = useState("");
   const [findings, setFindings] = useState("");
   const [treatmentPlan, setTreatmentPlan] = useState("");
+  const [teethTreated, setTeethTreated] = useState("");
   const [originalNotesInfo, setOriginalNotesInfo] = useState(null);
 
   // Step 3: Payment
@@ -42,6 +43,7 @@ export default function VisitCompletionModal({ visit, onClose, onComplete }) {
       if (notes.dentist_notes) setDentistNotes(notes.dentist_notes);
       if (notes.findings) setFindings(notes.findings);
       if (notes.treatment_plan) setTreatmentPlan(notes.treatment_plan);
+      if (notes.teeth_treated) setTeethTreated(notes.teeth_treated);
       
       // Store original notes info for display
       if (notes.created_by || notes.created_at) {
@@ -89,6 +91,7 @@ export default function VisitCompletionModal({ visit, onClose, onComplete }) {
         dentist_notes: dentistNotes,
         findings: findings,
         treatment_plan: treatmentPlan,
+        teeth_treated: teethTreated,
         payment_status: paymentStatus,
         onsite_payment_amount: onsitePaymentAmount ? Number(onsitePaymentAmount) : null,
         payment_method_change: paymentMethodChange || null,
@@ -329,6 +332,22 @@ export default function VisitCompletionModal({ visit, onClose, onComplete }) {
                         onChange={(e) => setTreatmentPlan(e.target.value)}
                         placeholder="Outline the treatment plan or follow-up instructions..."
                       />
+                    </div>
+                    <div className="col-12">
+                      <label className="form-label fw-semibold">
+                        <i className="fas fa-tooth text-primary me-1"></i>
+                        Teeth Treated
+                      </label>
+                      <input
+                        type="text"
+                        className="form-control"
+                        value={teethTreated}
+                        onChange={(e) => setTeethTreated(e.target.value)}
+                        placeholder="e.g., 1,2,3,4,5 or leave blank if not applicable"
+                      />
+                      <div className="form-text">
+                        Enter tooth numbers separated by commas (e.g., 1,2,3,4,5). Use the Universal Numbering System.
+                      </div>
                     </div>
                   </div>
                 </div>

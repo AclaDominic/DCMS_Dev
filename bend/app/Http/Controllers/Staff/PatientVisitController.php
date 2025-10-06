@@ -189,6 +189,7 @@ class PatientVisitController extends Controller
             'dentist_notes' => ['nullable', 'string', 'max:2000'],
             'findings' => ['nullable', 'string', 'max:2000'],
             'treatment_plan' => ['nullable', 'string', 'max:2000'],
+            'teeth_treated' => ['nullable', 'string', 'max:200'],
             'payment_status' => ['required', 'in:paid,hmo_fully_covered,partial,unpaid'],
             'onsite_payment_amount' => ['nullable', 'numeric', 'min:0'],
             'payment_method_change' => ['nullable', 'in:maya_to_cash'],
@@ -253,6 +254,7 @@ class PatientVisitController extends Controller
                     'dentist_notes_encrypted' => $validated['dentist_notes'] ?? $visit->visitNotes->dentist_notes_encrypted,
                     'findings_encrypted' => $validated['findings'] ?? $visit->visitNotes->findings_encrypted,
                     'treatment_plan_encrypted' => $validated['treatment_plan'] ?? $visit->visitNotes->treatment_plan_encrypted,
+                    'teeth_treated' => $validated['teeth_treated'] ?? $visit->visitNotes->teeth_treated,
                     'updated_by' => $userId,
                 ]);
             } else {
@@ -261,6 +263,7 @@ class PatientVisitController extends Controller
                     'dentist_notes_encrypted' => $validated['dentist_notes'] ?? null,
                     'findings_encrypted' => $validated['findings'] ?? null,
                     'treatment_plan_encrypted' => $validated['treatment_plan'] ?? null,
+                    'teeth_treated' => $validated['teeth_treated'] ?? null,
                     'created_by' => $userId,
                 ]);
             }
@@ -689,8 +692,8 @@ class PatientVisitController extends Controller
             ]);
         }
 
-        // Get patient history
-        $patientHistory = $visit->getPatientHistory();
+        // Get complete patient history
+        $patientHistory = $visit->getCompletePatientHistory();
 
         // Return minimal patient summary and history
         return response()->json([

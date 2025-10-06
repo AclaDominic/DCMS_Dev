@@ -125,4 +125,28 @@ class PatientVisit extends Model
                 ];
             });
     }
+
+    /**
+     * Get patient's complete visit history (all completed visits)
+     */
+    public function getCompletePatientHistory()
+    {
+        return self::where('patient_id', $this->patient_id)
+            ->where('id', '!=', $this->id)
+            ->where('status', 'completed')
+            ->with(['service', 'visitNotes'])
+            ->orderBy('visit_date', 'desc')
+            ->get()
+            ->map(function ($visit) {
+                return [
+                    'id' => $visit->id,
+                    'visit_date' => $visit->visit_date,
+                    'service_name' => $visit->service?->name,
+                    'status' => $visit->status,
+                    'has_notes' => $visit->visitNotes ? true : false,
+                    'notes_created_at' => $visit->visitNotes?->created_at,
+                    'teeth_treated' => $visit->visitNotes?->teeth_treated,
+                ];
+            });
+    }
 }

@@ -331,6 +331,7 @@ function DentistVisitManager() {
                                       <th>Date</th>
                                       <th>Service</th>
                                       <th>Status</th>
+                                      <th>Teeth Treated</th>
                                       <th>Notes</th>
                                     </tr>
                                   </thead>
@@ -359,6 +360,21 @@ function DentistVisitManager() {
                                           }`}>
                                             {visit.status}
                                           </span>
+                                        </td>
+                                        <td>
+                                          {visit.teeth_treated ? (
+                                            <div>
+                                              <span className="badge bg-info">
+                                                {visit.teeth_treated}
+                                              </span>
+                                              <br />
+                                              <small className="text-muted">
+                                                {visit.teeth_treated.split(',').length} tooth{visit.teeth_treated.split(',').length !== 1 ? 's' : ''}
+                                              </small>
+                                            </div>
+                                          ) : (
+                                            <span className="text-muted">-</span>
+                                          )}
                                         </td>
                                         <td>
                                           {visit.has_notes ? (
