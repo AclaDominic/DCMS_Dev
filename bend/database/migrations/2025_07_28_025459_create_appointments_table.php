@@ -34,6 +34,7 @@ return new class extends Migration {
 
             // misc
             $table->text('notes')->nullable();
+            $table->integer('teeth_count')->nullable(); // For per-teeth services
             $table->timestamp('canceled_at')->nullable();
             $table->timestamp('reminded_at')->nullable();
 

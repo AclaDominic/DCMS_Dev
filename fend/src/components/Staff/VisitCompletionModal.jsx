@@ -363,7 +363,12 @@ export default function VisitCompletionModal({ visit, onClose, onComplete }) {
                             <div className="col-6">
                               <div className="d-flex flex-column">
                                 <small className="text-muted mb-1">Service Price</small>
-                                <div className="fw-semibold text-primary">₱{servicePrice.toLocaleString()}</div>
+                                <div className="fw-semibold text-primary">
+                                  ₱{servicePrice.toLocaleString()}
+                                  {visit.service?.per_teeth_service && (
+                                    <small className="text-info d-block">per tooth</small>
+                                  )}
+                                </div>
                               </div>
                             </div>
                             <div className="col-6">

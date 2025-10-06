@@ -551,6 +551,7 @@ class PatientVisitController extends Controller
             'dentist_notes' => ['nullable', 'string', 'max:2000'],
             'findings' => ['nullable', 'string', 'max:2000'],
             'treatment_plan' => ['nullable', 'string', 'max:2000'],
+            'teeth_treated' => ['nullable', 'string', 'max:200'],
         ]);
 
         $userId = $request->user()->id;
@@ -563,6 +564,7 @@ class PatientVisitController extends Controller
                 'dentist_notes_encrypted' => $validated['dentist_notes'] ?? $visit->visitNotes->dentist_notes_encrypted,
                 'findings_encrypted' => $validated['findings'] ?? $visit->visitNotes->findings_encrypted,
                 'treatment_plan_encrypted' => $validated['treatment_plan'] ?? $visit->visitNotes->treatment_plan_encrypted,
+                'teeth_treated' => $validated['teeth_treated'] ?? $visit->visitNotes->teeth_treated,
                 'updated_by' => $userId,
             ]);
             
@@ -573,6 +575,7 @@ class PatientVisitController extends Controller
                 'dentist_notes_encrypted' => $validated['dentist_notes'] ?? null,
                 'findings_encrypted' => $validated['findings'] ?? null,
                 'treatment_plan_encrypted' => $validated['treatment_plan'] ?? null,
+                'teeth_treated' => $validated['teeth_treated'] ?? null,
                 'created_by' => $userId,
             ]);
             
@@ -747,6 +750,7 @@ class PatientVisitController extends Controller
                 'dentist_notes' => null,
                 'findings' => null,
                 'treatment_plan' => null,
+                'teeth_treated' => null,
             ]);
         }
 
@@ -776,6 +780,7 @@ class PatientVisitController extends Controller
             'dentist_notes' => $visit->visitNotes->dentist_notes_encrypted,
             'findings' => $visit->visitNotes->findings_encrypted,
             'treatment_plan' => $visit->visitNotes->treatment_plan_encrypted,
+            'teeth_treated' => $visit->visitNotes->teeth_treated,
             'created_by' => $visit->visitNotes->createdBy?->name,
             'created_at' => $visit->visitNotes->created_at,
             'updated_by' => $visit->visitNotes->updatedBy?->name,

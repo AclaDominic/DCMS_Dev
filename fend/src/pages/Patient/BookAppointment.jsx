@@ -34,6 +34,7 @@ function BookAppointment() {
   const [selectedSlot, setSelectedSlot] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [bookingMessage, setBookingMessage] = useState("");
+  const [teethCount, setTeethCount] = useState("");
 
   // NEW: for HMO picker
   const [myPatientId, setMyPatientId] = useState(null);
@@ -94,6 +95,7 @@ function BookAppointment() {
     setPaymentMethod("cash");
     setPatientHmoId(null); // reset HMO when date changes
     setBookingMessage("");
+    setTeethCount("");
     setShowServiceModal(false);
     if (date) {
       fetchServices(date);
@@ -106,6 +108,7 @@ function BookAppointment() {
     fetchSlots(service.id);
     setSelectedSlot("");
     setBookingMessage("");
+    setTeethCount(""); // Reset teeth treated when changing service
     setShowServiceModal(false);
   };
 
@@ -137,6 +140,9 @@ function BookAppointment() {
       };
       if (paymentMethod === "hmo") {
         payload.patient_hmo_id = patientHmoId;
+      }
+      if (selectedService.per_teeth_service && teethCount) {
+        payload.teeth_count = parseInt(teethCount);
       }
 
       await api.post("/api/appointment", payload);
@@ -229,7 +235,18 @@ function BookAppointment() {
                         <div>
                           <strong>Service Selected:</strong><br/>
                           <span className="fs-5">{selectedService.name}</span><br/>
-                          <span className="text-success fw-semibold">₱{Number(selectedService.price || selectedService.promo_price).toLocaleString()}</span>
+                          <span className="text-success fw-semibold">
+                            ₱{Number(selectedService.price || selectedService.promo_price).toLocaleString()}
+                            {selectedService.per_teeth_service ? ' per tooth' : ''}
+                          </span>
+                          {selectedService.per_teeth_service && (
+                            <div className="mt-2">
+                              <small className="text-info">
+                                <i className="bi bi-info-circle me-1"></i>
+                                Total cost depends on number of teeth treated
+                              </small>
+                            </div>
+                          )}
                         </div>
                       </div>
                       <button 
@@ -247,6 +264,32 @@ function BookAppointment() {
 
               {selectedService && (
                 <div className="mt-5">
+                  {/* Consultation Recommendation for Per-Teeth Services */}
+                  {selectedService.per_teeth_service && (
+                    <div className="alert alert-info border-0 shadow-sm mb-4" role="alert">
+                      <div className="d-flex align-items-start">
+                        <i className="bi bi-lightbulb me-3 fs-4 text-info"></i>
+                        <div>
+                          <h6 className="alert-heading text-info mb-2">
+                            <i className="bi bi-tooth me-2"></i>
+                            Per-Teeth Service Recommendation
+                          </h6>
+                          <p className="mb-2">
+                            For per-teeth services, we recommend scheduling a <strong>consultation first</strong> to determine:
+                          </p>
+                          <ul className="mb-2 ps-3">
+                            <li>How many teeth need treatment</li>
+                            <li>The appropriate procedure for each tooth</li>
+                            <li>Accurate cost estimation</li>
+                          </ul>
+                          <p className="mb-0">
+                            <strong>If you already know the details, please proceed with booking.</strong>
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="border-top pt-4">
                     <h4 className="h5 mb-4">
                       <i className="bi bi-clock me-2 text-primary"></i>
@@ -281,6 +324,35 @@ function BookAppointment() {
                             ))}
                           </select>
                         </div>
+
+                        {/* Teeth Count Input for Per-Teeth Services */}
+                        {selectedService.per_teeth_service && (
+                          <div className="mb-4">
+                            <label className="form-label fw-semibold fs-6 mb-3">
+                              <i className="bi bi-tooth me-2 text-primary"></i>
+                              Number of Teeth to be Treated <span className="text-muted">(optional)</span>
+                            </label>
+                            <input
+                              type="number"
+                              className="form-control form-control-lg border-2"
+                              placeholder="e.g., 3"
+                              value={teethCount}
+                              onChange={(e) => setTeethCount(e.target.value)}
+                              min="1"
+                              max="32"
+                              style={{ fontSize: '1.1rem' }}
+                            />
+                            <div className="form-text mt-2">
+                              <i className="bi bi-info-circle me-1"></i>
+                              Enter the number of teeth that need treatment. Leave blank if you're unsure - we'll determine this during your visit.
+                              {teethCount && (
+                                <div className="mt-2">
+                                  <strong>Estimated cost:</strong> ₱{Number(selectedService.price || selectedService.promo_price) * parseInt(teethCount || 0).toLocaleString()}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
 
                         <div className="mb-4">
                           <label className="form-label fw-semibold fs-6 mb-3">

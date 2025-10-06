@@ -15,6 +15,7 @@ class VisitNote extends Model
         'dentist_notes_encrypted',
         'findings_encrypted',
         'treatment_plan_encrypted',
+        'teeth_treated',
         'created_by',
         'updated_by',
         'last_accessed_at',
@@ -67,5 +68,54 @@ class VisitNote extends Model
             'last_accessed_at' => now(),
             'last_accessed_by' => $userId,
         ]);
+    }
+
+    // Helper method to get formatted teeth treated
+    public function getFormattedTeethTreatedAttribute(): string
+    {
+        return Service::formatTeethTreated($this->teeth_treated);
+    }
+
+    // Helper method to set sanitized teeth treated
+    public function setTeethTreatedAttribute($value)
+    {
+        $this->attributes['teeth_treated'] = Service::sanitizeTeethTreated($value);
+    }
+
+    // Method to calculate total cost for per-teeth services in this visit
+    public function calculatePerTeethCost()
+    {
+        if (!$this->teeth_treated) {
+            return 0;
+        }
+
+        $teethCount = Service::countTeeth($this->teeth_treated);
+        
+        // Get the services for this visit that are per-teeth
+        $visit = $this->patientVisit;
+        if (!$visit) {
+            return 0;
+        }
+
+        $totalCost = 0;
+        
+        // Assuming there's a relationship to get services for this visit
+        // This would need to be implemented based on your visit structure
+        // For now, we'll return the teeth count for calculation
+        
+        return $teethCount;
+    }
+
+    // Method to get formatted teeth treated with count
+    public function getTeethTreatedWithCountAttribute(): string
+    {
+        if (!$this->teeth_treated) {
+            return '';
+        }
+
+        $formatted = $this->formatted_teeth_treated;
+        $count = Service::countTeeth($this->teeth_treated);
+        
+        return $formatted . " ({$count} teeth)";
     }
 }

@@ -147,7 +147,7 @@ function ServiceSelectionModal({
                             <div className="pricing-section-large">
                               <div className="d-flex justify-content-center align-items-center mb-3">
                                 <span className="text-muted text-decoration-line-through me-3 fs-5">
-                                  ₱{Number(selectedService.original_price).toLocaleString()}
+                                  ₱{Number(selectedService.original_price).toLocaleString()}{selectedService.per_teeth_service ? ' per tooth' : ''}
                                 </span>
                                 <span className="badge bg-danger fs-6">
                                   {selectedService.discount_percent}% OFF
@@ -158,8 +158,16 @@ function ServiceSelectionModal({
                                 lineHeight: '1.2',
                                 wordWrap: 'break-word'
                               }}>
-                                ₱{Number(selectedService.promo_price).toLocaleString()}
+                                ₱{Number(selectedService.promo_price).toLocaleString()}{selectedService.per_teeth_service ? ' per tooth' : ''}
                               </div>
+                              {selectedService.per_teeth_service && (
+                                <div className="text-center mt-2">
+                                  <small className="text-info">
+                                    <i className="bi bi-info-circle me-1"></i>
+                                    Total cost depends on number of teeth treated
+                                  </small>
+                                </div>
+                              )}
                             </div>
                           )}
 
@@ -170,9 +178,17 @@ function ServiceSelectionModal({
                                 lineHeight: '1.2',
                                 wordWrap: 'break-word'
                               }}>
-                                ₱{Number(selectedService.price).toLocaleString()}
+                                ₱{Number(selectedService.price).toLocaleString()}{selectedService.per_teeth_service ? ' per tooth' : ''}
                               </div>
                               <span className="badge bg-info fs-6">Special Service</span>
+                              {selectedService.per_teeth_service && (
+                                <div className="text-center mt-2">
+                                  <small className="text-info">
+                                    <i className="bi bi-info-circle me-1"></i>
+                                    Total cost depends on number of teeth treated
+                                  </small>
+                                </div>
+                              )}
                             </div>
                           )}
 
@@ -183,8 +199,16 @@ function ServiceSelectionModal({
                                 lineHeight: '1.2',
                                 wordWrap: 'break-word'
                               }}>
-                                ₱{Number(selectedService.price).toLocaleString()}
+                                ₱{Number(selectedService.price).toLocaleString()}{selectedService.per_teeth_service ? ' per tooth' : ''}
                               </div>
+                              {selectedService.per_teeth_service && (
+                                <div className="text-center mt-2">
+                                  <small className="text-info">
+                                    <i className="bi bi-info-circle me-1"></i>
+                                    Total cost depends on number of teeth treated
+                                  </small>
+                                </div>
+                              )}
                             </div>
                           )}
                         </div>
@@ -310,13 +334,13 @@ function ServiceSelectionModal({
                               {service.type === "promo" && (
                                 <div className="d-flex align-items-center">
                                   <span className="text-muted text-decoration-line-through me-3">
-                                    ₱{Number(service.original_price).toLocaleString()}
+                                    ₱{Number(service.original_price).toLocaleString()}{service.per_teeth_service ? ' per tooth' : ''}
                                   </span>
                                   <span className="badge bg-danger me-3">
                                     {service.discount_percent}% OFF
                                   </span>
                                   <div className="h4 text-success fw-bold mb-0">
-                                    ₱{Number(service.promo_price).toLocaleString()}
+                                    ₱{Number(service.promo_price).toLocaleString()}{service.per_teeth_service ? ' per tooth' : ''}
                                   </div>
                                 </div>
                               )}
@@ -324,7 +348,7 @@ function ServiceSelectionModal({
                               {service.type === "special" && (
                                 <div className="d-flex align-items-center">
                                   <div className="h4 text-info fw-bold me-3">
-                                    ₱{Number(service.price).toLocaleString()}
+                                    ₱{Number(service.price).toLocaleString()}{service.per_teeth_service ? ' per tooth' : ''}
                                   </div>
                                   <span className="badge bg-info">Special Service</span>
                                 </div>
@@ -332,7 +356,7 @@ function ServiceSelectionModal({
 
                               {service.type === "regular" && (
                                 <div className="h4 text-dark fw-bold mb-0">
-                                  ₱{Number(service.price).toLocaleString()}
+                                  ₱{Number(service.price).toLocaleString()}{service.per_teeth_service ? ' per tooth' : ''}
                                 </div>
                               )}
                             </div>

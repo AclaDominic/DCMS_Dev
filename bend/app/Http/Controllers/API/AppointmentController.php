@@ -30,10 +30,15 @@ class AppointmentController extends Controller
         'payment_method'  => ['required', Rule::in(['cash', 'maya', 'hmo'])],
         // NEW: optional, required when payment_method = hmo
         'patient_hmo_id'  => ['nullable', 'integer', 'exists:patient_hmos,id'],
+        // NEW: optional, for per-teeth services
+        'teeth_count'     => ['nullable', 'integer', 'min:1', 'max:32'],
     ]);
 
     $service  = Service::findOrFail($validated['service_id']);
-    $blocksNeeded = (int) max(1, ceil($service->estimated_minutes / 30));
+    
+    // Calculate estimated minutes based on teeth count for per-teeth services
+    $estimatedMinutes = $service->calculateEstimatedMinutes($validated['teeth_count'] ?? null);
+    $blocksNeeded = (int) max(1, ceil($estimatedMinutes / 30));
     $dateStr  = $validated['date'];
     $date     = Carbon::createFromFormat('Y-m-d', $dateStr)->startOfDay();
 
@@ -62,7 +67,7 @@ class AppointmentController extends Controller
         return response()->json(['message' => 'Invalid start time (not on grid or outside hours).'], 422);
     }
 
-    $endTime = $startTime->copy()->addMinutes($service->estimated_minutes);
+    $endTime = $startTime->copy()->addMinutes($estimatedMinutes);
     if ($startTime->lt($open) || $endTime->gt($close)) {
         return response()->json(['message' => 'Selected time is outside clinic hours.'], 422);
     }
@@ -114,6 +119,7 @@ class AppointmentController extends Controller
         'status'          => 'pending',
         'payment_method'  => $validated['payment_method'],
         'payment_status'  => $validated['payment_method'] === 'maya' ? 'awaiting_payment' : 'unpaid',
+        'teeth_count'     => $validated['teeth_count'] ?? null, // NEW
     ]);
 
     // Notify staff about the new appointment

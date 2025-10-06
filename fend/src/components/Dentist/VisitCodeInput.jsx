@@ -1,6 +1,7 @@
 import { useState } from "react";
 import api from "../../api/api";
 import LoadingSpinner from "../LoadingSpinner";
+import ToothChart from "./ToothChart";
 
 function VisitCodeInput() {
   const [code, setCode] = useState("");
@@ -11,11 +12,13 @@ function VisitCodeInput() {
     dentist_notes: "",
     findings: "",
     treatment_plan: "",
+    teeth_treated: "",
   });
   const [saving, setSaving] = useState(false);
   const [fetchingNotes, setFetchingNotes] = useState(null);
   const [fetchedNotes, setFetchedNotes] = useState(null);
   const [notesError, setNotesError] = useState("");
+  const [showToothChart, setShowToothChart] = useState(false);
 
   const handleCodeSubmit = async (e) => {
     e.preventDefault();
@@ -34,6 +37,7 @@ function VisitCodeInput() {
           dentist_notes: notesResponse.data.dentist_notes || "",
           findings: notesResponse.data.findings || "",
           treatment_plan: notesResponse.data.treatment_plan || "",
+          teeth_treated: notesResponse.data.teeth_treated || "",
         });
       }
     } catch (err) {
@@ -96,6 +100,7 @@ function VisitCodeInput() {
       dentist_notes: "",
       findings: "",
       treatment_plan: "",
+      teeth_treated: "",
     });
     setError("");
     setFetchedNotes(null);
@@ -253,6 +258,30 @@ function VisitCodeInput() {
                         placeholder="Enter treatment plan..."
                       />
                     </div>
+                    
+                    <div className="mb-3">
+                      <label htmlFor="teethTreated" className="form-label">
+                        Teeth Treated
+                      </label>
+                      <input
+                        type="text"
+                        className="form-control"
+                        id="teethTreated"
+                        value={notes.teeth_treated}
+                        onChange={(e) => setNotes({...notes, teeth_treated: e.target.value})}
+                        placeholder="e.g., 1,2,3,4,5 or leave blank if not applicable"
+                      />
+                      <div className="form-text">
+                        Enter tooth numbers separated by commas (e.g., 1,2,3,4,5). Use the tooth numbering chart as reference.
+                      </div>
+                      
+                      <ToothChart
+                        selectedTeeth={notes.teeth_treated ? notes.teeth_treated.split(',').map(t => t.trim()) : []}
+                        onTeethChange={(teeth) => setNotes({...notes, teeth_treated: teeth})}
+                        showChart={showToothChart}
+                        onToggleChart={() => setShowToothChart(!showToothChart)}
+                      />
+                    </div>
                   </div>
 
                   {/* Action Buttons */}
@@ -336,6 +365,20 @@ function VisitCodeInput() {
                     </div>
                   </div>
                 )}
+                
+                {fetchedNotes.teeth_treated && (
+                  <div className="mb-4">
+                    <h6 className="text-warning">
+                      <i className="bi bi-tooth me-2"></i>
+                      Teeth Treated
+                    </h6>
+                    <div className="bg-light p-3 rounded border">
+                      <p className="mb-0">
+                        {fetchedNotes.teeth_treated}
+                      </p>
+                    </div>
+                  </div>
+                )}
 
                 {fetchedNotes.created_by && (
                   <div className="text-muted small border-top pt-3">
@@ -358,7 +401,7 @@ function VisitCodeInput() {
                   </div>
                 )}
 
-                {!fetchedNotes.dentist_notes && !fetchedNotes.findings && !fetchedNotes.treatment_plan && (
+                {!fetchedNotes.dentist_notes && !fetchedNotes.findings && !fetchedNotes.treatment_plan && !fetchedNotes.teeth_treated && (
                   <div className="text-center py-4">
                     <i className="bi bi-file-text fs-1 text-muted"></i>
                     <p className="mt-2 text-muted">No detailed notes available for this visit.</p>

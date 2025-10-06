@@ -196,8 +196,9 @@ export default function ServicesAndPromos() {
     return true;
   };
 
-  const formatPrice = (price) => {
-    return `₱${Number(price).toFixed(2)}`;
+  const formatPrice = (price, isPerTeeth = false) => {
+    const formatted = `₱${Number(price).toFixed(2)}`;
+    return isPerTeeth ? `${formatted} per tooth` : formatted;
   };
 
   const formatDate = (dateString) => {
@@ -376,10 +377,10 @@ export default function ServicesAndPromos() {
                                     <div className="d-flex align-items-center gap-4 mb-3">
                                       <div>
                                         <span className="h3 text-success fw-bold mb-0">
-                                          {formatPrice(promo.discounted_price)}
+                                          {formatPrice(promo.discounted_price, promo.service.per_teeth_service)}
                                         </span>
                                         <span className="text-decoration-line-through text-muted ms-2">
-                                          {formatPrice(promo.service.price)}
+                                          {formatPrice(promo.service.price, promo.service.per_teeth_service)}
                                         </span>
                                       </div>
                                       <div className="text-muted">
@@ -515,10 +516,10 @@ export default function ServicesAndPromos() {
                         <div>
                           <div className="d-flex align-items-center gap-2">
                             <span className="h4 text-success fw-bold mb-0">
-                              {formatPrice(priceInfo.price)}
+                              {formatPrice(priceInfo.price, service.per_teeth_service)}
                             </span>
                             <span className="text-decoration-line-through text-muted">
-                              {formatPrice(priceInfo.originalPrice)}
+                              {formatPrice(priceInfo.originalPrice, service.per_teeth_service)}
                             </span>
                             <span className="badge bg-danger">
                               <i className="bi bi-percent me-1"></i>
@@ -530,8 +531,16 @@ export default function ServicesAndPromos() {
                           </small>
                         </div>
                       ) : (
-                        <div className="h4 text-primary fw-bold mb-0">
-                          {formatPrice(priceInfo.price)}
+                        <div>
+                          <div className="h4 text-primary fw-bold mb-0">
+                            {formatPrice(priceInfo.price, service.per_teeth_service)}
+                          </div>
+                          {service.per_teeth_service && (
+                            <small className="text-info">
+                              <i className="bi bi-info-circle me-1"></i>
+                              Total cost depends on number of teeth treated
+                            </small>
+                          )}
                         </div>
                       )}
                     </div>

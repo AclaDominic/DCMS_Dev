@@ -23,7 +23,7 @@ class AppointmentServiceController extends Controller
         $dayOfWeek = $carbonDate->dayOfWeek; // 0 = Sunday, 6 = Saturday
 
         // 1. Check if clinic is open on that date
-        $override = ClinicCalendar::whereDate('date', $date)->first();
+        $override = ClinicCalendar::where('date', $date)->first();
         $isOpen = false;
 
         if ($override) {
@@ -69,6 +69,8 @@ class AppointmentServiceController extends Controller
                 'original_price' => $originalPrice,
                 'promo_price' => $discountPrice,
                 'discount_percent' => $percent,
+                'per_teeth_service' => $promo->service->per_teeth_service,
+                'per_tooth_minutes' => $promo->service->per_tooth_minutes,
             ];
         })->values();
 
@@ -81,7 +83,9 @@ class AppointmentServiceController extends Controller
                     'id' => $service->id,
                     'name' => $service->name,
                     'type' => 'regular',
-                    'price' => $service->price
+                    'price' => $service->price,
+                    'per_teeth_service' => $service->per_teeth_service,
+                    'per_tooth_minutes' => $service->per_tooth_minutes,
                 ];
             });
 
@@ -101,6 +105,8 @@ class AppointmentServiceController extends Controller
                 'type' => 'special',
                 'price' => $service->price,
                 'special_until' => optional($service->special_end_date)?->toDateString(),
+                'per_teeth_service' => $service->per_teeth_service,
+                'per_tooth_minutes' => $service->per_tooth_minutes,
             ];
         });
 

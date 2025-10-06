@@ -17,6 +17,8 @@ export default function ServiceManager() {
     is_excluded_from_analytics: false,
     estimated_minutes: "",
     is_special: false,
+    per_teeth_service: false,
+    per_tooth_minutes: "",
     special_start_date: "",
     special_end_date: "",
     bundled_service_ids: [],
@@ -45,10 +47,21 @@ export default function ServiceManager() {
 
   const handleChange = (e) => {
     const { name, type, checked, value } = e.target;
-    setFormData({
-      ...formData,
-      [name]: type === "checkbox" ? checked : value,
-    });
+    
+    // Handle special checkbox logic
+    if (name === "is_special" && checked) {
+      // If marking as special, disable per_teeth_service
+      setFormData({
+        ...formData,
+        [name]: checked,
+        per_teeth_service: false,
+      });
+    } else {
+      setFormData({
+        ...formData,
+        [name]: type === "checkbox" ? checked : value,
+      });
+    }
   };
 
   const handleDelete = (service) => {
@@ -110,6 +123,8 @@ export default function ServiceManager() {
       is_excluded_from_analytics: false,
       estimated_minutes: "",
       is_special: false,
+      per_teeth_service: false,
+      per_tooth_minutes: "",
       special_start_date: "",
       special_end_date: "",
       bundled_service_ids: [],
@@ -127,6 +142,8 @@ export default function ServiceManager() {
       is_excluded_from_analytics: service.is_excluded_from_analytics || false,
       estimated_minutes: service.estimated_minutes || "",
       is_special: service.is_special || false,
+      per_teeth_service: service.per_teeth_service || false,
+      per_tooth_minutes: service.per_tooth_minutes || "",
       special_start_date: service.special_start_date || "",
       special_end_date: service.special_end_date || "",
       bundled_service_ids: service.bundled_services?.map((s) => s.id) || [],
@@ -213,6 +230,9 @@ export default function ServiceManager() {
                 <th className="fw-semibold px-4 py-3 border-0" style={{ fontSize: '1.1rem' }}>
                   <i className="bi bi-graph-up me-2"></i>Analytics
                 </th>
+                <th className="fw-semibold px-4 py-3 border-0" style={{ fontSize: '1.1rem' }}>
+                  <i className="bi bi-tooth me-2"></i>Per Teeth
+                </th>
                 <th className="fw-semibold px-4 py-3 border-0 text-center" style={{ fontSize: '1.1rem' }}>
                   <i className="bi bi-gear me-2"></i>Actions
                 </th>
@@ -243,7 +263,12 @@ export default function ServiceManager() {
                     </div>
                   </td>
                   <td className="px-4 py-3 border-0" style={{ fontSize: '1rem' }}>
-                    <div className="fw-bold text-success fs-5">₱{Number(service.price).toFixed(2)}</div>
+                    <div className="fw-bold text-success fs-5">
+                      {service.per_teeth_service 
+                        ? `₱${Number(service.price).toFixed(2)} per tooth`
+                        : `₱${Number(service.price).toFixed(2)}`
+                      }
+                    </div>
                   </td>
                   <td className="px-4 py-3 border-0" style={{ fontSize: '1rem' }}>
                     <span className="badge bg-light text-dark">{service.category || "-"}</span>
@@ -273,6 +298,11 @@ export default function ServiceManager() {
                   <td className="px-4 py-3 border-0" style={{ fontSize: '1rem' }}>
                     <span className={`badge ${service.is_excluded_from_analytics ? 'bg-danger' : 'bg-success'}`}>
                       {service.is_excluded_from_analytics ? "Excluded" : "Included"}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 border-0" style={{ fontSize: '1rem' }}>
+                    <span className={`badge ${service.per_teeth_service ? 'bg-info' : 'bg-secondary'}`}>
+                      {service.per_teeth_service ? "Yes" : "No"}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-center border-0">
@@ -373,6 +403,12 @@ export default function ServiceManager() {
                     onChange={handleChange}
                     required
                   />
+                  {formData.per_teeth_service && (
+                    <small className="text-info">
+                      <i className="bi bi-info-circle me-1"></i>
+                      This will be the price per tooth. Total cost will be calculated based on number of teeth treated.
+                    </small>
+                  )}
                   {formErrors.price && (
                     <div className="invalid-feedback">
                       {formErrors.price[0]}
@@ -469,6 +505,60 @@ export default function ServiceManager() {
                     </small>
                   </label>
                 </div>
+                <div className="form-check mb-3">
+                  <input
+                    className="form-check-input"
+                    type="checkbox"
+                    id="perTeethService"
+                    name="per_teeth_service"
+                    checked={formData.per_teeth_service}
+                    onChange={handleChange}
+                    disabled={formData.is_special}
+                  />
+                  <label className="form-check-label" htmlFor="perTeethService">
+                    Per Teeth Service
+                    <br />
+                    <small className="text-muted">
+                      Track which specific tooth was serviced and what procedure was done.
+                      Examples: Tooth Extraction, Tooth Filling, Root Canal Treatment.
+                    </small>
+                  </label>
+                </div>
+                {formData.per_teeth_service && (
+                  <div className="mb-3">
+                    <label className="form-label">
+                      Minutes per Tooth <span className="text-danger">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      name="per_tooth_minutes"
+                      className={`form-control ${
+                        formErrors.per_tooth_minutes ? "is-invalid" : ""
+                      }`}
+                      value={formData.per_tooth_minutes}
+                      onChange={handleChange}
+                      min="1"
+                      max="60"
+                      required
+                    />
+                    <small className="text-info">
+                      <i className="bi bi-info-circle me-1"></i>
+                      Time per tooth. Total appointment time will be calculated as: (minutes per tooth × number of teeth) rounded up to 30-minute blocks.
+                    </small>
+                    {formErrors.per_tooth_minutes && (
+                      <div className="invalid-feedback">
+                        {formErrors.per_tooth_minutes[0]}
+                      </div>
+                    )}
+                  </div>
+                )}
+                {formData.is_special && formData.per_teeth_service && (
+                  <div className="alert alert-warning mb-3" role="alert">
+                    <i className="bi bi-exclamation-triangle me-2"></i>
+                    <strong>Warning:</strong> Per Teeth Service is only available for solo services. 
+                    Since this service is marked as Special/Package, the Per Teeth option has been turned off.
+                  </div>
+                )}
                 {formData.is_special && (
                   <div className="mb-3">
                     <label className="form-label">

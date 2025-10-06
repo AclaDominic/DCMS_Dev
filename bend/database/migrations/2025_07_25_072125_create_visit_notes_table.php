@@ -20,6 +20,9 @@ return new class extends Migration {
             $table->text('findings_encrypted')->nullable();
             $table->text('treatment_plan_encrypted')->nullable();
             
+            // Teeth treated field for per-teeth services
+            $table->string('teeth_treated')->nullable();
+            
             // Metadata
             $table->foreignId('created_by')
                 ->nullable()

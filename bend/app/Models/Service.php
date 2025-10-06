@@ -19,6 +19,8 @@ class Service extends Model
         'special_start_date',
         'special_end_date',
         'estimated_minutes',
+        'per_teeth_service',
+        'per_tooth_minutes',
     ];
 
     public function discounts()
@@ -62,5 +64,110 @@ class Service extends Model
     public function parentPackages()
     {
         return $this->belongsToMany(Service::class, 'service_bundle_items', 'child_service_id', 'parent_service_id');
+    }
+
+    // Helper method to check if this service can be marked as per-teeth
+    public function canBePerTeethService(): bool
+    {
+        return !$this->is_special;
+    }
+
+    // Helper method to get formatted teeth treated string
+    public static function formatTeethTreated($teethString): string
+    {
+        if (empty($teethString)) {
+            return '';
+        }
+        
+        // Remove spaces and split by comma
+        $teeth = array_map('trim', explode(',', $teethString));
+        $teeth = array_filter($teeth); // Remove empty values
+        
+        return implode(', ', $teeth);
+    }
+
+    // Helper method to sanitize teeth treated input
+    public static function sanitizeTeethTreated($teethString): string
+    {
+        if (empty($teethString)) {
+            return '';
+        }
+        
+        // Remove spaces and split by comma
+        $teeth = array_map('trim', explode(',', $teethString));
+        $teeth = array_filter($teeth); // Remove empty values
+        
+        return implode(',', $teeth);
+    }
+
+    // Helper method to count teeth from teeth treated string
+    public static function countTeeth($teethString): int
+    {
+        if (empty($teethString)) {
+            return 0;
+        }
+        
+        $teeth = array_map('trim', explode(',', $teethString));
+        $teeth = array_filter($teeth); // Remove empty values
+        
+        return count($teeth);
+    }
+
+    // Method to calculate total price for per-teeth services
+    public function calculateTotalPrice($teethTreated = null): float
+    {
+        if (!$this->per_teeth_service) {
+            return $this->price;
+        }
+
+        if ($teethTreated === null) {
+            return $this->price; // Return per-tooth price if no teeth specified
+        }
+
+        $teethCount = self::countTeeth($teethTreated);
+        return $this->price * $teethCount;
+    }
+
+    // Method to get display price for per-teeth services
+    public function getDisplayPrice(): string
+    {
+        if ($this->per_teeth_service) {
+            return '₱' . number_format($this->price, 2) . ' per tooth';
+        }
+        
+        return '₱' . number_format($this->price, 2);
+    }
+
+    // Method to check if service allows discounted pricing (for packages/promos)
+    public function allowsDiscountedPricing(): bool
+    {
+        return $this->is_special; // Special/package services can have discounted pricing
+    }
+
+    // Method to calculate estimated minutes for per-teeth services
+    public function calculateEstimatedMinutes($teethCount = null): int
+    {
+        if (!$this->per_teeth_service || !$this->per_tooth_minutes) {
+            return $this->estimated_minutes;
+        }
+
+        if ($teethCount === null || $teethCount <= 0) {
+            return $this->per_tooth_minutes; // Return per-tooth time for single tooth
+        }
+
+        $totalMinutes = $this->per_tooth_minutes * $teethCount;
+        
+        // Round up to nearest 30 minutes
+        return (int) ceil($totalMinutes / 30) * 30;
+    }
+
+    // Method to get display time for per-teeth services
+    public function getDisplayTime(): string
+    {
+        if ($this->per_teeth_service && $this->per_tooth_minutes) {
+            return "{$this->per_tooth_minutes} mins per tooth";
+        }
+        
+        return "{$this->estimated_minutes} mins";
     }
 }
