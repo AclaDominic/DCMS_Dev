@@ -45,6 +45,7 @@ import StaffLayout from "../layouts/StaffLayout";
 import StaffDashboard from "../pages/Staff/StaffDashboard";
 import StaffProfile from "../pages/Staff/StaffProfile";
 import StaffAppointmentManager from "../pages/Staff/StaffAppointmentManager"; // Appointment management
+import AdminAppointmentManager from "../pages/Admin/AdminAppointmentManager"; // Admin appointment management
 import AppointmentReminders from "../pages/Staff/AppointmentReminders";
 import ConsumeStockPage from "../pages/Staff/ConsumeStockPage";
 
@@ -125,8 +126,8 @@ export default function AppRouter() {
               </Gate>
             }
           />
-          {/* Mirror Staff Appointments under Admin */}
-          <Route path="appointments" element={<StaffAppointmentManager />} />
+          {/* Admin Appointments with Visit Tracking */}
+          <Route path="appointments" element={<AdminAppointmentManager />} />
           {/* System Logs */}
           <Route path="system-logs" element={<SystemLogsPage />} />
           {/* Add more admin routes as needed */}

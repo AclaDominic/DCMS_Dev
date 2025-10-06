@@ -611,10 +611,10 @@ class PatientVisitController extends Controller
      */
     public function resolveCode(Request $request, $code)
     {
-        // Check authorization - only dentist or staff can resolve codes
+        // Check authorization - only dentist, staff, or admin can resolve codes
         $user = $request->user();
-        if (!in_array($user->role, ['dentist', 'staff'])) {
-            return response()->json(['message' => 'Unauthorized: Only dentists and staff can resolve visit codes.'], 403);
+        if (!in_array($user->role, ['dentist', 'staff', 'admin'])) {
+            return response()->json(['message' => 'Unauthorized: Only dentists, staff, and admins can resolve visit codes.'], 403);
         }
 
         // Normalize the code
