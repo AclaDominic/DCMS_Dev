@@ -23,8 +23,7 @@ import VerifySuccess from "../pages/VerifySuccess";
 // Admin layout and pages
 import AdminLayout from "../layouts/AdminLayout";
 import AdminDashboard from "../pages/Admin/Dashboard";
-import AdminDeviceApprovals from "../pages/Admin/DeviceApprovals";
-import AdminApprovedDevices from "../pages/Admin/ApprovedDevices";
+import AdminDeviceManager from "../pages/Admin/AdminDeviceManager";
 import AdminStaffRegister from "../pages/Admin/StaffRegister";
 import AdminProfile from "../pages/Admin/AdminProfile";
 import AdminServices from "../pages/Admin/ServiceManager";
@@ -94,8 +93,7 @@ export default function AppRouter() {
         {/* Admin Routes */}
         <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<AdminDashboard />} />
-          <Route path="device-approvals" element={<AdminDeviceApprovals />} />
-          <Route path="approved-devices" element={<AdminApprovedDevices />} />
+          <Route path="devices" element={<AdminDeviceManager />} />
           <Route path="staff-register" element={<AdminStaffRegister />} />
           <Route path="profile" element={<AdminProfile />} />
           <Route path="services" element={<AdminServices />} />
