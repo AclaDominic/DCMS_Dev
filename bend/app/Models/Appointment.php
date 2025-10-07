@@ -145,4 +145,26 @@ class Appointment extends Model
 
         return $blockedSlots;
     }
+
+    /**
+     * Check if two time slots overlap
+     * Returns true if the time slots have any overlap
+     */
+    public static function hasTimeSlotOverlap(string $timeSlot1, string $timeSlot2): bool
+    {
+        if (strpos($timeSlot1, '-') === false || strpos($timeSlot2, '-') === false) {
+            return false; // Invalid format
+        }
+
+        [$start1, $end1] = explode('-', $timeSlot1, 2);
+        [$start2, $end2] = explode('-', $timeSlot2, 2);
+
+        $startTime1 = \Carbon\Carbon::createFromFormat('H:i', trim($start1));
+        $endTime1 = \Carbon\Carbon::createFromFormat('H:i', trim($end1));
+        $startTime2 = \Carbon\Carbon::createFromFormat('H:i', trim($start2));
+        $endTime2 = \Carbon\Carbon::createFromFormat('H:i', trim($end2));
+
+        // Check for overlap: first appointment starts before second ends AND first appointment ends after second starts
+        return $startTime1->lt($endTime2) && $endTime1->gt($startTime2);
+    }
 }

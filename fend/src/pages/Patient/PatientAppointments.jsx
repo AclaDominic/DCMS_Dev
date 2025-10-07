@@ -9,6 +9,11 @@ function PatientAppointments() {
   const [meta, setMeta] = useState({});
   const [paying, setPaying] = useState(null); // appointment_id being processed
   const [generatingReceipt, setGeneratingReceipt] = useState(null); // appointment_id being processed
+  const [rescheduleModal, setRescheduleModal] = useState(null); // appointment being rescheduled
+  const [rescheduleDate, setRescheduleDate] = useState("");
+  const [rescheduleSlots, setRescheduleSlots] = useState([]);
+  const [selectedRescheduleSlot, setSelectedRescheduleSlot] = useState("");
+  const [rescheduleLoading, setRescheduleLoading] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -147,6 +152,85 @@ function PatientAppointments() {
     }
   };
 
+  const handleOpenReschedule = (appointment) => {
+    setRescheduleModal(appointment);
+    setRescheduleDate("");
+    setRescheduleSlots([]);
+    setSelectedRescheduleSlot("");
+  };
+
+  const handleRescheduleDateChange = async (e) => {
+    const date = e.target.value;
+    setRescheduleDate(date);
+    setRescheduleSlots([]);
+    setSelectedRescheduleSlot("");
+
+    if (date && rescheduleModal) {
+      try {
+        const res = await api.get(
+          `/api/appointment/available-slots?date=${date}&service_id=${rescheduleModal.service.id}`
+        );
+        setRescheduleSlots(res.data.slots);
+      } catch (err) {
+        console.error("Failed to fetch available slots", err);
+        setRescheduleSlots([]);
+      }
+    }
+  };
+
+  const handleRescheduleSubmit = async () => {
+    if (!rescheduleDate || !selectedRescheduleSlot || !rescheduleModal) {
+      alert("Please select both date and time slot.");
+      return;
+    }
+
+    try {
+      setRescheduleLoading(true);
+      await api.post(`/api/appointment/${rescheduleModal.id}/reschedule`, {
+        date: rescheduleDate,
+        start_time: selectedRescheduleSlot,
+      });
+
+      alert("Appointment rescheduled successfully! It will need staff approval.");
+      setRescheduleModal(null);
+      setRescheduleDate("");
+      setRescheduleSlots([]);
+      setSelectedRescheduleSlot("");
+      fetchAppointments(currentPage);
+    } catch (err) {
+      console.error("Reschedule failed", err);
+      const serverMsg = err.response?.data?.message || "Failed to reschedule appointment.";
+      alert(serverMsg);
+    } finally {
+      setRescheduleLoading(false);
+    }
+  };
+
+  const handleCloseReschedule = () => {
+    setRescheduleModal(null);
+    setRescheduleDate("");
+    setRescheduleSlots([]);
+    setSelectedRescheduleSlot("");
+  };
+
+  // Helper functions for date formatting
+  const todayStr = () => {
+    const d = new Date();
+    return d.toISOString().slice(0, 10);
+  };
+
+  const tomorrowStr = () => {
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    return d.toISOString().slice(0, 10);
+  };
+
+  const sevenDaysOutStr = () => {
+    const d = new Date();
+    d.setDate(d.getDate() + 7);
+    return d.toISOString().slice(0, 10);
+  };
+
 
   const renderStatusBadge = (status) => {
     const map = {
@@ -228,6 +312,7 @@ function PatientAppointments() {
                               a.status === "approved";
 
                             const showReceipt = a.status === "completed" && a.payment_status === "paid";
+                            const showReschedule = a.payment_method === "maya" && a.payment_status === "paid" && (a.status === "approved" || a.status === "pending");
 
                             return (
                               <tr key={a.id}>
@@ -298,6 +383,17 @@ function PatientAppointments() {
                                       </button>
                                     )}
 
+                                    {showReschedule && (
+                                      <button
+                                        className="btn btn-warning btn-sm"
+                                        onClick={() => handleOpenReschedule(a)}
+                                        title="Reschedule Appointment"
+                                      >
+                                        <i className="bi bi-calendar-event me-1"></i>
+                                        Reschedule
+                                      </button>
+                                    )}
+
                                     {a.status !== "cancelled" && a.status !== "rejected" && a.status !== "completed" && (
                                       <button
                                         className="btn btn-outline-danger btn-sm"
@@ -327,6 +423,7 @@ function PatientAppointments() {
                     a.status === "approved";
 
                   const showReceipt = a.status === "completed" && a.payment_status === "paid";
+                  const showReschedule = a.payment_method === "maya" && a.payment_status === "paid" && (a.status === "approved" || a.status === "pending");
 
                   return (
                     <div key={a.id} className="card mb-3 border-0 shadow-sm">
@@ -414,6 +511,16 @@ function PatientAppointments() {
                             </button>
                           )}
 
+                          {showReschedule && (
+                            <button
+                              className="btn btn-warning btn-sm flex-fill"
+                              onClick={() => handleOpenReschedule(a)}
+                            >
+                              <i className="bi bi-calendar-event me-1"></i>
+                              Reschedule
+                            </button>
+                          )}
+
                           {a.status !== "cancelled" && a.status !== "rejected" && a.status !== "completed" && (
                             <button
                               className="btn btn-outline-danger btn-sm flex-fill"
@@ -456,6 +563,114 @@ function PatientAppointments() {
                 </div>
               )}
             </>
+          )}
+
+          {/* Reschedule Modal */}
+          {rescheduleModal && (
+            <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} tabIndex="-1">
+              <div className="modal-dialog modal-dialog-centered">
+                <div className="modal-content">
+                  <div className="modal-header">
+                    <h5 className="modal-title">
+                      <i className="bi bi-calendar-event me-2"></i>
+                      Reschedule Appointment
+                    </h5>
+                    <button
+                      type="button"
+                      className="btn-close"
+                      onClick={handleCloseReschedule}
+                      disabled={rescheduleLoading}
+                    ></button>
+                  </div>
+                  <div className="modal-body">
+                    <div className="alert alert-info border-0">
+                      <i className="bi bi-info-circle me-2"></i>
+                      <strong>Service:</strong> {rescheduleModal.service?.name}
+                      <br />
+                      <strong>Current Date:</strong> {rescheduleModal.date} at {rescheduleModal.start_time}
+                      <br />
+                      <small>All other details (payment method, service, etc.) will remain the same.</small>
+                    </div>
+
+                    <div className="mb-3">
+                      <label className="form-label fw-semibold">
+                        <i className="bi bi-calendar3 me-2 text-primary"></i>
+                        Select New Date
+                      </label>
+                      <input
+                        type="date"
+                        className="form-control"
+                        value={rescheduleDate}
+                        onChange={handleRescheduleDateChange}
+                        min={tomorrowStr()}
+                        max={sevenDaysOutStr()}
+                        disabled={rescheduleLoading}
+                      />
+                      <div className="form-text">
+                        Appointments can be rescheduled from tomorrow up to 7 days in advance
+                      </div>
+                    </div>
+
+                    {rescheduleDate && rescheduleSlots.length > 0 && (
+                      <div className="mb-3">
+                        <label className="form-label fw-semibold">
+                          <i className="bi bi-clock me-2 text-primary"></i>
+                          Available Time Slots
+                        </label>
+                        <select
+                          className="form-select"
+                          value={selectedRescheduleSlot}
+                          onChange={(e) => setSelectedRescheduleSlot(e.target.value)}
+                          disabled={rescheduleLoading}
+                        >
+                          <option value="">-- Select Time Slot --</option>
+                          {rescheduleSlots.map((slot) => (
+                            <option key={slot} value={slot}>
+                              {slot}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+
+                    {rescheduleDate && rescheduleSlots.length === 0 && (
+                      <div className="alert alert-warning border-0">
+                        <i className="bi bi-exclamation-triangle me-2"></i>
+                        No available slots for this date. Please select a different date.
+                      </div>
+                    )}
+                  </div>
+                  <div className="modal-footer">
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      onClick={handleCloseReschedule}
+                      disabled={rescheduleLoading}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-warning"
+                      onClick={handleRescheduleSubmit}
+                      disabled={!rescheduleDate || !selectedRescheduleSlot || rescheduleLoading}
+                    >
+                      {rescheduleLoading ? (
+                        <>
+                          <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                          Rescheduling...
+                        </>
+                      ) : (
+                        <>
+                          <i className="bi bi-calendar-event me-1"></i>
+                          Reschedule Appointment
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
           )}
     </div>
   );

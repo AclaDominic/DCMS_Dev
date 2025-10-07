@@ -659,4 +659,135 @@ class AppointmentController extends Controller
             'balance_due' => $balance,
         ]);
     }
+
+    /**
+     * POST /api/appointments/{id}/reschedule
+     * Body: { date: Y-m-d, start_time: HH:MM }
+     * Allows rescheduling of paid Maya appointments to a new date/time
+     */
+    public function reschedule(Request $request, $id, ClinicDateResolverService $resolver)
+    {
+        $user = auth()->user();
+        if (!$user->patient) {
+            return response()->json(['message' => 'Not linked to patient profile.'], 403);
+        }
+
+        $appointment = Appointment::where('id', $id)
+            ->where('patient_id', $user->patient->id)
+            ->first();
+
+        if (!$appointment) {
+            return response()->json(['message' => 'Appointment not found.'], 404);
+        }
+
+        // Check eligibility: only paid Maya appointments can be rescheduled
+        if ($appointment->payment_method !== 'maya' || $appointment->payment_status !== 'paid') {
+            return response()->json(['message' => 'Only paid Maya appointments can be rescheduled.'], 422);
+        }
+
+        // Check appointment status - allow rescheduling of approved appointments
+        if (!in_array($appointment->status, ['approved', 'pending'])) {
+            return response()->json(['message' => 'This appointment cannot be rescheduled.'], 422);
+        }
+
+        $validated = $request->validate([
+            'date' => ['required', 'date_format:Y-m-d', 'after:today'],
+            'start_time' => ['required', 'regex:/^\d{2}:\d{2}(:\d{2})?$/'],
+        ]);
+
+        $service = $appointment->service;
+        $dateStr = $validated['date'];
+        $date = Carbon::createFromFormat('Y-m-d', $dateStr)->startOfDay();
+
+        $startRaw = $validated['start_time'];
+        $startTime = Carbon::createFromFormat('H:i', $this->normalizeTime($startRaw));
+
+        // Booking window check (tomorrow .. +7)
+        $today = now()->startOfDay();
+        if ($date->lte($today) || $date->gt($today->copy()->addDays(7))) {
+            return response()->json(['message' => 'Date is outside the booking window.'], 422);
+        }
+
+        // Resolve day snapshot
+        $snap = $resolver->resolve($date);
+        if (!$snap['is_open']) {
+            return response()->json(['message' => 'Clinic is closed on this date.'], 422);
+        }
+
+        $open = Carbon::parse($snap['open_time']);
+        $close = Carbon::parse($snap['close_time']);
+
+        // Ensure start is in the 30-min grid and inside hours
+        $grid = ClinicDateResolverService::buildBlocks($snap['open_time'], $snap['close_time']);
+        if (!in_array($startTime->format('H:i'), $grid, true)) {
+            return response()->json(['message' => 'Invalid start time (not on grid or outside hours).'], 422);
+        }
+
+        // Calculate estimated minutes and blocks needed
+        $estimatedMinutes = $service->calculateEstimatedMinutes($appointment->teeth_count ?? null);
+        $blocksNeeded = (int) max(1, ceil($estimatedMinutes / 30));
+        $endTime = $startTime->copy()->addMinutes($blocksNeeded * 30);
+
+        if ($startTime->lt($open) || $endTime->gt($close)) {
+            return response()->json(['message' => 'Selected time is outside clinic hours.'], 422);
+        }
+
+        // Capacity check (excluding current appointment)
+        $capCheck = $this->checkCapacity($service, $dateStr, $startTime->format('H:i'), $appointment->id);
+        if (!$capCheck['ok']) {
+            $fullAt = $capCheck['full_at'] ?? $startTime->format('H:i');
+            return response()->json(['message' => "Time slot starting at {$fullAt} is already full."], 422);
+        }
+
+        // Check for overlapping appointments for the same patient (excluding current appointment)
+        $timeSlot = $this->normalizeTime($startTime) . '-' . $this->normalizeTime($endTime);
+        $hasOverlap = Appointment::where('patient_id', $appointment->patient_id)
+            ->where('id', '!=', $appointment->id)
+            ->where('date', $dateStr)
+            ->whereIn('status', ['pending', 'approved', 'completed'])
+            ->get()
+            ->filter(function ($apt) use ($timeSlot) {
+                return Appointment::hasTimeSlotOverlap($apt->time_slot, $timeSlot);
+            })
+            ->isNotEmpty();
+
+        if ($hasOverlap) {
+            return response()->json([
+                'message' => 'You already have an appointment at this time. Please choose a different time slot.',
+            ], 422);
+        }
+
+        // Update the appointment
+        $oldDate = $appointment->date;
+        $oldTimeSlot = $appointment->time_slot;
+        
+        $appointment->date = $dateStr;
+        $appointment->time_slot = $timeSlot;
+        $appointment->status = 'pending'; // Reset to pending for staff approval
+        $appointment->save();
+
+        // Log the reschedule action
+        SystemLog::create([
+            'user_id' => $user->id,
+            'category' => 'appointment',
+            'action' => 'rescheduled',
+            'message' => 'Patient rescheduled appointment #' . $appointment->id . ' from ' . $oldDate . ' ' . $oldTimeSlot . ' to ' . $dateStr . ' ' . $timeSlot,
+            'context' => [
+                'appointment_id' => $appointment->id,
+                'old_date' => $oldDate,
+                'old_time_slot' => $oldTimeSlot,
+                'new_date' => $dateStr,
+                'new_time_slot' => $timeSlot,
+                'patient_id' => $user->patient->id,
+            ]
+        ]);
+
+        // Notify staff about the rescheduled appointment
+        SystemNotificationService::notifyNewAppointment($appointment);
+
+        return response()->json([
+            'message' => 'Appointment rescheduled successfully. It will need staff approval.',
+            'appointment' => $appointment->fresh(['service'])
+        ]);
+    }
 }

@@ -194,6 +194,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/', [AppointmentController::class, 'store']);
         Route::get('/available-slots', [AppointmentSlotController::class, 'get']);
         Route::post('/{id}/cancel', [AppointmentController::class, 'cancel']);
+        Route::post('/{id}/reschedule', [AppointmentController::class, 'reschedule']);
         Route::get('/resolve/{code}', [AppointmentController::class, 'resolveReferenceCode']);
     });
 
