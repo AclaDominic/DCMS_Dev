@@ -115,6 +115,7 @@ class ReportSeeder extends Seeder
                     'start_time' => $startAt->toDateTimeString(),
                     'end_time' => $endAt?->toDateTimeString(),
                     'status' => $status,
+                    'is_seeded' => true,
                     'created_at' => now()->toDateTimeString(),
                     'updated_at' => now()->toDateTimeString(),
                 ];
@@ -151,6 +152,7 @@ class ReportSeeder extends Seeder
                         'notes' => null,
                         'canceled_at' => null,
                         'reminded_at' => null,
+                        'is_seeded' => true,
                         'created_at' => now()->toDateTimeString(),
                         'updated_at' => now()->toDateTimeString(),
                     ];

@@ -19,6 +19,9 @@ class PatientVisit extends Model
         'status',
         'visit_code',
         'consultation_started_at',
+        'receipt_sent_at',
+        'receipt_sent_to',
+        'is_seeded',
     ];
 
     protected $casts = [
@@ -26,6 +29,7 @@ class PatientVisit extends Model
         'start_time' => 'datetime',
         'end_time' => 'datetime',
         'consultation_started_at' => 'datetime',
+        'receipt_sent_at' => 'datetime',
     ];
 
     protected static function boot()

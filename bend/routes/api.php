@@ -36,6 +36,7 @@ use App\Http\Controllers\API\ReportController;
 use App\Http\Controllers\API\GoalController;
 use App\Http\Controllers\API\DentistUserController;
 use App\Http\Controllers\API\DentistPasswordController;
+use App\Http\Controllers\API\ReceiptController;
 use App\Http\Middleware\DentistAuthMiddleware;
 use App\Http\Middleware\DentistPasswordChangeMiddleware;
 
@@ -208,6 +209,14 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Patient's own appointments
     Route::get('/user-appointments', [AppointmentController::class, 'userAppointments']);
+
+    // Receipt generation
+    Route::prefix('receipts')->group(function () {
+        Route::get('/appointment/{appointmentId}', [ReceiptController::class, 'generateAppointmentReceipt']);
+        Route::get('/visit/{visitId}', [ReceiptController::class, 'generateVisitReceipt']);
+        Route::post('/appointment/{appointmentId}/email', [ReceiptController::class, 'sendReceiptEmail']);
+        Route::post('/visit/{visitId}/email', [ReceiptController::class, 'sendVisitReceiptEmail']);
+    });
 
     // Notifications
     Route::get('/notifications', [NotificationController::class, 'index']);

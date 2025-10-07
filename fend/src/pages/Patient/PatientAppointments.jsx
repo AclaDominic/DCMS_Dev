@@ -8,6 +8,7 @@ function PatientAppointments() {
   const [currentPage, setCurrentPage] = useState(1);
   const [meta, setMeta] = useState({});
   const [paying, setPaying] = useState(null); // appointment_id being processed
+  const [generatingReceipt, setGeneratingReceipt] = useState(null); // appointment_id being processed
 
   useEffect(() => {
     (async () => {
@@ -116,6 +117,37 @@ function PatientAppointments() {
     }
   };
 
+  const handleViewReceipt = async (appointmentId) => {
+    try {
+      setGeneratingReceipt(appointmentId);
+
+      // Generate and download receipt
+      const response = await api.get(`/api/receipts/appointment/${appointmentId}`, {
+        responseType: 'blob',
+        skip401Handler: true
+      });
+
+      // Create blob and download
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `receipt-${appointmentId}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+    } catch (err) {
+      console.error("Failed to generate receipt", err);
+      const serverMsg = err.response?.data?.message || "Failed to generate receipt. Please try again.";
+      alert(serverMsg);
+    } finally {
+      setGeneratingReceipt(null);
+    }
+  };
+
+
   const renderStatusBadge = (status) => {
     const map = {
       approved: "bg-success",
@@ -195,6 +227,8 @@ function PatientAppointments() {
                               a.payment_status === "awaiting_payment" &&
                               a.status === "approved";
 
+                            const showReceipt = a.status === "completed" && a.payment_status === "paid";
+
                             return (
                               <tr key={a.id}>
                                 <td>
@@ -243,6 +277,27 @@ function PatientAppointments() {
                                       </button>
                                     )}
 
+                                    {showReceipt && (
+                                      <button
+                                        className="btn btn-success btn-sm"
+                                        onClick={() => handleViewReceipt(a.id)}
+                                        disabled={generatingReceipt === a.id}
+                                        title="Download Receipt"
+                                      >
+                                        {generatingReceipt === a.id ? (
+                                          <>
+                                            <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                                            Generating...
+                                          </>
+                                        ) : (
+                                          <>
+                                            <i className="bi bi-receipt me-1"></i>
+                                            Receipt
+                                          </>
+                                        )}
+                                      </button>
+                                    )}
+
                                     {a.status !== "cancelled" && a.status !== "rejected" && a.status !== "completed" && (
                                       <button
                                         className="btn btn-outline-danger btn-sm"
@@ -270,6 +325,8 @@ function PatientAppointments() {
                     a.payment_method === "maya" &&
                     a.payment_status === "awaiting_payment" &&
                     a.status === "approved";
+
+                  const showReceipt = a.status === "completed" && a.payment_status === "paid";
 
                   return (
                     <div key={a.id} className="card mb-3 border-0 shadow-sm">
@@ -333,6 +390,26 @@ function PatientAppointments() {
                                 </>
                               ) : (
                                 "Pay now"
+                              )}
+                            </button>
+                          )}
+
+                          {showReceipt && (
+                            <button
+                              className="btn btn-success btn-sm flex-fill"
+                              onClick={() => handleViewReceipt(a.id)}
+                              disabled={generatingReceipt === a.id}
+                            >
+                              {generatingReceipt === a.id ? (
+                                <>
+                                  <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                                  Generating...
+                                </>
+                              ) : (
+                                <>
+                                  <i className="bi bi-receipt me-1"></i>
+                                  Receipt
+                                </>
                               )}
                             </button>
                           )}

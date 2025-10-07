@@ -211,7 +211,7 @@ class NotificationController extends Controller
     public function testSms(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'phone_number' => 'required|string|regex:/^(09\d{9}|\+639\d{9})$/',
+            'phone_number' => ['required', 'string', 'regex:/^(09[0-9]{9}|\+639[0-9]{9})$/'],
             'message' => 'nullable|string|max:160',
         ], [
             'phone_number.required' => 'Phone number is required',
@@ -230,7 +230,7 @@ class NotificationController extends Controller
         $phoneNumber = $request->input('phone_number');
         
         // Convert Philippine local format (09xxxxxxxxx) to E.164 format (+639xxxxxxxxx)
-        if (preg_match('/^09(\d{9})$/', $phoneNumber, $matches)) {
+        if (preg_match('/^09([0-9]{9})$/', $phoneNumber, $matches)) {
             $phoneNumber = '+639' . $matches[1];
         }
         

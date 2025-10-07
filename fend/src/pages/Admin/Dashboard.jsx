@@ -19,7 +19,7 @@ const AdminDashboard = () => {
     }
 
     // Validate Philippine mobile number format (10 digits starting with 9)
-    const phoneRegex = /^9\d{9}$/;
+    const phoneRegex = /^9[0-9]{9}$/;
     if (!phoneRegex.test(smsTest.phoneNumber)) {
       setSmsTest(prev => ({ ...prev, error: 'Please enter a valid 10-digit Philippine mobile number (e.g., 9171234567)' }));
       return;
@@ -28,8 +28,11 @@ const AdminDashboard = () => {
     setSmsTest(prev => ({ ...prev, loading: true, error: null, result: null }));
 
     try {
+      // Convert 9xxxxxxxxx to 09xxxxxxxxx format for backend
+      const phoneNumber = '0' + smsTest.phoneNumber;
+      
       const response = await axios.post('/api/admin/test-sms', {
-        phone_number: smsTest.phoneNumber,
+        phone_number: phoneNumber,
         message: smsTest.message || undefined
       });
 
@@ -245,7 +248,7 @@ const AdminDashboard = () => {
                       <button
                         type="submit"
                         className="btn btn-info btn-lg px-4"
-                        disabled={smsTest.loading || !smsTest.phoneNumber.trim() || !/^9\d{9}$/.test(smsTest.phoneNumber)}
+                        disabled={smsTest.loading || !smsTest.phoneNumber.trim() || !/^9[0-9]{9}$/.test(smsTest.phoneNumber)}
                       >
                         {smsTest.loading ? (
                           <>

@@ -266,6 +266,7 @@ class AnalyticsSeeder extends Seeder
                     'end_time' => $endTime->toDateTimeString(),
                     'status' => $status,
                     'visit_code' => $visitCode,
+                    'is_seeded' => true,
                     'created_at' => now()->toDateTimeString(),
                     'updated_at' => now()->toDateTimeString(),
                 ];
@@ -288,6 +289,7 @@ class AnalyticsSeeder extends Seeder
                         'payment_method' => $this->getPaymentMethod(),
                         'payment_status' => $this->getPaymentStatus($appointmentStatus),
                         'notes' => $this->generateAppointmentNote(),
+                        'is_seeded' => true,
                         'created_at' => $startTime->toDateTimeString(),
                         'updated_at' => $startTime->toDateTimeString(),
                     ];

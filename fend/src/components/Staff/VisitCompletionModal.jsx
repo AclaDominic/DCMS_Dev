@@ -98,6 +98,26 @@ export default function VisitCompletionModal({ visit, onClose, onComplete }) {
       };
 
       await api.post(`/api/visits/${visit.id}/complete-with-details`, payload);
+      
+      // Automatically send receipt email if patient is linked to a user account
+      try {
+        const emailResponse = await api.post(`/api/receipts/visit/${visit.id}/email`, {}, {
+          skip401Handler: true
+        });
+        
+        if (emailResponse.data.note) {
+          // Email was skipped (likely seeded data)
+          alert(`Visit completed successfully!\n\n${emailResponse.data.message}\n\n${emailResponse.data.note}`);
+        } else {
+          // Email was sent successfully
+          alert(`Visit completed successfully!\n\nReceipt sent to: ${emailResponse.data.email}`);
+        }
+      } catch (emailErr) {
+        // Email sending failed, but visit completion was successful
+        console.error("Failed to send receipt email:", emailErr);
+        alert(`Visit completed successfully!\n\nNote: Receipt email could not be sent. Patient can download receipt from their appointments page.`);
+      }
+      
       onComplete();
       onClose();
     } catch (err) {

@@ -21,6 +21,9 @@ class Appointment extends Model
         'payment_status',
         'notes',
         'teeth_count',
+        'receipt_sent_at',
+        'receipt_sent_to',
+        'is_seeded',
     ];
 
     public function patient()

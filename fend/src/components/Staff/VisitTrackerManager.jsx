@@ -32,6 +32,7 @@ function VisitTrackerManager() {
   const [showAllVisits, setShowAllVisits] = useState(false);
   const [completingVisit, setCompletingVisit] = useState(null);
   const [viewingNotes, setViewingNotes] = useState(null);
+  const [sendingReceipt, setSendingReceipt] = useState(null);
 
   useEffect(() => {
     fetchVisits();
@@ -151,6 +152,27 @@ function VisitTrackerManager() {
 
   const handleVisitComplete = async () => {
     await fetchVisits();
+  };
+
+  const handleSendReceiptEmail = async (visitId) => {
+    setSendingReceipt(visitId);
+    try {
+      const response = await api.post(`/api/receipts/visit/${visitId}/email`, {}, {
+        skip401Handler: true
+      });
+
+      if (response.data.note) {
+        alert(`${response.data.message}\n\n${response.data.note}`);
+      } else {
+        alert(`Receipt sent successfully to ${response.data.email}`);
+      }
+    } catch (err) {
+      console.error("Failed to send receipt email", err);
+      const serverMsg = err.response?.data?.message || "Failed to send receipt email. Please try again.";
+      alert(serverMsg);
+    } finally {
+      setSendingReceipt(null);
+    }
   };
 
   const handleSearchRefCode = async () => {
@@ -403,6 +425,28 @@ function VisitTrackerManager() {
                             }}
                           >
                             Reject
+                          </button>
+                        </div>
+                      )}
+                      {v.status === "completed" && (
+                        <div className="d-flex gap-1 flex-wrap">
+                          <button
+                            className="btn btn-success btn-sm"
+                            onClick={() => handleSendReceiptEmail(v.id)}
+                            disabled={sendingReceipt === v.id}
+                            title="Send Receipt Email"
+                          >
+                            {sendingReceipt === v.id ? (
+                              <>
+                                <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                                Sending...
+                              </>
+                            ) : (
+                              <>
+                                <i className="bi bi-envelope me-1"></i>
+                                Send Receipt
+                              </>
+                            )}
                           </button>
                         </div>
                       )}

@@ -29,6 +29,7 @@ class DatabaseSeeder extends Seeder
             ReportSeeder::class,
             AnalyticsSeeder::class, // Comprehensive 1-year analytics data
             PerformanceGoalTestSeeder::class, // Test data for performance goals
+            ReceiptTestSeeder::class, // Test appointments for receipt functionality
             // Add other seeders here as needed
         ]);
     }
