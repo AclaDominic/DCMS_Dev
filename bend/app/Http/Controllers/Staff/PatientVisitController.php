@@ -17,6 +17,9 @@ use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use App\Models\DentistSchedule;
+use App\Models\Notification;
+use App\Models\NotificationTarget;
 
 
 class PatientVisitController extends Controller
@@ -788,6 +791,99 @@ class PatientVisitController extends Controller
             'created_at' => $visit->visitNotes->created_at,
             'updated_by' => $visit->visitNotes->updatedBy?->name,
             'updated_at' => $visit->visitNotes->updated_at,
+        ]);
+    }
+
+    /**
+     * POST /api/visits/send-visit-code
+     * Send visit code notification to a specific dentist
+     */
+    public function sendVisitCode(Request $request)
+    {
+        $validated = $request->validate([
+            'visit_id' => 'required|exists:patient_visits,id',
+            'dentist_id' => 'required|exists:dentist_schedules,id',
+            'dentist_email' => 'required|email',
+        ]);
+
+        $visit = PatientVisit::with(['patient', 'service'])->findOrFail($validated['visit_id']);
+        $dentist = DentistSchedule::findOrFail($validated['dentist_id']);
+
+        // Verify the dentist is working today
+        $today = now();
+        $dayOfWeek = strtolower($today->format('D')); // sun, mon, tue, etc.
+        
+        if (!$dentist->{$dayOfWeek} || $dentist->status !== 'active') {
+            return response()->json(['message' => 'Selected dentist is not working today.'], 422);
+        }
+
+        // Check if visit is still pending
+        if ($visit->status !== 'pending') {
+            return response()->json(['message' => 'Visit is no longer pending.'], 422);
+        }
+
+        // Create notification for the dentist
+        $notification = Notification::create([
+            'type' => 'visit_code',
+            'title' => "New Patient Visit - {$visit->patient->first_name} {$visit->patient->last_name}",
+            'body' => "Visit Code: {$visit->visit_code}\nPatient: {$visit->patient->first_name} {$visit->patient->last_name}\nService: " . ($visit->service?->name ?? 'Not specified') . "\nStarted: " . $visit->start_time->format('M j, Y g:i A'),
+            'severity' => 'info',
+            'scope' => 'targeted',
+            'audience_roles' => null,
+            'effective_from' => now(),
+            'effective_until' => null,
+            'data' => [
+                'visit_id' => $visit->id,
+                'visit_code' => $visit->visit_code,
+                'patient_name' => "{$visit->patient->first_name} {$visit->patient->last_name}",
+                'service_name' => $visit->service?->name ?? 'Not specified',
+                'start_time' => $visit->start_time->toISOString(),
+                'dentist_id' => $dentist->id,
+                'dentist_name' => $dentist->dentist_name ?? $dentist->dentist_code,
+                'action_url' => "/dentist/visit/{$visit->visit_code}", // This will be handled by frontend routing
+            ],
+            'created_by' => $request->user()->id,
+        ]);
+
+        // Find the dentist user by email
+        $dentistUser = \App\Models\User::where('email', $validated['dentist_email'])->first();
+        
+        if (!$dentistUser) {
+            return response()->json(['message' => 'Dentist user not found with the provided email.'], 422);
+        }
+
+        // Create targeted notification for the dentist
+        NotificationTarget::create([
+            'notification_id' => $notification->id,
+            'user_id' => $dentistUser->id,
+            'user_email' => $validated['dentist_email'],
+            'read_at' => null,
+        ]);
+
+        // Log the action
+        SystemLog::create([
+            'category' => 'visit',
+            'action' => 'visit_code_sent',
+            'message' => "Visit code sent to dentist: " . ($dentist->dentist_name ?? $dentist->dentist_code),
+            'user_id' => $request->user()->id,
+            'subject_id' => $visit->id,
+            'context' => [
+                'visit_id' => $visit->id,
+                'visit_code' => $visit->visit_code,
+                'patient_name' => "{$visit->patient->first_name} {$visit->patient->last_name}",
+                'dentist_id' => $dentist->id,
+                'dentist_name' => $dentist->dentist_name ?? $dentist->dentist_code,
+                'dentist_email' => $validated['dentist_email'],
+                'sent_by' => $request->user()->name,
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+            ],
+        ]);
+
+        return response()->json([
+            'message' => 'Visit code sent successfully to dentist.',
+            'notification_id' => $notification->id,
+            'dentist_name' => $dentist->dentist_name ?? $dentist->dentist_code,
         ]);
     }
 

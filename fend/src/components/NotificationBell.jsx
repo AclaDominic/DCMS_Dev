@@ -1,11 +1,15 @@
 import { useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import useNotifications from "../context/NotificationsContext";
 
 export default function NotificationBell() {
   const { items, unread, loading, error, loadList, loadUnread, markAllRead } = useNotifications();
   const [open, setOpen] = useState(false);
+  const [clickedNotificationId, setClickedNotificationId] = useState(null);
+  const isNavigatingRef = useRef(false);
   const btnRef = useRef(null);
+  const panelRef = useRef(null);
+  const navigate = useNavigate();
 
   // panel position (viewport coords)
   const [pos, setPos] = useState({ top: 0, left: 0 });
@@ -30,11 +34,53 @@ export default function NotificationBell() {
     const next = !open;
     setOpen(next);
     if (next) {
-      computePosition();
+      // Small delay to prevent flickering
+      setTimeout(() => {
+        computePosition();
+      }, 10);
       await loadList();
-      await markAllRead(); // clear badge
-      await loadUnread();  // returns 0
+      // Only mark as read if there are actually unread notifications
+      if (unread > 0) {
+        await markAllRead(); // clear badge
+        await loadUnread();  // returns 0
+      }
     }
+  };
+
+  const handleNotificationClick = (notification) => {
+    console.log('Notification clicked:', notification);
+    
+    // Prevent multiple clicks
+    if (isNavigatingRef.current) {
+      console.log('Already navigating, ignoring click');
+      return;
+    }
+    
+    // Handle visit code notifications specially
+    if (notification.type === 'visit_code' && notification.data?.visit_code) {
+      console.log('Navigating to visit code:', notification.data.visit_code);
+      
+      // Set navigating flag and show visual feedback
+      isNavigatingRef.current = true;
+      setClickedNotificationId(notification.id);
+      
+      // Close the notification panel first
+      setOpen(false);
+      
+      // Add delay to ensure smooth transition
+      setTimeout(() => {
+        navigate(`/dentist/visit/${notification.data.visit_code}`);
+        // Reset flag after navigation
+        setTimeout(() => {
+          isNavigatingRef.current = false;
+          setClickedNotificationId(null);
+        }, 1500);
+      }, 200);
+      return;
+    }
+    
+    // For other notifications, just close the panel
+    setOpen(false);
   };
 
   // Close on Esc / outside click; reposition on resize
@@ -43,13 +89,21 @@ export default function NotificationBell() {
     const onKey = (e) => e.key === "Escape" && setOpen(false);
     const onResize = () => computePosition();
     const onClickAway = (e) => {
-      const panel = document.getElementById("notif-panel");
-      if (!panel || !btnRef.current) return;
-      if (!panel.contains(e.target) && !btnRef.current.contains(e.target)) setOpen(false);
+      if (!panelRef.current || !btnRef.current) return;
+      
+      // Check if the click is outside both the panel and the button
+      const isClickInsidePanel = panelRef.current.contains(e.target);
+      const isClickInsideButton = btnRef.current.contains(e.target);
+      
+      if (!isClickInsidePanel && !isClickInsideButton) {
+        setOpen(false);
+      }
     };
+    
     document.addEventListener("keydown", onKey);
     window.addEventListener("resize", onResize);
     document.addEventListener("mousedown", onClickAway);
+    
     return () => {
       document.removeEventListener("keydown", onKey);
       window.removeEventListener("resize", onResize);
@@ -59,10 +113,18 @@ export default function NotificationBell() {
 
   return (
     <>
+      <style>
+        {`
+          .notification-bell-btn:hover {
+            background: linear-gradient(135deg, #0096c7 0%, #0056b3 100%) !important;
+            transform: translateY(-1px) !important;
+          }
+        `}
+      </style>
       <button
         ref={btnRef}
         onClick={toggle}
-        className="btn d-inline-flex align-items-center"
+        className="btn d-inline-flex align-items-center notification-bell-btn"
         title="Notifications"
         aria-label="Notifications"
         style={{
@@ -72,14 +134,6 @@ export default function NotificationBell() {
           borderRadius: '8px',
           padding: '0.5rem 0.75rem',
           transition: 'all 0.3s ease'
-        }}
-        onMouseEnter={(e) => {
-          e.target.style.background = 'linear-gradient(135deg, #0096c7 0%, #0056b3 100%)';
-          e.target.style.transform = 'translateY(-1px)';
-        }}
-        onMouseLeave={(e) => {
-          e.target.style.background = 'linear-gradient(135deg, #00b4d8 0%, #0077b6 100%)';
-          e.target.style.transform = 'translateY(0)';
         }}
       >
         <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
@@ -99,7 +153,7 @@ export default function NotificationBell() {
 
       {open && (
         <div
-          id="notif-panel"
+          ref={panelRef}
           role="dialog"
           aria-modal="true"
           className="position-fixed" // <-- fixed to viewport, not the sidebar
@@ -121,25 +175,19 @@ export default function NotificationBell() {
                 <strong style={{ fontSize: '1.1rem' }}>Notifications</strong>
                 <div className="small" style={{ opacity: 0.9 }}>Clinic updates &amp; alerts</div>
               </div>
-              <button 
-                className="btn btn-sm p-0" 
-                onClick={() => setOpen(false)}
-                style={{
-                  color: 'white',
-                  background: 'rgba(255,255,255,0.2)',
-                  border: 'none',
-                  borderRadius: '6px',
-                  padding: '0.25rem 0.5rem',
-                  fontSize: '0.8rem',
-                  fontWeight: '600'
-                }}
-                onMouseEnter={(e) => {
-                  e.target.style.background = 'rgba(255,255,255,0.3)';
-                }}
-                onMouseLeave={(e) => {
-                  e.target.style.background = 'rgba(255,255,255,0.2)';
-                }}
-              >
+               <button 
+                 className="btn btn-sm p-0 notification-close-btn" 
+                 onClick={() => setOpen(false)}
+                 style={{
+                   color: 'white',
+                   background: 'rgba(255,255,255,0.2)',
+                   border: 'none',
+                   borderRadius: '6px',
+                   padding: '0.25rem 0.5rem',
+                   fontSize: '0.8rem',
+                   fontWeight: '600'
+                 }}
+               >
                 Close
               </button>
             </div>
@@ -161,20 +209,16 @@ export default function NotificationBell() {
                   No notifications.
                 </div>
               )}
-              {!loading && !error && items.map((n) => (
-                <div key={n.id} className="list-group-item small p-3" style={{
-                  borderLeft: 'none',
-                  borderRight: 'none',
-                  borderBottom: '1px solid #f1f3f4',
-                  transition: 'background-color 0.2s ease'
-                }}
-                onMouseEnter={(e) => {
-                  e.target.style.backgroundColor = '#f8f9fa';
-                }}
-                onMouseLeave={(e) => {
-                  e.target.style.backgroundColor = 'transparent';
-                }}
-                >
+               {!loading && !error && items.map((n) => (
+                 <div 
+                   key={n.id} 
+                   className={`list-group-item small p-3 ${clickedNotificationId === n.id ? 'list-group-item-success' : ''}`}
+                   style={{
+                     borderLeft: 'none',
+                     borderRight: 'none',
+                     borderBottom: '1px solid #f1f3f4'
+                   }}
+                 >
                   <div className="d-flex justify-content-between align-items-start">
                     <div className="me-3 flex-grow-1">
                       <div className="fw-semibold mb-1" style={{ color: '#1e293b', fontSize: '0.9rem' }}>
@@ -182,15 +226,54 @@ export default function NotificationBell() {
                         {n.severity === "danger"  && <span className="badge ms-2" style={{ backgroundColor: '#dc3545', color: 'white', fontSize: '0.65rem' }}>Important</span>}
                         {n.severity === "warning" && <span className="badge ms-2" style={{ backgroundColor: '#ffc107', color: '#000', fontSize: '0.65rem' }}>Warning</span>}
                         {n.severity === "info"    && <span className="badge ms-2" style={{ backgroundColor: '#00b4d8', color: 'white', fontSize: '0.65rem' }}>Info</span>}
+                        {n.type === "visit_code" && <span className="badge ms-2" style={{ backgroundColor: '#28a745', color: 'white', fontSize: '0.65rem' }}>
+                          <i className="bi bi-key me-1"></i>Visit Code
+                        </span>}
                       </div>
-                      {n.body && <div className="text-muted mt-1" style={{ fontSize: '0.8rem', lineHeight: '1.4' }}>{n.body}</div>}
+        {n.body && (
+          <div className="text-muted mt-1" style={{ fontSize: '0.8rem', lineHeight: '1.4' }}>
+            {n.type === "visit_code" && n.data?.visit_code ? (
+              <>
+                {n.body.split(n.data.visit_code)[0]}
+                <span 
+                  className="fw-bold text-primary"
+                  style={{ 
+                    cursor: 'pointer',
+                    textDecoration: 'underline',
+                    backgroundColor: clickedNotificationId === n.id ? '#d1ecf1' : 'transparent',
+                    padding: '1px 3px',
+                    borderRadius: '3px'
+                  }}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleNotificationClick(n);
+                  }}
+                  title="Click to use visit code and continue"
+                >
+                  {n.data.visit_code}
+                </span>
+                {n.body.split(n.data.visit_code)[1]}
+              </>
+            ) : (
+              n.body
+            )}
+          </div>
+        )}
                       {n.data?.date && <div className="text-muted mt-1" style={{ fontSize: '0.75rem' }}>Date: {n.data.date}</div>}
                     </div>
-                    <small className="text-muted" style={{ fontSize: '0.7rem', whiteSpace: 'nowrap' }}>
-                      {n.created_at ? new Date(n.created_at).toLocaleDateString() : ""}
-                      <br />
-                      {n.created_at ? new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ""}
-                    </small>
+                    <div className="d-flex flex-column align-items-end">
+                      {clickedNotificationId === n.id && (
+                        <small className="text-success mb-1">
+                          <i className="bi bi-arrow-right-circle me-1"></i>Opening visit...
+                        </small>
+                      )}
+                      <small className="text-muted" style={{ fontSize: '0.7rem', whiteSpace: 'nowrap' }}>
+                        {n.created_at ? new Date(n.created_at).toLocaleDateString() : ""}
+                        <br />
+                        {n.created_at ? new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ""}
+                      </small>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -201,29 +284,21 @@ export default function NotificationBell() {
               borderRadius: '0 0 12px 12px',
               borderTop: '1px solid #e9ecef'
             }}>
-              <Link 
-                to="/notifications" 
-                className="btn btn-sm p-0"
-                style={{
-                  color: '#00b4d8',
-                  background: 'transparent',
-                  border: 'none',
-                  fontWeight: '600',
-                  fontSize: '0.8rem'
-                }}
-                onMouseEnter={(e) => {
-                  e.target.style.color = '#0077b6';
-                  e.target.style.textDecoration = 'underline';
-                }}
-                onMouseLeave={(e) => {
-                  e.target.style.color = '#00b4d8';
-                  e.target.style.textDecoration = 'none';
-                }}
-              >
+               <Link 
+                 to="/notifications" 
+                 className="btn btn-sm p-0 notification-see-all-btn"
+                 style={{
+                   color: '#00b4d8',
+                   background: 'transparent',
+                   border: 'none',
+                   fontWeight: '600',
+                   fontSize: '0.8rem'
+                 }}
+               >
                 See all
               </Link>
               <button 
-                className="btn btn-sm p-0" 
+                className="btn btn-sm p-0 notification-bottom-close-btn" 
                 onClick={() => setOpen(false)}
                 style={{
                   color: '#6c757d',
@@ -231,12 +306,6 @@ export default function NotificationBell() {
                   border: 'none',
                   fontWeight: '600',
                   fontSize: '0.8rem'
-                }}
-                onMouseEnter={(e) => {
-                  e.target.style.color = '#495057';
-                }}
-                onMouseLeave={(e) => {
-                  e.target.style.color = '#6c757d';
                 }}
               >
                 Close

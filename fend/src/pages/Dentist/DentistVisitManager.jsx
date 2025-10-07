@@ -1,14 +1,15 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import api from "../../api/api";
 import LoadingSpinner from "../../components/LoadingSpinner";
 import ToothChart from "../../components/Dentist/ToothChart";
 
 function DentistVisitManager() {
   const navigate = useNavigate();
+  const { visitCode: urlVisitCode } = useParams();
   
   // Visit code state
-  const [visitCode, setVisitCode] = useState("");
+  const [visitCode, setVisitCode] = useState(urlVisitCode || "");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [visitData, setVisitData] = useState(null);
@@ -30,6 +31,39 @@ function DentistVisitManager() {
   const [fetchingNotes, setFetchingNotes] = useState(null);
   const [fetchedNotes, setFetchedNotes] = useState(null);
   const [notesError, setNotesError] = useState("");
+
+  // Auto-resolve visit code if provided via URL
+  useEffect(() => {
+    if (urlVisitCode && !visitData && !loading) {
+      // Auto-submit the form with the visit code from URL
+      const autoSubmit = async () => {
+        setLoading(true);
+        setError("");
+        try {
+          const response = await api.get(`/api/visits/resolve/${urlVisitCode.trim()}`);
+          setVisitData(response.data);
+          
+          // Load existing notes if any
+          if (response.data.has_existing_notes) {
+            const notesResponse = await api.get(`/api/visits/${response.data.visit.id}/dentist-notes`);
+            setNotes({
+              dentist_notes: notesResponse.data.dentist_notes || "",
+              findings: notesResponse.data.findings || "",
+              treatment_plan: notesResponse.data.treatment_plan || "",
+              teeth_treated: notesResponse.data.teeth_treated || "",
+            });
+          }
+        } catch (err) {
+          setError(err.response?.data?.message || "Failed to resolve visit code");
+          setVisitData(null);
+        } finally {
+          setLoading(false);
+        }
+      };
+      
+      autoSubmit();
+    }
+  }, [urlVisitCode]);
 
   const TabButton = ({ id, icon, label }) => (
     <button

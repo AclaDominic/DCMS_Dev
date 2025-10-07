@@ -126,7 +126,6 @@ Route::middleware(['auth:sanctum', AdminOnly::class])->group(function () {
     Route::patch('/weekly-schedule/{id}', [ClinicWeeklyScheduleController::class, 'update']);
 
     // Dentist schedules (capacity source) — keep simple paths
-    Route::get('/dentists', [DentistScheduleController::class, 'index']);
     Route::post('/dentists', [DentistScheduleController::class, 'store']);
     Route::get('/dentists/{id}', [DentistScheduleController::class, 'show']);
     Route::put('/dentists/{id}', [DentistScheduleController::class, 'update']);
@@ -278,12 +277,16 @@ Route::middleware(['auth:sanctum', EnsureDeviceIsApproved::class])->group(functi
         Route::put('/{id}/update-patient', [PatientVisitController::class, 'updatePatient']);
         Route::post('/{visit}/link-existing', [PatientVisitController::class, 'linkToExistingPatient']);
         Route::post('/{id}/view-notes', [PatientVisitController::class, 'viewNotes']);
+        Route::post('/send-visit-code', [PatientVisitController::class, 'sendVisitCode']);
         
         // Visit code resolution and notes (accessible to staff and dentists)
         Route::get('/resolve/{code}', [PatientVisitController::class, 'resolveCode'])->middleware('throttle:10,1');
         Route::post('/{id}/save-dentist-notes', [PatientVisitController::class, 'saveDentistNotes']);
         Route::get('/{id}/dentist-notes', [PatientVisitController::class, 'getDentistNotes']);
     });
+
+    // Dentist schedules (read-only access for staff to send visit codes)
+    Route::get('/dentists', [DentistScheduleController::class, 'index']);
 
     // Appointments (staff side)
     Route::post('/appointments/{id}/approve', [AppointmentController::class, 'approve']);

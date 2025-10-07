@@ -183,6 +183,7 @@ export default function AppRouter() {
           <Route path="profile" element={<DentistProfile />} />
           <Route path="schedule" element={<DentistSchedule />} />
           <Route path="visit-manager" element={<DentistVisitManager />} />
+          <Route path="visit/:visitCode" element={<DentistVisitManager />} />
           <Route path="schedule-view" element={<DentistScheduleView />} />
         </Route>
         {/* Payment Result Routes */}

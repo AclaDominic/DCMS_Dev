@@ -3,6 +3,7 @@ import api from "../../api/api";
 import LoadingSpinner from "../LoadingSpinner";
 import VisitCompletionModal from "./VisitCompletionModal";
 import VisitNotesModal from "./VisitNotesModal";
+import SendVisitCodeModal from "./SendVisitCodeModal";
 
 function VisitTrackerManager() {
   const [visits, setVisits] = useState([]);
@@ -33,6 +34,7 @@ function VisitTrackerManager() {
   const [completingVisit, setCompletingVisit] = useState(null);
   const [viewingNotes, setViewingNotes] = useState(null);
   const [sendingReceipt, setSendingReceipt] = useState(null);
+  const [sendingVisitCode, setSendingVisitCode] = useState(null);
 
   useEffect(() => {
     fetchVisits();
@@ -410,6 +412,14 @@ function VisitTrackerManager() {
                             )}
                           </button>
                           <button
+                            className="btn btn-info btn-sm"
+                            onClick={() => setSendingVisitCode(v)}
+                            title="Send visit code to available dentist"
+                          >
+                            <i className="bi bi-send me-1"></i>
+                            Send Code
+                          </button>
+                          <button
                             className="btn btn-warning btn-sm"
                             onClick={() => handleEditClick(v)}
                           >
@@ -768,6 +778,17 @@ function VisitTrackerManager() {
         <VisitNotesModal
           visit={viewingNotes}
           onClose={() => setViewingNotes(null)}
+        />
+      )}
+
+      {/* Send Visit Code Modal */}
+      {sendingVisitCode && (
+        <SendVisitCodeModal
+          visit={sendingVisitCode}
+          onClose={() => setSendingVisitCode(null)}
+          onSuccess={(dentist) => {
+            console.log(`Visit code sent to Dr. ${dentist.dentist_name || dentist.dentist_code}`);
+          }}
         />
       )}
     </div>
