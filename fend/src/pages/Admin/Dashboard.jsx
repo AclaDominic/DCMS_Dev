@@ -1,6 +1,54 @@
-import React from "react";
+import React, { useState } from "react";
+import axios from "axios";
 
 const AdminDashboard = () => {
+  const [smsTest, setSmsTest] = useState({
+    phoneNumber: '',
+    message: '',
+    loading: false,
+    result: null,
+    error: null
+  });
+
+  const handleSmsTest = async (e) => {
+    e.preventDefault();
+    
+    if (!smsTest.phoneNumber.trim()) {
+      setSmsTest(prev => ({ ...prev, error: 'Phone number is required' }));
+      return;
+    }
+
+    // Validate Philippine mobile number format (10 digits starting with 9)
+    const phoneRegex = /^9\d{9}$/;
+    if (!phoneRegex.test(smsTest.phoneNumber)) {
+      setSmsTest(prev => ({ ...prev, error: 'Please enter a valid 10-digit Philippine mobile number (e.g., 9171234567)' }));
+      return;
+    }
+
+    setSmsTest(prev => ({ ...prev, loading: true, error: null, result: null }));
+
+    try {
+      const response = await axios.post('/api/admin/test-sms', {
+        phone_number: smsTest.phoneNumber,
+        message: smsTest.message || undefined
+      });
+
+      setSmsTest(prev => ({ 
+        ...prev, 
+        loading: false, 
+        result: response.data,
+        phoneNumber: '',
+        message: ''
+      }));
+    } catch (error) {
+      setSmsTest(prev => ({ 
+        ...prev, 
+        loading: false, 
+        error: error.response?.data?.message || 'Failed to send test SMS'
+      }));
+    }
+  };
+
   return (
     <div 
       className="admin-dashboard-page"
@@ -140,6 +188,105 @@ const AdminDashboard = () => {
                     </div>
                   </div>
                 </div>
+              </div>
+            </div>
+
+            {/* SMS Test Section */}
+            <div className="card border-0 shadow-sm mt-4" style={{ borderRadius: '16px', width: '100%' }}>
+              <div className="card-header bg-info text-white border-0" style={{ borderRadius: '16px 16px 0 0' }}>
+                <h5 className="mb-0 fw-semibold">
+                  <i className="bi bi-chat-dots me-2"></i>
+                  SMS Test
+                </h5>
+              </div>
+              <div className="card-body p-4">
+                <form onSubmit={handleSmsTest}>
+                  <div className="row g-3">
+                    <div className="col-12 col-md-6">
+                      <label htmlFor="phoneNumber" className="form-label fw-semibold">
+                        Phone Number (Philippines)
+                      </label>
+                      <div className="input-group">
+                        <span className="input-group-text bg-light border-end-0">+63</span>
+                        <input
+                          type="text"
+                          className="form-control border-start-0"
+                          id="phoneNumber"
+                          placeholder="9171234567"
+                          value={smsTest.phoneNumber}
+                          onChange={(e) => setSmsTest(prev => ({ ...prev, phoneNumber: e.target.value }))}
+                          disabled={smsTest.loading}
+                          maxLength={10}
+                        />
+                      </div>
+                      <div className="form-text">
+                        Enter 10-digit Philippine mobile number (e.g., 9171234567)
+                      </div>
+                    </div>
+                    <div className="col-12 col-md-6">
+                      <label htmlFor="message" className="form-label fw-semibold">
+                        Custom Message (Optional)
+                      </label>
+                      <input
+                        type="text"
+                        className="form-control"
+                        id="message"
+                        placeholder="Leave empty for default test message"
+                        value={smsTest.message}
+                        onChange={(e) => setSmsTest(prev => ({ ...prev, message: e.target.value }))}
+                        disabled={smsTest.loading}
+                        maxLength={160}
+                      />
+                      <div className="form-text">
+                        {smsTest.message.length}/160 characters
+                      </div>
+                    </div>
+                    <div className="col-12">
+                      <button
+                        type="submit"
+                        className="btn btn-info btn-lg px-4"
+                        disabled={smsTest.loading || !smsTest.phoneNumber.trim() || !/^9\d{9}$/.test(smsTest.phoneNumber)}
+                      >
+                        {smsTest.loading ? (
+                          <>
+                            <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                            Sending...
+                          </>
+                        ) : (
+                          <>
+                            <i className="bi bi-send me-2"></i>
+                            Send Test SMS
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                </form>
+
+                {/* Error Message */}
+                {smsTest.error && (
+                  <div className="alert alert-danger mt-3" role="alert">
+                    <i className="bi bi-exclamation-triangle me-2"></i>
+                    {smsTest.error}
+                  </div>
+                )}
+
+                {/* Success Message */}
+                {smsTest.result && (
+                  <div className="alert alert-success mt-3" role="alert">
+                    <i className="bi bi-check-circle me-2"></i>
+                    <strong>Success!</strong> {smsTest.result.message}
+                    {smsTest.result.data && (
+                      <div className="mt-2">
+                        <small>
+                          <strong>Phone:</strong> +63{smsTest.result.data.phone_number.replace('+639', '')}<br/>
+                          <strong>Message:</strong> {smsTest.result.data.message}<br/>
+                          <strong>Sent at:</strong> {new Date(smsTest.result.data.sent_at).toLocaleString()}
+                        </small>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </div>

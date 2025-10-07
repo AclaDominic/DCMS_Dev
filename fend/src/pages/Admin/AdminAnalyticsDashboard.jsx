@@ -397,27 +397,6 @@ export default function AdminAnalyticsDashboard() {
 
     return [
       {
-        id: 'revenue',
-        title: 'Total Revenue',
-        icon: '💰',
-        value: revenue,
-        prevValue: prevRevenue,
-        change: k?.total_revenue?.pct_change || 0,
-        color: '#14B8A6', // Teal
-        glowColor: 'rgba(20, 184, 166, 0.4)',
-        data: {
-          labels: ['Current Month', 'Previous Month'],
-          datasets: [{
-            data: [revenue, prevRevenue],
-            backgroundColor: ['#14B8A6', 'rgba(20, 184, 166, 0.3)'],
-            borderColor: ['#14B8A6', 'rgba(20, 184, 166, 0.5)'],
-            borderWidth: 3,
-            hoverBackgroundColor: ['#0F766E', 'rgba(20, 184, 166, 0.4)'],
-          }]
-        },
-        formatter: (val) => `₱${val.toLocaleString()}`
-      },
-      {
         id: 'visits',
         title: 'Total Visits',
         icon: '👥',
@@ -1179,7 +1158,7 @@ export default function AdminAnalyticsDashboard() {
             {/* Modern Light Theme KPI Grid */}
             <div className="row g-4 mb-5">
               {chartConfigs.map((config, index) => (
-                <div key={config.id} className="col-12 col-sm-6 col-lg-4 col-xl-4">
+                <div key={config.id} className="col-12 col-sm-6 col-lg-3 col-xl-3">
                   <div
                     className="card h-100 border-0"
                     style={{

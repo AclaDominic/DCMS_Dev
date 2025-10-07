@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
+use App\Helpers\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 
 class NotificationController extends Controller
 {
@@ -201,5 +203,58 @@ class NotificationController extends Controller
             'total' => $total,
             'totalPages' => (int) ceil($total / $perPage),
         ]);
+    }
+
+    /**
+     * Test SMS functionality by sending a test message
+     */
+    public function testSms(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'phone_number' => 'required|string|regex:/^(09\d{9}|\+639\d{9})$/',
+            'message' => 'nullable|string|max:160',
+        ], [
+            'phone_number.required' => 'Phone number is required',
+            'phone_number.regex' => 'Phone number must be in format 09xxxxxxxxx or +639xxxxxxxxx',
+            'message.max' => 'Message cannot exceed 160 characters',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $phoneNumber = $request->input('phone_number');
+        
+        // Convert Philippine local format (09xxxxxxxxx) to E.164 format (+639xxxxxxxxx)
+        if (preg_match('/^09(\d{9})$/', $phoneNumber, $matches)) {
+            $phoneNumber = '+639' . $matches[1];
+        }
+        
+        $customMessage = $request->input('message', 'This is a test SMS from DCMS. SMS functionality is working correctly!');
+
+        try {
+            // Use the NotificationService to send the test SMS
+            NotificationService::send($phoneNumber, 'SMS Test', $customMessage);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Test SMS sent successfully',
+                'data' => [
+                    'phone_number' => $phoneNumber,
+                    'message' => $customMessage,
+                    'sent_at' => now()->toISOString(),
+                ],
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to send test SMS',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
     }
 }

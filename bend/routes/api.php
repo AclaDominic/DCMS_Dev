@@ -143,6 +143,9 @@ Route::middleware(['auth:sanctum', AdminOnly::class])->group(function () {
         Route::get('/{systemLog}', [SystemLogController::class, 'show']);
     });
 
+    // SMS testing
+    Route::post('/admin/test-sms', [NotificationController::class, 'testSms']);
+
     // Reports
     Route::prefix('reports')->group(function () {
         Route::get('/visits-monthly', [ReportController::class, 'visitsMonthly']);

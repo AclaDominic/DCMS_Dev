@@ -2,47 +2,82 @@
 
 namespace App\Helpers;
 
-use Illuminate\Support\Facades\Log;
+use Aws\Sns\SnsClient;
 use App\Models\Appointment;
-// use Aws\Sns\SnsClient; // Uncomment this if you plan to use AWS SNS later
+use App\Models\NotificationLog;
+use App\Models\SmsWhitelist;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class NotificationService
 {
     /**
-     * Generic send. For now this only logs the message so you can inspect it in storage/logs/laravel.log.
-     * Keep using this anywhere you need a simple notification.
+     * Generic send with SMS logging and whitelisting support.
+     * Always creates a notification_logs row; decides whether to send via SNS based on env flags and whitelist.
      */
     public static function send(string $to = null, string $subject = 'Notification', string $message = ''): void
     {
-        // ✅ Log-friendly format
-        Log::info($subject);
-        Log::info("To: " . ($to ?? 'N/A'));
-        Log::info("Message: " . $message);
+        // 1) Always create a log row
+        $log = NotificationLog::create([
+            'channel'    => 'sms',
+            'to'         => $to ?? 'N/A',
+            'message'    => $message,
+            'status'     => 'pending',
+            'meta'       => ['subject' => $subject],
+            'created_by' => Auth::check() ? Auth::id() : null,
+        ]);
 
-        // Optional: Mail::to($to)->send(new ReminderMail(...));
+        // 2) Read toggle and whitelist from env (user will set values manually)
+        $smsEnabled    = filter_var(env('SMS_ENABLED', false), FILTER_VALIDATE_BOOLEAN);
+        $envWhitelist  = array_filter(array_map('trim', explode(',', (string) env('SMS_WHITELIST', ''))));
+        $inEnvWhitelist = $to && in_array($to, $envWhitelist, true);
+        $inDbWhitelist  = $to ? SmsWhitelist::where('phone_e164', $to)->exists() : false;
 
-        /*
-        // 🔄 SMS (uncomment below to switch to SMS via AWS SNS)
+        // 3) If disabled or not whitelisted → block and log
+        if (!$smsEnabled || !$to || !($inEnvWhitelist || $inDbWhitelist)) {
+            $log->update(['status' => 'blocked_sandbox']);
+            Log::info("SMS blocked_sandbox: {$subject} to {$to}");
+            return;
+        }
 
-        // $sns = new SnsClient([
-        //     'region' => env('AWS_DEFAULT_REGION'),
-        //     'version' => '2010-03-31',
-        //     'credentials' => [
-        //         'key' => env('AWS_ACCESS_KEY_ID'),
-        //         'secret' => env('AWS_SECRET_ACCESS_KEY'),
-        //     ],
-        // ]);
+        // 4) Send via AWS SNS
+        $sns = new SnsClient([
+            'version'     => '2010-03-31',
+            'region'      => config('services.sns.region'),
+            'credentials' => [
+                'key'    => env('AWS_ACCESS_KEY_ID'),
+                'secret' => env('AWS_SECRET_ACCESS_KEY'),
+            ],
+        ]);
 
-        // try {
-        //     $sns->publish([
-        //         'Message' => $message,
-        //         'PhoneNumber' => $to, // Must be E.164 format, e.g., +639171234567
-        //     ]);
-        //     Log::info("SMS sent to $to");
-        // } catch (\Exception $e) {
-        //     Log::error("Failed to send SMS to $to: " . $e->getMessage());
-        // }
-        */
+        try {
+            $result = $sns->publish([
+                'Message'        => $message,
+                'PhoneNumber'    => $to,
+                'MessageAttributes' => array_filter([
+                    'AWS.SNS.SMS.SMSType' => [
+                        'DataType'    => 'String',
+                        'StringValue' => config('services.sns.sms_type'),
+                    ],
+                    'AWS.SNS.SMS.SenderID' => config('services.sns.sender_id') ? [
+                        'DataType'    => 'String',
+                        'StringValue' => config('services.sns.sender_id'),
+                    ] : null,
+                ]),
+            ]);
+
+            $log->update([
+                'status'               => 'sent',
+                'provider_message_id'  => $result['MessageId'] ?? null,
+            ]);
+            Log::info("SMS sent to {$to}");
+        } catch (\Throwable $e) {
+            $log->update([
+                'status' => 'failed',
+                'error'  => $e->getMessage(),
+            ]);
+            Log::error("SMS failed to {$to}: {$e->getMessage()}");
+        }
     }
 
     /**
