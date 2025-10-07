@@ -323,6 +323,10 @@ function BookAppointment() {
                               </option>
                             ))}
                           </select>
+                          <div className="form-text mt-2">
+                            <i className="bi bi-info-circle me-1"></i>
+                            Time slots that overlap with your existing appointments are automatically excluded
+                          </div>
                         </div>
 
                         {/* Teeth Count Input for Per-Teeth Services */}

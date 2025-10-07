@@ -23,6 +23,9 @@ class AppointmentSlotController extends Controller
             'service_id' => 'nullable|integer|exists:services,id',
         ]);
 
+        // Get the authenticated patient
+        $patient = \App\Models\Patient::byUser(auth()->id());
+
         $date = Carbon::createFromFormat('Y-m-d', $data['date'])->startOfDay();
         $snap = $resolver->resolve($date);
         if (!$snap['is_open']) {
@@ -62,7 +65,13 @@ class AppointmentSlotController extends Controller
         $requiredBlocks = 1;
         if (!empty($data['service_id'])) {
             $service = Service::findOrFail($data['service_id']);
-            $requiredBlocks = max(1, (int) ceil(($service->estimated_minutes ?? 0) / 30));
+            $requiredBlocks = max(1, (int) ceil(($service->estimated_minutes ?? 30) / 30));
+        }
+
+        // Get patient's blocked time slots if patient exists
+        $patientBlockedSlots = [];
+        if ($patient) {
+            $patientBlockedSlots = Appointment::getBlockedTimeSlotsForPatient($patient->id, $data['date']);
         }
 
         // Return every start time whose covered blocks stay strictly below cap
@@ -71,6 +80,7 @@ class AppointmentSlotController extends Controller
             $t  = Carbon::createFromFormat('H:i', $start);
             $ok = true;
 
+            // Check capacity constraints
             for ($i = 0; $i < $requiredBlocks; $i++) {
                 $k = $t->format('H:i');
                 if (!array_key_exists($k, $usage) || $usage[$k] >= $cap) {
@@ -78,6 +88,17 @@ class AppointmentSlotController extends Controller
                     break;
                 }
                 $t->addMinutes(30);
+            }
+
+            // Check for patient-specific overlaps if patient exists
+            if ($ok && $patient && !empty($patientBlockedSlots)) {
+                $endTime = $t->copy()->addMinutes($requiredBlocks * 30);
+                $proposedTimeSlot = $start . '-' . $endTime->format('H:i');
+                
+                // Check if this proposed slot would overlap with any existing patient appointment
+                if (Appointment::hasOverlappingAppointment($patient->id, $data['date'], $proposedTimeSlot)) {
+                    $ok = false;
+                }
             }
 
             if ($ok) {

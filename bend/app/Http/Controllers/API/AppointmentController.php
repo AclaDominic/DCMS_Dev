@@ -67,7 +67,8 @@ class AppointmentController extends Controller
         return response()->json(['message' => 'Invalid start time (not on grid or outside hours).'], 422);
     }
 
-    $endTime = $startTime->copy()->addMinutes($estimatedMinutes);
+    // Calculate end time using 30-minute blocks (round up to nearest 30 minutes)
+    $endTime = $startTime->copy()->addMinutes($blocksNeeded * 30);
     if ($startTime->lt($open) || $endTime->gt($close)) {
         return response()->json(['message' => 'Selected time is outside clinic hours.'], 422);
     }
@@ -84,6 +85,14 @@ class AppointmentController extends Controller
     if (!$patient) {
         return response()->json([
             'message' => 'Your account is not yet linked to a patient record. Please contact the clinic.',
+        ], 422);
+    }
+
+    // Check for overlapping appointments for the same patient
+    $timeSlot = $this->normalizeTime($startTime) . '-' . $this->normalizeTime($endTime);
+    if (Appointment::hasOverlappingAppointment($patient->id, $dateStr, $timeSlot)) {
+        return response()->json([
+            'message' => 'You already have an appointment at this time. Please choose a different time slot.',
         ], 422);
     }
 
