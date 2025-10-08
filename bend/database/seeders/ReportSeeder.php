@@ -5,7 +5,9 @@ namespace Database\Seeders;
 use App\Models\Appointment;
 use App\Models\Patient;
 use App\Models\PatientVisit;
+use App\Models\Payment;
 use App\Models\Service;
+use App\Models\User;
 use App\Models\VisitNote;
 use App\Services\ClinicDateResolverService;
 use Illuminate\Database\Seeder;
@@ -191,7 +193,46 @@ class ReportSeeder extends Seeder
             Appointment::insert($chunk);
         }
 
+        // Create Payment records for completed visits
+        $this->createPaymentsForCompletedVisits($startOfMonth, $endOfMonth);
+
         $this->command?->info('ReportSeeder: seeded '.count($visitRows).' visits, '.count($visitNotesRows).' visit notes, and '.count($appointmentRows).' appointments for '.$startOfMonth->format('Y-m'));
+    }
+
+    private function createPaymentsForCompletedVisits(Carbon $startOfMonth, Carbon $endOfMonth): void
+    {
+        // Get completed visits for the month
+        $completedVisits = PatientVisit::whereBetween('start_time', [$startOfMonth, $endOfMonth])
+            ->where('status', 'completed')
+            ->with('service')
+            ->get();
+
+        // Get an admin user for created_by
+        $adminUser = User::where('role', 'admin')->first();
+
+        foreach ($completedVisits as $visit) {
+            $service = $visit->service;
+            $amount = $service ? $service->price : 2000; // Default amount if no service
+
+            Payment::create([
+                'appointment_id' => null,
+                'patient_visit_id' => $visit->id,
+                'currency' => 'PHP',
+                'amount_due' => $amount,
+                'amount_paid' => $amount,
+                'method' => 'cash', // Default to cash for seeded visits
+                'status' => 'paid',
+                'reference_no' => 'REPORT-PAY-' . strtoupper(uniqid()),
+                'paid_at' => $visit->end_time ?? $visit->created_at,
+                'created_by' => $adminUser?->id,
+                'created_at' => $visit->created_at,
+                'updated_at' => $visit->created_at,
+            ]);
+        }
+
+        if ($completedVisits->count() > 0) {
+            $this->command?->info('Created ' . $completedVisits->count() . ' Payment records for completed visits.');
+        }
     }
 
     private function findAvailableSlot(array $slotUsage, int $capacity, array $grid): ?array

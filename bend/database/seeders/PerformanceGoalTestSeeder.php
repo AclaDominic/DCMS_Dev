@@ -9,6 +9,7 @@ use App\Models\ServiceBundleItem;
 use App\Models\ServiceDiscount;
 use App\Models\Patient;
 use App\Models\PatientVisit;
+use App\Models\Payment;
 use App\Models\VisitNote;
 use App\Models\PatientHmo;
 use App\Models\User;
@@ -314,6 +315,7 @@ class PerformanceGoalTestSeeder extends Seeder
         }
         
         // Insert all visits
+        $completedVisits = [];
         foreach ($visitsData as $visitData) {
             $visit = PatientVisit::updateOrCreate([
                 'patient_id' => $visitData['patient_id'],
@@ -325,11 +327,49 @@ class PerformanceGoalTestSeeder extends Seeder
             // Create visit notes for completed visits to simulate real-world usage
             if ($visit->status === 'completed') {
                 $this->createVisitNote($visit, $visitData);
+                $completedVisits[] = $visit;
             }
         }
         
+        // Create Payment records for all completed visits
+        $this->createPaymentsForCompletedVisits($completedVisits);
+        
         // Create sample HMO data for patients to simulate real-world usage
         $this->createSampleHmoData();
+    }
+    
+    /**
+     * Create Payment records for completed visits
+     */
+    private function createPaymentsForCompletedVisits(array $completedVisits): void
+    {
+        // Get an admin user for created_by
+        $adminUser = User::where('role', 'admin')->first();
+        
+        foreach ($completedVisits as $visit) {
+            $service = $visit->service;
+            $amount = $service ? $service->price : 2000; // Default amount if no service
+
+            Payment::updateOrCreate([
+                'patient_visit_id' => $visit->id,
+            ], [
+                'appointment_id' => null,
+                'currency' => 'PHP',
+                'amount_due' => $amount,
+                'amount_paid' => $amount,
+                'method' => 'cash', // Default to cash for seeded visits
+                'status' => 'paid',
+                'reference_no' => 'PERF-PAY-' . strtoupper(uniqid()),
+                'paid_at' => $visit->end_time ?? $visit->created_at,
+                'created_by' => $adminUser?->id,
+                'created_at' => $visit->created_at,
+                'updated_at' => $visit->created_at,
+            ]);
+        }
+        
+        if (count($completedVisits) > 0) {
+            $this->command?->info('Created ' . count($completedVisits) . ' Payment records for completed visits in PerformanceGoalTestSeeder.');
+        }
     }
     
     /**

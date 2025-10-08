@@ -193,20 +193,42 @@ class ReceiptService
         $payments = $appointment->payments;
         $user = $patient->user;
 
+        // Debug logging to identify payment data issues
+        Log::info('Receipt generation debug', [
+            'appointment_id' => $appointment->id,
+            'payment_status' => $appointment->payment_status,
+            'payments_count' => $payments->count(),
+            'payments_data' => $payments->toArray(),
+        ]);
+
         // Calculate total amount
         $totalAmount = $appointment->calculateTotalCost();
         $totalPaid = $payments->sum('amount_paid');
 
-        // Get payment details
-        $paymentDetails = $payments->map(function ($payment) {
-            return [
-                'method' => ucfirst($payment->method),
-                'amount' => $payment->amount_paid,
-                'reference' => $payment->reference_no,
-                'paid_at' => $payment->paid_at ? $payment->paid_at->format('M d, Y h:i A') : null,
-                'status' => $payment->status
-            ];
-        });
+        // Handle case where payment_status is 'paid' but no Payment records exist
+        // This can happen with manual status updates, cash payments, or HMO coverage
+        if ($appointment->payment_status === 'paid' && $payments->isEmpty()) {
+            // Create a synthetic payment record for display purposes
+            $paymentDetails = collect([[
+                'method' => ucfirst($appointment->payment_method ?? 'cash'),
+                'amount' => $totalAmount,
+                'reference' => 'SYNTHETIC-' . $appointment->reference_code,
+                'paid_at' => $appointment->updated_at ? $appointment->updated_at->format('M d, Y h:i A') : 'N/A',
+                'status' => 'paid'
+            ]]);
+            $totalPaid = $totalAmount; // Set total paid to match total amount
+        } else {
+            // Get payment details from actual Payment records
+            $paymentDetails = $payments->map(function ($payment) {
+                return [
+                    'method' => ucfirst($payment->method),
+                    'amount' => $payment->amount_paid,
+                    'reference' => $payment->reference_no,
+                    'paid_at' => $payment->paid_at ? $payment->paid_at->format('M d, Y h:i A') : null,
+                    'status' => $payment->status
+                ];
+            });
+        }
 
         return [
             'receipt_type' => 'appointment',
@@ -258,20 +280,42 @@ class ReceiptService
         $user = $patient->user;
         $visitNotes = $visit->visitNotes;
 
+        // Debug logging to identify payment data issues
+        Log::info('Visit receipt generation debug', [
+            'visit_id' => $visit->id,
+            'visit_status' => $visit->status,
+            'payments_count' => $payments->count(),
+            'payments_data' => $payments->toArray(),
+        ]);
+
         // Calculate total amount
         $totalAmount = $service ? $service->price : 0;
         $totalPaid = $payments->sum('amount_paid');
 
-        // Get payment details
-        $paymentDetails = $payments->map(function ($payment) {
-            return [
-                'method' => ucfirst($payment->method),
-                'amount' => $payment->amount_paid,
-                'reference' => $payment->reference_no,
-                'paid_at' => $payment->paid_at ? $payment->paid_at->format('M d, Y h:i A') : null,
-                'status' => $payment->status
-            ];
-        });
+        // Handle case where visit is completed but no Payment records exist
+        // This can happen with manual status updates, cash payments, or HMO coverage
+        if ($visit->status === 'completed' && $payments->isEmpty()) {
+            // Create a synthetic payment record for display purposes
+            $paymentDetails = collect([[
+                'method' => 'Cash', // Default to cash for visits without payment records
+                'amount' => $totalAmount,
+                'reference' => 'SYNTHETIC-VISIT-' . $visit->id,
+                'paid_at' => $visit->updated_at ? $visit->updated_at->format('M d, Y h:i A') : 'N/A',
+                'status' => 'paid'
+            ]]);
+            $totalPaid = $totalAmount; // Set total paid to match total amount
+        } else {
+            // Get payment details from actual Payment records
+            $paymentDetails = $payments->map(function ($payment) {
+                return [
+                    'method' => ucfirst($payment->method),
+                    'amount' => $payment->amount_paid,
+                    'reference' => $payment->reference_no,
+                    'paid_at' => $payment->paid_at ? $payment->paid_at->format('M d, Y h:i A') : null,
+                    'status' => $payment->status
+                ];
+            });
+        }
 
         return [
             'receipt_type' => 'visit',
