@@ -307,6 +307,52 @@ class AppointmentController extends Controller
         return response()->json($appointments);
     }
 
+    public function userVisitHistory(Request $request)
+    {
+        $user = $request->user();
+
+        if (!$user->patient) {
+            return response()->json([
+                'data' => [],
+                'meta' => [
+                    'current_page' => 1,
+                    'last_page' => 1,
+                    'total' => 0,
+                    'per_page' => 10,
+                ]
+            ]);
+        }
+
+        // Get completed patient visits with visit notes
+        $visits = \App\Models\PatientVisit::with(['service', 'visitNotes'])
+            ->where('patient_id', $user->patient->id)
+            ->where('status', 'completed')
+            ->latest('visit_date')
+            ->paginate(10);
+
+        // Transform the data to include service name and teeth treated
+        $transformedVisits = $visits->getCollection()->map(function ($visit) {
+            return [
+                'id' => $visit->id,
+                'visit_date' => $visit->visit_date->format('Y-m-d'),
+                'service_name' => $visit->service?->name,
+                'teeth_treated' => $visit->visitNotes?->teeth_treated,
+                'created_at' => $visit->created_at,
+                'has_notes' => $visit->visitNotes ? true : false,
+            ];
+        });
+
+        return response()->json([
+            'data' => $transformedVisits,
+            'meta' => [
+                'current_page' => $visits->currentPage(),
+                'last_page' => $visits->lastPage(),
+                'total' => $visits->total(),
+                'per_page' => $visits->perPage(),
+            ]
+        ]);
+    }
+
     public function cancel($id)
     {
         $user = auth()->user();

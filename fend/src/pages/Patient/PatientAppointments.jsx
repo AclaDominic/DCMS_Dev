@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import api from "../../api/api";
 import LoadingSpinner from "../../components/LoadingSpinner";
+import PatientServiceHistory from "../../components/Patient/PatientServiceHistory";
 
 function PatientAppointments() {
   const [appointments, setAppointments] = useState([]);
@@ -14,6 +15,9 @@ function PatientAppointments() {
   const [rescheduleSlots, setRescheduleSlots] = useState([]);
   const [selectedRescheduleSlot, setSelectedRescheduleSlot] = useState("");
   const [rescheduleLoading, setRescheduleLoading] = useState(false);
+  
+  // Tab state for switching between appointments and service history
+  const [activeTab, setActiveTab] = useState("appointments");
 
   useEffect(() => {
     (async () => {
@@ -248,7 +252,7 @@ function PatientAppointments() {
           <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4">
             <h2 className="h4 mb-3 mb-md-0">
               <i className="bi bi-calendar3 me-2"></i>
-              My Appointments
+              My Appointments & History
             </h2>
             <div className="d-flex gap-2">
               <button 
@@ -271,21 +275,75 @@ function PatientAppointments() {
             </div>
           </div>
 
-          {loading && <LoadingSpinner message="Loading appointments..." />}
+          {/* Tab Navigation */}
+          <div className="d-flex gap-2 mb-4" role="group" aria-label="Content tabs">
+            <button
+              className={`btn flex-fill flex-sm-grow-0 border-0 shadow-sm ${
+                activeTab === "appointments" ? "" : "btn-outline-primary"
+              }`}
+              onClick={() => setActiveTab("appointments")}
+              type="button"
+              style={{
+                background: activeTab === "appointments" 
+                  ? 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)'
+                  : 'transparent',
+                color: activeTab === "appointments" ? 'white' : '#3b82f6',
+                border: activeTab === "appointments" ? 'none' : '1px solid #3b82f6',
+                borderRadius: '8px',
+                padding: '12px 16px',
+                fontWeight: '600',
+                transition: 'all 0.3s ease',
+                minWidth: '140px'
+              }}
+            >
+              <i className="bi bi-calendar3 me-2"></i>
+              <span className="d-none d-sm-inline">Appointments</span>
+              <span className="d-sm-none">Appts</span>
+            </button>
+            <button
+              className={`btn flex-fill flex-sm-grow-0 border-0 shadow-sm ${
+                activeTab === "history" ? "" : "btn-outline-primary"
+              }`}
+              onClick={() => setActiveTab("history")}
+              type="button"
+              style={{
+                background: activeTab === "history" 
+                  ? 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)'
+                  : 'transparent',
+                color: activeTab === "history" ? 'white' : '#3b82f6',
+                border: activeTab === "history" ? 'none' : '1px solid #3b82f6',
+                borderRadius: '8px',
+                padding: '12px 16px',
+                fontWeight: '600',
+                transition: 'all 0.3s ease',
+                minWidth: '140px'
+              }}
+            >
+              <i className="bi bi-clock-history me-2"></i>
+              <span className="d-none d-sm-inline">Service History</span>
+              <span className="d-sm-none">History</span>
+            </button>
+          </div>
 
-          {!loading && appointments.length === 0 && (
-            <div className="text-center py-5">
-              <i className="bi bi-calendar-x display-1 text-muted"></i>
-              <h3 className="h5 mt-3 text-muted">No appointments yet</h3>
-              <p className="text-muted">You haven't booked any appointments yet.</p>
-              <a href="/patient/appointment" className="btn btn-primary">
-                <i className="bi bi-calendar-plus me-2"></i>
-                Book Your First Appointment
-              </a>
-            </div>
-          )}
+          {/* Tab Content */}
+          <div className="tab-content">
+            {activeTab === "appointments" && (
+              <div className="tab-pane fade show active">
+                {loading && <LoadingSpinner message="Loading appointments..." />}
 
-          {!loading && appointments.length > 0 && (
+                {!loading && appointments.length === 0 && (
+                  <div className="text-center py-5">
+                    <i className="bi bi-calendar-x display-1 text-muted"></i>
+                    <h3 className="h5 mt-3 text-muted">No appointments yet</h3>
+                    <p className="text-muted">You haven't booked any appointments yet.</p>
+                    <a href="/patient/appointment" className="btn btn-primary">
+                      <i className="bi bi-calendar-plus me-2"></i>
+                      Book Your First Appointment
+                    </a>
+                  </div>
+                )}
+
+                {!loading && appointments.length > 0 && (
             <>
               {/* Desktop Table View */}
               <div className="d-none d-lg-block">
@@ -563,7 +621,16 @@ function PatientAppointments() {
                 </div>
               )}
             </>
-          )}
+                )}
+              </div>
+            )}
+
+            {activeTab === "history" && (
+              <div className="tab-pane fade show active">
+                <PatientServiceHistory />
+              </div>
+            )}
+          </div>
 
           {/* Reschedule Modal */}
           {rescheduleModal && (

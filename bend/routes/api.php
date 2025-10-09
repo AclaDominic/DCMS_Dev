@@ -209,6 +209,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Patient's own appointments
     Route::get('/user-appointments', [AppointmentController::class, 'userAppointments']);
+    Route::get('/user-visit-history', [AppointmentController::class, 'userVisitHistory']);
 
     // Receipt generation
     Route::prefix('receipts')->group(function () {
