@@ -161,8 +161,9 @@ function ClinicCalendarManager() {
           className="btn border-0 shadow-sm flex-shrink-0" 
           onClick={() => setShowAddModal(true)}
           style={{
-            background: 'linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%)',
-            color: 'white',
+            background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
+            color: '#1e293b',
+            border: '1px solid #e2e8f0',
             borderRadius: '12px',
             padding: '12px 24px',
             fontWeight: '600',

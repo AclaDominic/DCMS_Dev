@@ -69,9 +69,15 @@ const AdminDashboard = () => {
           <div className="col-12" style={{ padding: 0 }}>
             {/* Header Section */}
             <div className="text-center mb-5">
-              <div className="bg-primary rounded-circle mx-auto mb-4 d-flex align-items-center justify-content-center" 
-                   style={{ width: '120px', height: '120px', fontSize: '3rem' }}>
-                <i className="bi bi-house-door text-white"></i>
+              <div className="rounded-circle mx-auto mb-4 d-flex align-items-center justify-content-center" 
+                   style={{ 
+                     width: '120px', 
+                     height: '120px', 
+                     fontSize: '3rem',
+                     background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
+                     border: '2px solid #e2e8f0'
+                   }}>
+                <i className="bi bi-house-door" style={{ color: '#1e293b' }}></i>
               </div>
               <h1 className="fw-bold mb-3" style={{ color: '#1e293b' }}>
                 Welcome, Admin!
@@ -84,11 +90,17 @@ const AdminDashboard = () => {
               <div className="col-12 col-sm-6 col-lg-3" style={{ padding: '0.5rem' }}>
                 <div className="card border-0 shadow-sm h-100" style={{ borderRadius: '16px', width: '100%' }}>
                   <div className="card-body p-4 text-center">
-                    <div className="bg-primary rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center" 
-                         style={{ width: '60px', height: '60px', fontSize: '1.5rem' }}>
-                      <i className="bi bi-people text-white"></i>
+                    <div className="rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center" 
+                         style={{ 
+                           width: '60px', 
+                           height: '60px', 
+                           fontSize: '1.5rem',
+                           background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
+                           border: '2px solid #e2e8f0'
+                         }}>
+                      <i className="bi bi-people" style={{ color: '#1e293b' }}></i>
                     </div>
-                    <h5 className="fw-bold text-primary">Patient Management</h5>
+                    <h5 className="fw-bold" style={{ color: '#1e293b' }}>Patient Management</h5>
                     <p className="text-muted small">Manage patient records and appointments</p>
                   </div>
                 </div>
@@ -136,7 +148,11 @@ const AdminDashboard = () => {
 
             {/* Main Content Card */}
             <div className="card border-0 shadow-sm" style={{ borderRadius: '16px', width: '100%' }}>
-              <div className="card-header bg-primary text-white border-0" style={{ borderRadius: '16px 16px 0 0' }}>
+              <div className="card-header border-0" style={{ 
+                borderRadius: '16px 16px 0 0',
+                background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
+                color: '#1e293b'
+              }}>
                 <h5 className="mb-0 fw-semibold">
                   <i className="bi bi-info-circle me-2"></i>
                   Dashboard Status

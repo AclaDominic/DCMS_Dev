@@ -67,7 +67,11 @@ const AdminProfile = () => {
 
             {/* Profile Card */}
             <div className="card border-0 shadow-sm mb-4" style={{ borderRadius: '16px' }}>
-              <div className="card-header bg-primary text-white border-0" style={{ borderRadius: '16px 16px 0 0' }}>
+              <div className="card-header border-0" style={{ 
+                borderRadius: '16px 16px 0 0',
+                background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
+                color: '#1e293b'
+              }}>
                 <h5 className="mb-0 fw-semibold">
                   <i className="bi bi-person-circle me-2"></i>
                   Profile Information
@@ -77,9 +81,15 @@ const AdminProfile = () => {
                 <div className="row g-3">
                   <div className="col-12">
                     <div className="d-flex align-items-center p-3 bg-light rounded" style={{ borderRadius: '12px' }}>
-                      <div className="bg-primary rounded-circle me-3 d-flex align-items-center justify-content-center" 
-                           style={{ width: '50px', height: '50px', fontSize: '1.5rem' }}>
-                        <i className="bi bi-person text-white"></i>
+                      <div className="rounded-circle me-3 d-flex align-items-center justify-content-center" 
+                           style={{ 
+                             width: '50px', 
+                             height: '50px', 
+                             fontSize: '1.5rem',
+                             background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
+                             border: '2px solid #e2e8f0'
+                           }}>
+                        <i className="bi bi-person" style={{ color: '#1e293b' }}></i>
                       </div>
                       <div>
                         <div className="text-muted small fw-semibold">Full Name</div>

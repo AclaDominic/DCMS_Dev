@@ -14,16 +14,8 @@ function StaffLayout() {
   const [deviceStatus, setDeviceStatus] = useState(null);
   const [deviceLoaded, setDeviceLoaded] = useState(false);
 
-  // Sidebar open/closed (same behavior as Admin)
-  const [sidebarOpen, setSidebarOpen] = useState(() => window.innerWidth >= 992);
-  useEffect(() => {
-    const onResize = () => {
-      if (window.innerWidth >= 992) setSidebarOpen(true);
-      else setSidebarOpen(false);
-    };
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
-  }, []);
+  // Sidebar is always open for staff
+  const sidebarOpen = true;
 
   // Inventory settings
   useEffect(() => {
@@ -91,7 +83,9 @@ function StaffLayout() {
         <ul className="nav flex-column nav-scroller">
           <li className="nav-item">
             <NavLink to="/staff" end className={({ isActive }) => linkState(isActive)}>
-              <span className="icon">🏠</span>
+              <svg className="icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+              </svg>
               <span className="label">Dashboard</span>
             </NavLink>
           </li>
@@ -107,7 +101,9 @@ function StaffLayout() {
               onClick={(e) => { if (maybeDisable()) e.preventDefault(); }}
               style={{ cursor: maybeDisable() ? "not-allowed" : "pointer", opacity: maybeDisable() ? 0.5 : 1 }}
             >
-              <span className="icon">📅</span>
+              <svg className="icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z"/>
+              </svg>
               <span className="label">Appointments</span>
             </NavLink>
           </li>
@@ -121,7 +117,9 @@ function StaffLayout() {
               onClick={(e) => { if (maybeDisable()) e.preventDefault(); }}
               style={{ cursor: maybeDisable() ? "not-allowed" : "pointer", opacity: maybeDisable() ? 0.5 : 1 }}
             >
-              <span className="icon">🔔</span>
+              <svg className="icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/>
+              </svg>
               <span className="label">Reminders</span>
             </NavLink>
           </li>
@@ -138,7 +136,9 @@ function StaffLayout() {
                   onClick={(e) => { if (maybeDisable()) e.preventDefault(); }}
                   style={{ cursor: maybeDisable() ? "not-allowed" : "pointer", opacity: maybeDisable() ? 0.5 : 1 }}
                 >
-                  <span className="icon">📦</span>
+                  <svg className="icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M19 7h-3V6a4 4 0 0 0-8 0v1H5a1 1 0 0 0-1 1v11a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3V8a1 1 0 0 0-1-1zM10 6a2 2 0 0 1 4 0v1h-4V6zm8 13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V9h2v1a1 1 0 0 0 2 0V9h4v1a1 1 0 0 0 2 0V9h2v10z"/>
+                  </svg>
                   <span className="label">Inventory</span>
                 </NavLink>
               </li>
@@ -148,7 +148,9 @@ function StaffLayout() {
           <li className="nav-item mt-2 small text-uppercase text-secondary ps-3">Account</li>
           <li className="nav-item">
             <NavLink to="/staff/profile" className={({ isActive }) => linkState(isActive)}>
-              <span className="icon">👤</span>
+              <svg className="icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2C13.1 2 14 2.9 14 4C14 5.1 13.1 6 12 6C10.9 6 10 5.1 10 4C10 2.9 10.9 2 12 2ZM21 9V7L15 1H5C3.89 1 3 1.89 3 3V21C3 22.11 3.89 23 5 23H11V21H5V19H13V17H5V15H13V13H5V11H13V9H21M15 15V17H19V19H15V21H17V23H21V21H23V17H21V15H15Z"/>
+              </svg>
               <span className="label">Account</span>
             </NavLink>
           </li>
@@ -169,18 +171,9 @@ function StaffLayout() {
 
       {/* Right side */}
       <div className="content-area">
-       {/* Topbar (toggle + bell) */}
+       {/* Topbar (bell only) */}
 <div className="topbar d-flex align-items-center pe-0">
-  <button
-    className="btn btn-dark toggle-btn me-2"
-    onClick={() => setSidebarOpen((v) => !v)}
-    aria-label="Toggle sidebar"
-  >
-    ☰
-  </button>
-  <div className="flex-grow-1" />
-  {/* push to right, no end margin */}
-  <div className="ms-auto me-0 topbar-bell">
+  <div className="topbar-bell">
     <NotificationsBell />
   </div>
 </div>

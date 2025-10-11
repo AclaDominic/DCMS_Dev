@@ -16,10 +16,10 @@ function ScheduleManager() {
       type="button"
       style={{
         background: activeTab === id 
-          ? 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)'
+          ? 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)'
           : 'transparent',
-        color: activeTab === id ? 'white' : '#3b82f6',
-        border: activeTab === id ? 'none' : '1px solid #3b82f6',
+        color: activeTab === id ? '#1e293b' : '#6b7280',
+        border: activeTab === id ? '1px solid #e2e8f0' : '1px solid #d1d5db',
         borderRadius: '8px',
         padding: '12px 16px',
         fontWeight: '600',
@@ -54,12 +54,16 @@ function ScheduleManager() {
             width: '100%',
             maxWidth: '100%'
           }}>
-            <div className="card-header bg-primary text-white border-0" style={{ borderRadius: '16px 16px 0 0' }}>
-              <h2 className="card-title mb-0 fw-bold">
+            <div className="card-header border-0" style={{ 
+              borderRadius: '16px 16px 0 0',
+              background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
+              color: '#1e293b'
+            }}>
+              <h2 className="card-title mb-0 fw-bold" style={{ color: '#1e293b' }}>
                 <i className="bi bi-calendar3 me-2"></i>
                 Clinic Schedule Management
               </h2>
-              <p className="mb-0 mt-2 opacity-75">Comprehensive scheduling and capacity management system</p>
+              <p className="mb-0 mt-2" style={{ color: '#6b7280' }}>Comprehensive scheduling and capacity management system</p>
             </div>
             <div className="card-body p-4" style={{ width: '100%', maxWidth: '100%' }}>
               {/* Responsive Tab Navigation */}

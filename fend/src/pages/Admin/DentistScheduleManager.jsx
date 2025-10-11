@@ -245,303 +245,496 @@ export default function DentistScheduleManager() {
   // Email verification no longer needed for dentists
 
   const DayBadge = ({ on, label }) => (
-    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs border ${on ? "bg-green-50 border-green-300" : "bg-gray-50 border-gray-200 text-gray-400"}`}>
+    <span className={`badge ${on ? "bg-success" : "bg-light text-muted"}`} style={{ fontSize: '0.7rem' }}>
       {label}
     </span>
   );
 
   return (
-    <div className="p-4 max-w-6xl mx-auto">
-      <div className="flex items-center justify-between mb-3">
-        <h1 className="text-xl font-semibold">Dentists</h1>
-        <button onClick={openCreate} className="rounded-xl px-3 py-2 border bg-white hover:bg-gray-50">+ Add Dentist</button>
-      </div>
-
-      <div className="mb-3">
-        <input
-          className="w-full md:w-80 border rounded-lg px-3 py-2"
-          placeholder="Search code / name / type / status"
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
-        />
-      </div>
-
-      {loading ? (
-        <div>Loading…</div>
-      ) : (
-        <div className="overflow-x-auto">
-          <table className="min-w-full border text-sm">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="p-2 border">Code</th>
-                <th className="p-2 border">Name</th>
-                <th className="p-2 border">Email</th>
-                <th className="p-2 border">Account Status</th>
-                <th className="p-2 border">Pseudonymous</th>
-                <th className="p-2 border">Employment</th>
-                <th className="p-2 border">Status</th>
-                <th className="p-2 border">Weekdays</th>
-                <th className="p-2 border">Contract End</th>
-                <th className="p-2 border">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((r) => (
-                <tr key={r.id} className="hover:bg-gray-50">
-                  <td className="p-2 border font-medium">{r.dentist_code}</td>
-                  <td className="p-2 border">{r.dentist_name || <span className="text-gray-400">—</span>}</td>
-                  <td className="p-2 border">
-                    {r.email ? (
-                      <div>
-                        <div className="text-sm">{r.email}</div>
-                        {r.temporary_password && (
-                          <div className="text-xs text-gray-500">Temp: {r.temporary_password}</div>
-                        )}
-                      </div>
-                    ) : (
-                      <span className="text-gray-400">—</span>
-                    )}
-                  </td>
-                  <td className="p-2 border">
-                    <div className="flex flex-col gap-1">
-                      {r.email ? (
-                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs ${
-                          r.password_changed 
-                            ? 'bg-blue-100 text-blue-800' 
-                            : 'bg-orange-100 text-orange-800'
-                        }`}>
-                          {r.password_changed ? '✓ Password Changed' : '⚠ Temp Password'}
-                        </span>
-                      ) : (
-                        <span className="text-gray-400 text-xs">No Account</span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="p-2 border">{r.is_pseudonymous ? "Yes" : "No"}</td>
-                  <td className="p-2 border">{r.employment_type}</td>
-                  <td className="p-2 border">{r.status}</td>
-                  <td className="p-2 border">
-                    <div className="flex flex-wrap gap-1">
-                      {WEEKDAYS.map((d) => (
-                        <DayBadge key={d.key} on={!!r[d.key]} label={d.label} />
-                      ))}
-                    </div>
-                  </td>
-                  <td className="p-2 border">{r.contract_end_date || <span className="text-gray-400">—</span>}</td>
-                  <td className="p-2 border">
-                    <div className="flex flex-col gap-1">
-                      <div className="flex gap-1">
-                        <button className="px-2 py-1 rounded border text-xs" onClick={() => openEdit(r)}>Edit</button>
-                        <button className="px-2 py-1 rounded border text-xs" onClick={() => onDelete(r)}>Delete</button>
-                      </div>
-                      {!r.email ? (
-                        <button className="px-2 py-1 rounded border bg-blue-500 text-white text-xs" onClick={() => openEdit(r)}>
-                          Add Email
-                        </button>
-                      ) : !r.temporary_password ? (
-                        <button className="px-2 py-1 rounded border bg-green-500 text-white text-xs" onClick={() => createDentistAccount(r)}>
-                          Create Account
-                        </button>
-                      ) : (
-                        <span className="text-xs text-gray-500">Account Created</span>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {filtered.length === 0 && (
-                <tr>
-                  <td className="p-3 text-center text-gray-500" colSpan={10}>No dentists found.</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+    <div 
+      className="dentist-schedule-manager-page"
+      style={{
+        background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
+        minHeight: '100vh',
+        width: '100%',
+        padding: '1.5rem',
+        boxSizing: 'border-box'
+      }}
+    >
+      {/* Header Section */}
+      <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-3">
+        <div>
+          <h2 className="m-0 fw-bold" style={{ color: '#1e293b' }}>
+            <i className="bi bi-person-badge me-2"></i>
+            Dentist Schedule Management
+          </h2>
+          <p className="text-muted mb-0 mt-1">Manage dentist schedules, employment types, and account creation</p>
         </div>
-      )}
+        <div className="d-flex gap-2 flex-wrap">
+          <button 
+            className="btn border-0 shadow-sm" 
+            onClick={openCreate}
+            style={{
+              background: 'linear-gradient(135deg, #00b4d8 0%, #0077b6 100%)',
+              color: 'white',
+              borderRadius: '12px',
+              padding: '12px 24px',
+              fontWeight: '600',
+              transition: 'all 0.3s ease'
+            }}
+          >
+            <i className="bi bi-plus-circle me-2"></i>
+            Add New Dentist
+          </button>
+        </div>
+      </div>
+
+      <div className="card border-0 shadow-sm" style={{ borderRadius: '16px' }}>
+        <div className="card-body p-4">
+          {/* Search Section */}
+          <div className="mb-4">
+            <div className="input-group" style={{ maxWidth: '400px' }}>
+              <span className="input-group-text bg-white border-end-0" style={{ borderRadius: '12px 0 0 12px' }}>
+                <i className="bi bi-search text-muted"></i>
+              </span>
+              <input
+                type="text"
+                className="form-control border-start-0"
+                style={{ borderRadius: '0 12px 12px 0' }}
+                placeholder="Search by code, name, type, or status..."
+                value={filter}
+                onChange={(e) => setFilter(e.target.value)}
+              />
+            </div>
+          </div>
+
+          {loading ? (
+            <div className="text-center py-5">
+              <div className="spinner-border text-primary" role="status">
+                <span className="visually-hidden">Loading...</span>
+              </div>
+              <p className="mt-2 text-muted">Loading dentists...</p>
+            </div>
+          ) : (
+            <div className="table-responsive">
+              <table className="table table-hover align-middle">
+                <thead className="table-light">
+                  <tr>
+                    <th scope="col" className="fw-semibold">Code</th>
+                    <th scope="col" className="fw-semibold">Name</th>
+                    <th scope="col" className="fw-semibold">Email</th>
+                    <th scope="col" className="fw-semibold">Account Status</th>
+                    <th scope="col" className="fw-semibold">Pseudonymous</th>
+                    <th scope="col" className="fw-semibold">Employment</th>
+                    <th scope="col" className="fw-semibold">Status</th>
+                    <th scope="col" className="fw-semibold">Weekdays</th>
+                    <th scope="col" className="fw-semibold">Contract End</th>
+                    <th scope="col" className="fw-semibold">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map((r) => (
+                    <tr key={r.id}>
+                      <td className="fw-medium">{r.dentist_code}</td>
+                      <td>{r.dentist_name || <span className="text-muted">—</span>}</td>
+                      <td>
+                        {r.email ? (
+                          <div>
+                            <div className="text-sm">{r.email}</div>
+                            {r.temporary_password && (
+                              <div className="text-xs text-muted">Temp: {r.temporary_password}</div>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-muted">—</span>
+                        )}
+                      </td>
+                      <td>
+                        <div className="d-flex flex-column gap-1">
+                          {r.email ? (
+                            <span className={`badge ${r.password_changed ? 'bg-success' : 'bg-warning'}`}>
+                              {r.password_changed ? '✓ Password Changed' : '⚠ Temp Password'}
+                            </span>
+                          ) : (
+                            <span className="text-muted text-xs">No Account</span>
+                          )}
+                        </div>
+                      </td>
+                      <td>
+                        <span className={`badge ${r.is_pseudonymous ? 'bg-info' : 'bg-secondary'}`}>
+                          {r.is_pseudonymous ? "Yes" : "No"}
+                        </span>
+                      </td>
+                      <td>
+                        <span className="badge bg-primary">{r.employment_type}</span>
+                      </td>
+                      <td>
+                        <span className={`badge ${r.status === 'active' ? 'bg-success' : 'bg-danger'}`}>
+                          {r.status}
+                        </span>
+                      </td>
+                      <td>
+                        <div className="d-flex flex-wrap gap-1">
+                          {WEEKDAYS.map((d) => (
+                            <DayBadge key={d.key} on={!!r[d.key]} label={d.label} />
+                          ))}
+                        </div>
+                      </td>
+                      <td>{r.contract_end_date || <span className="text-muted">—</span>}</td>
+                      <td>
+                        <div className="d-flex flex-column gap-1">
+                          <div className="btn-group btn-group-sm" role="group">
+                            <button 
+                              className="btn btn-outline-primary btn-sm" 
+                              onClick={() => openEdit(r)}
+                              style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
+                            >
+                              <i className="bi bi-pencil"></i> Edit
+                            </button>
+                            <button 
+                              className="btn btn-outline-danger btn-sm" 
+                              onClick={() => onDelete(r)}
+                              style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
+                            >
+                              <i className="bi bi-trash"></i> Delete
+                            </button>
+                          </div>
+                          {!r.email ? (
+                            <button 
+                              className="btn btn-primary btn-sm" 
+                              onClick={() => openEdit(r)}
+                              style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
+                            >
+                              <i className="bi bi-envelope-plus"></i> Add Email
+                            </button>
+                          ) : !r.temporary_password ? (
+                            <button 
+                              className="btn btn-success btn-sm" 
+                              onClick={() => createDentistAccount(r)}
+                              style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
+                            >
+                              <i className="bi bi-person-plus"></i> Create Account
+                            </button>
+                          ) : (
+                            <span className="text-muted text-xs">Account Created</span>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {filtered.length === 0 && (
+                    <tr>
+                      <td className="text-center text-muted py-4" colSpan={10}>
+                        <i className="bi bi-search display-6 d-block mb-2"></i>
+                        No dentists found matching your search criteria.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl p-4">
-            <div className="flex items-center justify-between mb-2">
-              <h2 className="text-lg font-semibold">{editMode ? "Edit Dentist" : "Add Dentist"}</h2>
-              <button onClick={() => setShowModal(false)} className="text-gray-500">✕</button>
-            </div>
+        <div className="modal fade show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} tabIndex="-1">
+          <div className="modal-dialog modal-lg">
+            <div className="modal-content border-0 shadow-lg" style={{ borderRadius: '16px' }}>
+              <div className="modal-header border-0 pb-0" style={{ 
+                background: 'linear-gradient(135deg, #00b4d8 0%, #0077b6 100%)',
+                borderRadius: '16px 16px 0 0'
+              }}>
+                <h5 className="modal-title text-white fw-bold">
+                  <i className="bi bi-person-badge me-2"></i>
+                  {editMode ? "Edit Dentist" : "Add New Dentist"}
+                </h5>
+                <button 
+                  type="button" 
+                  className="btn-close btn-close-white" 
+                  onClick={() => setShowModal(false)}
+                  aria-label="Close"
+                ></button>
+              </div>
 
-            <form onSubmit={onSubmit} className="space-y-3">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm">Dentist Code<span className="text-red-500">*</span></label>
-                  <input className="w-full border rounded px-3 py-2"
-                    value={form.dentist_code}
-                    onChange={(e) => setForm({ ...form, dentist_code: e.target.value })} />
-                  {errors.dentist_code && <p className="text-xs text-red-600 mt-1">{String(errors.dentist_code)}</p>}
-                </div>
+              <div className="modal-body">
+                <form id="dentist-form" onSubmit={onSubmit}>
+                  <div className="row g-3">
+                    <div className="col-md-6">
+                      <label className="form-label fw-semibold">
+                        Dentist Code <span className="text-danger">*</span>
+                      </label>
+                      <input 
+                        type="text"
+                        className={`form-control ${errors.dentist_code ? 'is-invalid' : ''}`}
+                        value={form.dentist_code}
+                        onChange={(e) => setForm({ ...form, dentist_code: e.target.value })}
+                        placeholder="e.g., D001"
+                      />
+                      {errors.dentist_code && <div className="invalid-feedback">{String(errors.dentist_code)}</div>}
+                    </div>
 
-                <div>
-                  <label className="block text-sm">Dentist Name (optional)</label>
-                  <input className="w-full border rounded px-3 py-2"
-                    value={form.dentist_name}
-                    onChange={(e) => setForm({ ...form, dentist_name: e.target.value })} />
-                </div>
+                    <div className="col-md-6">
+                      <label className="form-label fw-semibold">Dentist Name (optional)</label>
+                      <input 
+                        type="text"
+                        className="form-control"
+                        value={form.dentist_name}
+                        onChange={(e) => setForm({ ...form, dentist_name: e.target.value })}
+                        placeholder="Dr. John Doe"
+                      />
+                    </div>
 
-                <div className="flex items-center gap-2">
-                  <input
-                    id="isPseudo"
-                    type="checkbox"
-                    checked={!!form.is_pseudonymous}
-                    onChange={(e) => setForm({ ...form, is_pseudonymous: e.target.checked })}
-                  />
-                  <label htmlFor="isPseudo" className="text-sm">Use pseudonymous identity?</label>
-                </div>
+                    <div className="col-12">
+                      <div className="form-check">
+                        <input
+                          className="form-check-input"
+                          type="checkbox"
+                          id="isPseudo"
+                          checked={!!form.is_pseudonymous}
+                          onChange={(e) => setForm({ ...form, is_pseudonymous: e.target.checked })}
+                        />
+                        <label className="form-check-label" htmlFor="isPseudo">
+                          Use pseudonymous identity (hide real names)
+                        </label>
+                      </div>
+                    </div>
 
-                <div>
-                  <label className="block text-sm">Employment Type<span className="text-red-500">*</span></label>
-                  <select className="w-full border rounded px-3 py-2"
-                    value={form.employment_type}
-                    onChange={(e) => setForm({ ...form, employment_type: e.target.value })}>
-                    {EMP_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-                  </select>
-                  {errors.employment_type && <p className="text-xs text-red-600 mt-1">{String(errors.employment_type)}</p>}
-                </div>
+                    <div className="col-md-6">
+                      <label className="form-label fw-semibold">
+                        Employment Type <span className="text-danger">*</span>
+                      </label>
+                      <select 
+                        className={`form-select ${errors.employment_type ? 'is-invalid' : ''}`}
+                        value={form.employment_type}
+                        onChange={(e) => setForm({ ...form, employment_type: e.target.value })}
+                      >
+                        {EMP_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                      </select>
+                      {errors.employment_type && <div className="invalid-feedback">{String(errors.employment_type)}</div>}
+                    </div>
 
-                <div>
-                  <label className="block text-sm">Status<span className="text-red-500">*</span></label>
-                  <select className="w-full border rounded px-3 py-2"
-                    value={form.status}
-                    onChange={(e) => setForm({ ...form, status: e.target.value })}>
-                    {STATUSES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-                  </select>
-                  {errors.status && <p className="text-xs text-red-600 mt-1">{String(errors.status)}</p>}
-                </div>
+                    <div className="col-md-6">
+                      <label className="form-label fw-semibold">
+                        Status <span className="text-danger">*</span>
+                      </label>
+                      <select 
+                        className={`form-select ${errors.status ? 'is-invalid' : ''}`}
+                        value={form.status}
+                        onChange={(e) => setForm({ ...form, status: e.target.value })}
+                      >
+                        {STATUSES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+                      </select>
+                      {errors.status && <div className="invalid-feedback">{String(errors.status)}</div>}
+                    </div>
 
-                <div>
-                  <label className="block text-sm">Contract End (optional)</label>
-                  <input type="date" className="w-full border rounded px-3 py-2"
-                    value={form.contract_end_date || ""}
-                    onChange={(e) => setForm({ ...form, contract_end_date: e.target.value })} />
-                  {errors.contract_end_date && <p className="text-xs text-red-600 mt-1">{String(errors.contract_end_date)}</p>}
-                </div>
+                    <div className="col-md-6">
+                      <label className="form-label fw-semibold">Contract End Date (optional)</label>
+                      <input 
+                        type="date" 
+                        className={`form-control ${errors.contract_end_date ? 'is-invalid' : ''}`}
+                        value={form.contract_end_date || ""}
+                        onChange={(e) => setForm({ ...form, contract_end_date: e.target.value })} 
+                      />
+                      {errors.contract_end_date && <div className="invalid-feedback">{String(errors.contract_end_date)}</div>}
+                    </div>
 
-                <div>
-                  <label className="block text-sm">Email Address<span className="text-red-500">*</span></label>
-                  <input 
-                    type="email" 
-                    className="w-full border rounded px-3 py-2"
-                    value={form.email || ""}
-                    onChange={(e) => setForm({ ...form, email: e.target.value })}
-                    placeholder="dentist@example.com"
-                    required
-                  />
-                  {errors.email && <p className="text-xs text-red-600 mt-1">{String(errors.email)}</p>}
-                </div>
+                    <div className="col-md-6">
+                      <label className="form-label fw-semibold">
+                        Email Address <span className="text-danger">*</span>
+                      </label>
+                      <input 
+                        type="email" 
+                        className={`form-control ${errors.email ? 'is-invalid' : ''}`}
+                        value={form.email || ""}
+                        onChange={(e) => setForm({ ...form, email: e.target.value })}
+                        placeholder="dentist@example.com"
+                        required
+                      />
+                      {errors.email && <div className="invalid-feedback">{String(errors.email)}</div>}
+                    </div>
 
-                {editMode && form.temporary_password && (
-                  <div>
-                    <label className="block text-sm">Temporary Password</label>
-                    <div className="w-full border rounded px-3 py-2 bg-gray-50 text-sm">
-                      {form.temporary_password}
-                      <span className="text-gray-500 ml-2">(Auto-generated)</span>
+                    {editMode && form.temporary_password && (
+                      <div className="col-12">
+                        <label className="form-label fw-semibold">Temporary Password</label>
+                        <div className="form-control-plaintext bg-light border rounded p-2">
+                          <code>{form.temporary_password}</code>
+                          <small className="text-muted ms-2">(Auto-generated)</small>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="col-12">
+                      <label className="form-label fw-semibold">
+                        Working Days <span className="text-danger">*</span>
+                      </label>
+                      <div className="row g-2">
+                        {WEEKDAYS.map(d => (
+                          <div key={d.key} className="col-6 col-md-4 col-lg-3">
+                            <div className="form-check">
+                              <input 
+                                className="form-check-input"
+                                type="checkbox"
+                                id={`day-${d.key}`}
+                                checked={!!form[d.key]}
+                                onChange={(e) => setForm({ ...form, [d.key]: e.target.checked })} 
+                              />
+                              <label className="form-check-label" htmlFor={`day-${d.key}`}>
+                                {d.label}
+                              </label>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      {errors.weekdays && <div className="text-danger small mt-1">{String(errors.weekdays)}</div>}
                     </div>
                   </div>
-                )}
+                </form>
               </div>
 
-              <div>
-                <label className="block text-sm mb-1">Working Days<span className="text-red-500">*</span></label>
-                <div className="flex flex-wrap gap-3">
-                  {WEEKDAYS.map(d => (
-                    <label key={d.key} className="inline-flex items-center gap-2">
-                      <input type="checkbox"
-                        checked={!!form[d.key]}
-                        onChange={(e) => setForm({ ...form, [d.key]: e.target.checked })} />
-                      <span>{d.label}</span>
-                    </label>
-                  ))}
-                </div>
-                {errors.weekdays && <p className="text-xs text-red-600 mt-1">{String(errors.weekdays)}</p>}
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-2">
-                <button type="button" className="px-3 py-2 rounded border" onClick={() => setShowModal(false)}>Cancel</button>
-                <button disabled={saving} type="submit" className="px-3 py-2 rounded border bg-black text-white disabled:opacity-50">
-                  {saving ? "Saving…" : (editMode ? "Save Changes" : "Create")}
+              <div className="modal-footer border-0 pt-0">
+                <button 
+                  type="button" 
+                  className="btn btn-secondary" 
+                  onClick={() => setShowModal(false)}
+                >
+                  Cancel
+                </button>
+                <button 
+                  disabled={saving} 
+                  type="submit" 
+                  form="dentist-form"
+                  className="btn btn-primary"
+                  style={{
+                    background: 'linear-gradient(135deg, #00b4d8 0%, #0077b6 100%)',
+                    border: 'none'
+                  }}
+                >
+                  {saving ? (
+                    <>
+                      <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <i className="bi bi-check-circle me-2"></i>
+                      {editMode ? "Save Changes" : "Create Dentist"}
+                    </>
+                  )}
                 </button>
               </div>
-            </form>
+            </div>
           </div>
         </div>
       )}
 
       {/* Account Creation Modal */}
       {showAccountModal && (
-        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-4">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold">Create Dentist Account</h2>
-              <button onClick={() => setShowAccountModal(false)} className="text-gray-500">✕</button>
-            </div>
+        <div className="modal fade show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} tabIndex="-1">
+          <div className="modal-dialog">
+            <div className="modal-content border-0 shadow-lg" style={{ borderRadius: '16px' }}>
+              <div className="modal-header border-0 pb-0" style={{ 
+                background: 'linear-gradient(135deg, #00b4d8 0%, #0077b6 100%)',
+                borderRadius: '16px 16px 0 0'
+              }}>
+                <h5 className="modal-title text-white fw-bold">
+                  <i className="bi bi-person-plus me-2"></i>
+                  Create Dentist Account
+                </h5>
+                <button 
+                  type="button" 
+                  className="btn-close btn-close-white" 
+                  onClick={() => setShowAccountModal(false)}
+                  aria-label="Close"
+                ></button>
+              </div>
 
-            <div className="space-y-3">
-              <div>
-                <label className="block text-sm font-medium mb-1">Dentist</label>
-                <div className="p-2 bg-gray-50 rounded border">
-                  {selectedDentist?.dentist_code} - {selectedDentist?.dentist_name}
+              <div className="modal-body">
+                <div className="mb-3">
+                  <label className="form-label fw-semibold">Selected Dentist</label>
+                  <div className="form-control-plaintext bg-light border rounded p-3">
+                    <div className="d-flex align-items-center">
+                      <i className="bi bi-person-badge text-primary me-2"></i>
+                      <div>
+                        <strong>{selectedDentist?.dentist_code}</strong>
+                        {selectedDentist?.dentist_name && (
+                          <span className="text-muted ms-2">- {selectedDentist.dentist_name}</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mb-3">
+                  <label className="form-label fw-semibold">Email Address</label>
+                  <input
+                    type="email"
+                    className="form-control"
+                    value={accountForm.email}
+                    onChange={(e) => setAccountForm({ ...accountForm, email: e.target.value })}
+                    placeholder="dentist@example.com"
+                    required
+                  />
+                  {selectedDentist?.email && accountForm.email !== selectedDentist.email && (
+                    <div className="alert alert-warning mt-2 py-2">
+                      <i className="bi bi-exclamation-triangle me-2"></i>
+                      <small>
+                        Email differs from schedule email ({selectedDentist.email}) - this will be logged as an email change
+                      </small>
+                    </div>
+                  )}
+                </div>
+
+                <div className="mb-3">
+                  <label className="form-label fw-semibold">Full Name</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    value={accountForm.name}
+                    onChange={(e) => setAccountForm({ ...accountForm, name: e.target.value })}
+                    placeholder="Dr. John Doe"
+                    required
+                  />
+                </div>
+
+                <div className="alert alert-info">
+                  <i className="bi bi-info-circle me-2"></i>
+                  <strong>Note:</strong> A temporary password will be generated and sent to the email address. 
+                  The dentist will need to verify their email and change their password on first login.
                 </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium mb-1">Email Address</label>
-                <input
-                  type="email"
-                  className="w-full border rounded px-3 py-2"
-                  value={accountForm.email}
-                  onChange={(e) => setAccountForm({ ...accountForm, email: e.target.value })}
-                  placeholder="dentist@example.com"
-                  required
-                />
-                {selectedDentist?.email && accountForm.email !== selectedDentist.email && (
-                  <p className="text-xs text-orange-600 mt-1">
-                    ⚠️ Email differs from schedule email ({selectedDentist.email}) - this will be logged as an email change
-                  </p>
-                )}
+              <div className="modal-footer border-0">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setShowAccountModal(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  disabled={accountLoading}
+                  onClick={createAccount}
+                  className="btn btn-primary"
+                  style={{
+                    background: 'linear-gradient(135deg, #00b4d8 0%, #0077b6 100%)',
+                    border: 'none'
+                  }}
+                >
+                  {accountLoading ? (
+                    <>
+                      <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                      Creating...
+                    </>
+                  ) : (
+                    <>
+                      <i className="bi bi-person-plus me-2"></i>
+                      Create Account
+                    </>
+                  )}
+                </button>
               </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1">Full Name</label>
-                <input
-                  type="text"
-                  className="w-full border rounded px-3 py-2"
-                  value={accountForm.name}
-                  onChange={(e) => setAccountForm({ ...accountForm, name: e.target.value })}
-                  placeholder="Dr. John Doe"
-                  required
-                />
-              </div>
-
-              <div className="bg-yellow-50 border border-yellow-200 rounded p-3">
-                <p className="text-sm text-yellow-800">
-                  <strong>Note:</strong> A temporary password will be generated and sent to the email address. 
-                  The dentist will need to verify their email and change their password on first login.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-end gap-2 pt-4">
-              <button
-                type="button"
-                className="px-3 py-2 rounded border"
-                onClick={() => setShowAccountModal(false)}
-              >
-                Cancel
-              </button>
-              <button
-                disabled={accountLoading}
-                onClick={createAccount}
-                className="px-3 py-2 rounded border bg-blue-500 text-white disabled:opacity-50"
-              >
-                {accountLoading ? "Creating..." : "Create Account"}
-              </button>
             </div>
           </div>
         </div>

@@ -275,7 +275,7 @@ export default function ServiceDiscountManager() {
       <div className="d-flex flex-column flex-lg-row justify-content-between align-items-start align-items-lg-center mb-4 gap-3">
         <div>
           <h2 className="m-0 fw-bold" style={{ color: '#1e293b' }}>
-            💰 Service Promo Discounts
+             Service Promo Discounts
           </h2>
           <p className="text-muted mb-0 mt-1">Create and manage promotional discounts for services</p>
         </div>

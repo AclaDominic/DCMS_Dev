@@ -28,17 +28,34 @@ export default function PromoArchive() {
   };
 
   const exportToPDF = async () => {
-    const doc = new jsPDF();
+    const doc = new jsPDF({ orientation: "p", unit: "pt", format: "a4" });
     
-    // Add clinic header
-    const headerEndY = await addClinicHeader(doc, 20);
-    
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(14);
-    doc.text(`Promo Archive - ${year}`, 40, headerEndY);
+    const pageWidth = doc.internal.pageSize.width;
+    const pageHeight = doc.internal.pageSize.height;
 
+    // Add decorative border around entire page
+    doc.setDrawColor(0, 119, 182); // Brand blue
+    doc.setLineWidth(2);
+    doc.rect(20, 20, pageWidth - 40, pageHeight - 40);
+
+    // Add inner border
+    doc.setDrawColor(200, 200, 200);
+    doc.setLineWidth(1);
+    doc.rect(30, 30, pageWidth - 60, pageHeight - 60);
+
+    // Add clinic header using the original logo
+    let currentY = await addClinicHeader(doc, 60);
+    
+    // Center the report title only
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(0, 119, 182); // Brand blue
+    doc.text(`Promo Archive — ${year}`, pageWidth / 2, currentY, { align: 'center' });
+    currentY += 20;
+
+    // MAIN DATA TABLE ONLY
     autoTable(doc, {
-      startY: headerEndY + 20,
+      startY: currentY,
       head: [["Service", "Start", "End", "Price", "Status", "Activated"]],
       body: promos.map((promo) => [
         promo.service?.name || "-",
@@ -48,20 +65,38 @@ export default function PromoArchive() {
         promo.status.charAt(0).toUpperCase() + promo.status.slice(1),
         promo.activated_at?.split("T")[0] || "-",
       ]),
-      theme: "grid",
+      theme: "striped",
+      margin: { left: 40, right: 40 },
       styles: {
         fontSize: 10,
-        font: "helvetica",
-        textColor: 20,
-        cellPadding: 3,
+        cellPadding: 8,
       },
       headStyles: {
-        fillColor: [52, 58, 64],
-        textColor: 255,
+        fillColor: [0, 119, 182], // Brand blue header
+        textColor: [255, 255, 255],
+        fontStyle: "bold",
+        fontSize: 11,
       },
     });
 
-    doc.save(`PromoArchive-${year}.pdf`);
+    // Add footer with border
+    const footerY = pageHeight - 50;
+    doc.setDrawColor(200, 200, 200);
+    doc.setLineWidth(1);
+    doc.line(30, footerY, pageWidth - 30, footerY);
+    
+    // Add generation date - centered
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(150, 150, 150);
+    const currentDate = new Date().toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+    doc.text(`Generated on ${currentDate}`, pageWidth / 2, footerY + 15, { align: 'center' });
+
+    doc.save(`promo-archive-${year}.pdf`);
   };
 
   const renderStatusBadge = (status) => {

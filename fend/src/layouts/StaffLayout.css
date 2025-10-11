@@ -10,29 +10,79 @@
 /* Sidebar */
 .staff-shell .sidebar{
   width: 260px;
-  min-height: 100vh;
-  position: sticky;
+  height: 100vh;
+  position: fixed;
   top: 0;
   left: 0;
   background: #121a23 !important;
   color: #fff;
-  transition: width .2s ease, transform .25s ease;
-  z-index: 1040;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 1050;
   display: flex;
   flex-direction: column;
+  will-change: transform, width;
+  overflow: hidden;
+  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+  flex-shrink: 0;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  contain: layout style paint;
+  /* Ensure sidebar stays fixed even when content scrolls */
+  position: fixed !important;
 }
 
 .staff-shell .sidebar-header{
   padding: .9rem .9rem;
   background: #0f1821;
   border-bottom: 1px solid rgba(255,255,255,.08);
+  flex-shrink: 0;
+  min-height: 70px;
+  display: flex;
+  align-items: center;
 }
 
 /* Scroll area */
 .staff-shell .nav-scroller{
-  padding: .5rem .25rem 1rem .25rem;
+  padding: .5rem .25rem 0 .25rem;
   overflow-y: auto;
+  overflow-x: hidden;
   flex: 1;
+  min-height: 0;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.3) transparent;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  /* Ensure scrolling is always available */
+  overflow-y: auto;
+  /* Ensure proper height calculation */
+  height: calc(100vh - 70px);
+  max-height: calc(100vh - 70px);
+  /* Force scrollbar to always be visible when needed */
+  overflow: auto;
+}
+
+.staff-shell .nav-scroller::-webkit-scrollbar {
+  width: 8px;
+}
+
+.staff-shell .nav-scroller::-webkit-scrollbar-track {
+  background: rgba(255,255,255,0.1);
+  border-radius: 4px;
+}
+
+.staff-shell .nav-scroller::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.4);
+  border-radius: 4px;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+.staff-shell .nav-scroller::-webkit-scrollbar-thumb:hover {
+  background: rgba(255,255,255,0.6);
+}
+
+.staff-shell .nav-scroller::-webkit-scrollbar-thumb:active {
+  background: rgba(255,255,255,0.8);
 }
 
 /* Links */
@@ -73,6 +123,15 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  margin-left: 260px;
+  width: calc(100vw - 260px);
+  max-width: calc(100vw - 260px);
+  transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  /* Ensure content area is positioned correctly relative to fixed sidebar */
+  position: relative;
+  top: 0;
+  left: 0;
+  min-height: 100vh;
 }
 
 /* Topbar (white) */
@@ -84,9 +143,26 @@
   top: 0;
   z-index: 10;
   padding: .5rem .75rem;
+  display: flex;
+  align-items: center;
 }
 
-/* Notification bell stays normal flow */
+/* Staff main content area */
+.staff-shell .content-area main {
+  background: #ffffff !important;
+  width: 100% !important;
+  max-width: none !important;
+  position: relative !important;
+  min-height: calc(100vh - 56px) !important;
+  /* Enable scrolling for main content */
+  overflow-y: auto;
+  flex: 1;
+  /* Ensure main content scrolls independently of sidebar */
+  height: calc(100vh - 56px);
+  max-height: calc(100vh - 56px);
+}
+
+/* Notification bell positioning */
 .staff-shell .topbar .notifications-bell,
 .staff-shell .topbar .notification-bell,
 .staff-shell .topbar [class*="NotificationBell"]{
@@ -94,17 +170,35 @@
   z-index: auto !important;
 }
 
-/* Toggle button */
-.staff-shell .toggle-btn{
-  border: 1px solid #e5e7eb;
-  background: #0f172a;
-  color: #fff;
+.staff-shell .topbar-bell {
+  display: flex;
+  align-items: center;
 }
 
-/* Logout icon-only */
-.staff-shell .icon-only-btn { padding: .6rem; border-radius: .75rem; }
-.staff-shell.sidebar-closed .icon-only-btn {
-  width: 44px; height: 44px; padding: 0; border-radius: .75rem;
+/* Logout button positioning */
+.staff-shell .nav .nav-item.mt-4.px-3 {
+  margin-top: auto !important;
+  padding-top: 1rem !important;
+  padding-bottom: 0.75rem !important;
+  border-top: 1px solid rgba(255,255,255,.08);
+  flex-shrink: 0;
+  margin-bottom: 0 !important;
+}
+
+
+/* Logout button styling */
+.staff-shell .nav .nav-item.mt-4.px-3 .btn {
+  border-radius: 8px !important;
+  padding: 0.75rem 1rem !important;
+  font-weight: 500 !important;
+  transition: all 0.2s ease !important;
+}
+
+.staff-shell .nav .nav-item.mt-4.px-3 .btn:hover {
+  background-color: rgba(220, 53, 69, 0.1) !important;
+  border-color: #dc3545 !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(220, 53, 69, 0.2);
 }
 
 /* Mobile overlay (transparent click-catcher) */
@@ -127,16 +221,29 @@
 /* Mobile: slide sidebar */
 @media (max-width: 991.98px){
   .staff-shell .sidebar{
-    position: fixed;
+    position: fixed !important;
     transform: translateX(-100%);
   }
   .staff-shell.sidebar-open .sidebar{
     transform: translateX(0);
   }
+  
+  .staff-shell .content-area {
+    margin-left: 0 !important;
+    width: 100vw !important;
+    max-width: 100vw !important;
+  }
 }
 
 /* Desktop: collapse to icon rail */
 @media (min-width: 992px){
+  .staff-shell .sidebar{
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    transform: translateX(0) !important;
+  }
+  
   .staff-shell.sidebar-closed .sidebar{
     width: 76px;
   }
@@ -149,5 +256,11 @@
   .staff-shell.sidebar-closed .sidebar .nav-item.mt-2.small,
   .staff-shell.sidebar-closed .sidebar .nav-item.mt-2.small + .nav-item{
     display: none; /* hide group headers when collapsed */
+  }
+  
+  .staff-shell.sidebar-closed .content-area {
+    margin-left: 76px !important;
+    width: calc(100vw - 76px) !important;
+    max-width: calc(100vw - 76px) !important;
   }
 }

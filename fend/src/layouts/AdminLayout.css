@@ -56,8 +56,10 @@ html, body {
   /* Ensure sidebar matches viewport height exactly and stays fixed */
   min-height: 100vh;
   max-height: 100vh;
-  /* Prevent sidebar from scrolling with page content */
+  /* Sidebar content can scroll independently */
   overflow-y: auto;
+  /* Ensure sidebar stays fixed even when content scrolls */
+  position: fixed !important;
 }
 
 .sidebar-header{
@@ -236,9 +238,9 @@ html, body {
 }
 
 .sidebar .nav-link.active{
-  background: linear-gradient(135deg, #00b4d8, #0077b6);
-  color: #fff;
-  box-shadow: 0 6px 16px rgba(0, 119, 182, .25);
+  background: linear-gradient(135deg, #f8fafc, #e2e8f0);
+  color: #1e293b;
+  box-shadow: 0 6px 16px rgba(100, 116, 139, .25);
 }
 
 .sidebar .icon{
@@ -278,6 +280,12 @@ html, body {
   /* Ensure content area starts after fixed sidebar */
   position: relative;
   left: 0;
+  /* Enable independent scrolling for main content */
+  overflow-y: auto;
+  /* Ensure content area is positioned correctly relative to fixed sidebar */
+  position: relative;
+  top: 0;
+  left: 0;
 }
 
 /* Device Approvals specific content area */
@@ -296,6 +304,12 @@ html, body {
   max-width: none !important;
   position: relative !important;
   min-height: calc(100vh - 56px) !important;
+  /* Enable scrolling for main content */
+  overflow-y: auto;
+  flex: 1;
+  /* Ensure main content scrolls independently of sidebar */
+  height: calc(100vh - 56px);
+  max-height: calc(100vh - 56px);
 }
 
 /* Device Approvals specific main layout */
@@ -532,8 +546,8 @@ html {
 /* Light topbar to match white content */
 .topbar{
   height: 56px;
-  background: #ffffff;            /* ← white */
-  border-bottom: 1px solid #fff;
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  border-bottom: 1px solid #e2e8f0;
   position: sticky;
   top: 0;
   z-index: 1040;
@@ -550,9 +564,9 @@ html {
 
 /* Optional: make toggle button fit the light topbar (or keep your gradient) */
 .toggle-btn{
-  border: 1px solid #fff;
-  background: #0f172a;
-  color: #fff;
+  border: 1px solid #e2e8f0;
+  background: #1e293b;
+  color: #f8fafc;
 }
 
 /* Logout button container */
@@ -669,7 +683,7 @@ html {
 /* Mobile: slide-in/out sidebar - Consistent overlay behavior */
 @media (max-width: 991.98px){
   .sidebar{
-    position: fixed;
+    position: fixed !important;
     top: 0;
     left: 0;
     transform: translateX(-100%);
@@ -680,6 +694,8 @@ html {
     min-width: clamp(200px, 70vw, 280px);
     max-width: clamp(280px, 80vw, 360px);
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    /* Ensure sidebar stays fixed on mobile */
+    background: #121a23 !important;
   }
   .sidebar-open .sidebar{
     transform: translateX(0);
@@ -716,6 +732,8 @@ html {
     max-width: clamp(260px, 22vw, 320px) !important;
     height: 100vh !important;
     overflow-y: auto !important;
+    /* Ensure dark background and fixed positioning */
+    background: #121a23 !important;
   }
   
   .content-area {
@@ -747,6 +765,8 @@ html {
     max-width: clamp(280px, 24vw, 340px) !important;
     height: 100vh !important;
     overflow-y: auto !important;
+    /* Ensure dark background and fixed positioning */
+    background: #121a23 !important;
   }
   
   .content-area {
@@ -781,6 +801,8 @@ html {
     max-width: clamp(65px, 5.5vw, 85px) !important;
     height: 100vh !important;
     overflow-y: auto !important;
+    /* Ensure dark background and fixed positioning */
+    background: #121a23 !important;
   }
   .admin-shell.sidebar-closed .content-area {
     margin-left: clamp(60px, 5vw, 80px) !important;

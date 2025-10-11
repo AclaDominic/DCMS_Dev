@@ -178,8 +178,9 @@ export default function ServiceManager() {
             className="btn border-0 shadow-sm" 
             onClick={() => setShowModal(true)}
             style={{
-              background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
-              color: 'white',
+              background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
+              color: '#1e293b',
+              border: '1px solid #e2e8f0',
               borderRadius: '12px',
               padding: '12px 24px',
               fontWeight: '600',
