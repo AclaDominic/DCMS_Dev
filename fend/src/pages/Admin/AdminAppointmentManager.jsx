@@ -14,10 +14,10 @@ function AdminAppointmentManager() {
       type="button"
       style={{
         background: activeTab === id 
-          ? 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)'
+          ? 'var(--bs-primary)'
           : 'transparent',
-        color: activeTab === id ? 'white' : '#dc2626',
-        border: activeTab === id ? 'none' : '1px solid #dc2626',
+        color: activeTab === id ? 'white' : 'var(--bs-primary)',
+        border: activeTab === id ? 'none' : '1px solid var(--bs-primary)',
         borderRadius: '8px',
         padding: '12px 16px',
         fontWeight: '600',
@@ -52,7 +52,7 @@ function AdminAppointmentManager() {
             width: '100%',
             maxWidth: '100%'
           }}>
-            <div className="card-header bg-danger text-white border-0" style={{ borderRadius: '16px 16px 0 0' }}>
+            <div className="card-header bg-primary text-white border-0" style={{ borderRadius: '16px 16px 0 0' }}>
               <h2 className="card-title mb-0 fw-bold">
                 <i className="bi bi-calendar-check me-2"></i>
                 Admin Appointment & Visit Management

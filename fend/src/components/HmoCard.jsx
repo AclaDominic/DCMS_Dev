@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import api from "../api/api";
+import "./HmoCard.css";
 
 /**
  * HmoCard.jsx
@@ -106,25 +107,28 @@ export default function HmoCard({
 
   return (
     <div
-      className={`w-full ${compact ? "p-3" : "p-4"} bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-zinc-200/60 dark:border-zinc-800/60`}
+      className={`w-full ${compact ? "p-3" : "p-4"} rounded-2xl shadow-sm border hmo-card`}
     >
       <div className="flex items-center justify-between gap-2 mb-3">
-        <h3 className="text-lg font-semibold">HMO</h3>
+        <h3 className="text-lg font-semibold hmo-title">HMO</h3>
         {canManage && (
           <button
             onClick={onCreate}
-            className="px-3 py-1.5 rounded-xl text-sm font-medium bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 hover:opacity-90"
+            className="px-3 py-1.5 rounded-xl text-sm font-medium text-white transition-colors duration-200"
+            style={{ backgroundColor: '#2563eb' }}
+            onMouseEnter={(e) => e.target.style.backgroundColor = '#1d4ed8'}
+            onMouseLeave={(e) => e.target.style.backgroundColor = '#2563eb'}
           >
             + Add HMO
           </button>
         )}
       </div>
 
-      {loading && <div className="text-sm text-zinc-500">Loading HMOs…</div>}
+      {loading && <div className="text-sm text-muted">Loading HMOs…</div>}
       {error && <div className="text-sm text-red-600">{error}</div>}
 
       {!loading && !items?.length && (
-        <div className="text-sm text-zinc-500">No HMO on file.</div>
+        <div className="text-sm text-muted">No HMO on file.</div>
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -162,11 +166,11 @@ export default function HmoCard({
 
 function HmoItemCard({ item, onEdit, onAskDelete, canManage }) {
   return (
-    <div className="rounded-xl border border-zinc-200/60 dark:border-zinc-800/60 p-3">
+    <div className="rounded-xl border p-3 hmo-card" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}>
       <div className="flex items-start justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
-            <span className="font-medium">{item.provider_name}</span>
+            <span className="font-medium hmo-provider-name">{item.provider_name}</span>
             {item.is_primary ? (
               <span className="px-2 py-0.5 text-xs rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
                 Primary
@@ -175,12 +179,12 @@ function HmoItemCard({ item, onEdit, onAskDelete, canManage }) {
           </div>
           <div className="text-sm mt-2 space-y-1">
             <div>
-              <span className="text-zinc-500">HMO Number:</span>{" "}
-              {item.hmo_number}
+              <span className="hmo-label">HMO Number:</span>{" "}
+              <span className="hmo-value">{item.hmo_number}</span>
             </div>
             <div>
-              <span className="text-zinc-500">Name on Card:</span>{" "}
-              {item.patient_fullname_on_card}
+              <span className="hmo-label">Name on Card:</span>{" "}
+              <span className="hmo-value">{item.patient_fullname_on_card}</span>
             </div>
           </div>
         </div>
@@ -188,13 +192,19 @@ function HmoItemCard({ item, onEdit, onAskDelete, canManage }) {
           <div className="flex items-center gap-2">
             <button
               onClick={onEdit}
-              className="px-2.5 py-1 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800"
+              className="px-2.5 py-1 text-xs rounded-lg text-white transition-colors duration-200"
+              style={{ backgroundColor: '#2563eb' }}
+              onMouseEnter={(e) => e.target.style.backgroundColor = '#1d4ed8'}
+              onMouseLeave={(e) => e.target.style.backgroundColor = '#2563eb'}
             >
               Edit
             </button>
             <button
               onClick={onAskDelete}
-              className="px-2.5 py-1 text-xs rounded-lg border border-red-300 text-red-700 hover:bg-red-50 dark:border-red-800 dark:text-red-300 dark:hover:bg-red-900/20"
+              className="px-2.5 py-1 text-xs rounded-lg text-white transition-colors duration-200"
+              style={{ backgroundColor: '#dc2626' }}
+              onMouseEnter={(e) => e.target.style.backgroundColor = '#b91c1c'}
+              onMouseLeave={(e) => e.target.style.backgroundColor = '#dc2626'}
             >
               Delete
             </button>
@@ -244,12 +254,12 @@ function HmoFormModal({ onClose, onSaved, patientId, initial }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative w-full max-w-xl bg-white dark:bg-zinc-900 rounded-2xl shadow-xl border border-zinc-200/60 dark:border-zinc-800/60 p-4">
+      <div className="relative w-full max-w-xl rounded-2xl shadow-xl border p-4 hmo-card" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}>
         <div className="flex items-center justify-between mb-3">
-          <h4 className="text-base font-semibold">{isEdit ? "Edit HMO" : "Add HMO"}</h4>
+          <h4 className="text-base font-semibold hmo-title">{isEdit ? "Edit HMO" : "Add HMO"}</h4>
           <button
             onClick={onClose}
-            className="text-sm text-zinc-500 hover:text-zinc-800"
+            className="w-8 h-8 rounded-full button-close transition-colors duration-200 flex items-center justify-center"
           >
             ✕
           </button>
@@ -280,11 +290,15 @@ function HmoFormModal({ onClose, onSaved, patientId, initial }) {
             <input
               id="is_primary"
               type="checkbox"
-              className="h-4 w-4"
+              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border rounded"
+              style={{
+                borderColor: 'var(--input-border)',
+                backgroundColor: 'var(--input-bg)',
+              }}
               checked={form.is_primary}
               onChange={(e) => setForm({ ...form, is_primary: e.target.checked })}
             />
-            <label htmlFor="is_primary" className="text-sm">
+            <label htmlFor="is_primary" className="text-sm hmo-form-label">
               Mark as Primary
             </label>
           </div>
@@ -293,14 +307,28 @@ function HmoFormModal({ onClose, onSaved, patientId, initial }) {
         <div className="flex items-center justify-end gap-2 mt-4">
           <button
             onClick={onClose}
-            className="px-3 py-1.5 text-sm rounded-xl border border-zinc-300 dark:border-zinc-700"
+            className="px-3 py-1.5 text-sm rounded-xl text-white transition-colors duration-200"
+            style={{ backgroundColor: '#6b7280' }}
+            onMouseEnter={(e) => e.target.style.backgroundColor = '#4b5563'}
+            onMouseLeave={(e) => e.target.style.backgroundColor = '#6b7280'}
           >
             Cancel
           </button>
           <button
             onClick={save}
             disabled={submitting || !form.provider_name || !form.hmo_number || !form.patient_fullname_on_card}
-            className="px-3 py-1.5 text-sm rounded-xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 disabled:opacity-50"
+            className="px-3 py-1.5 text-sm rounded-xl text-white transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{ backgroundColor: (submitting || !form.provider_name || !form.hmo_number || !form.patient_fullname_on_card) ? '#9ca3af' : '#2563eb' }}
+            onMouseEnter={(e) => {
+              if (!submitting && form.provider_name && form.hmo_number && form.patient_fullname_on_card) {
+                e.target.style.backgroundColor = '#1d4ed8';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!submitting && form.provider_name && form.hmo_number && form.patient_fullname_on_card) {
+                e.target.style.backgroundColor = '#2563eb';
+              }
+            }}
           >
             {submitting ? "Saving…" : isEdit ? "Save Changes" : "Create"}
           </button>
@@ -314,19 +342,25 @@ function ConfirmDeleteModal({ title, message, onCancel, onConfirm }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/40" onClick={onCancel} />
-      <div className="relative w-full max-w-md bg-white dark:bg-zinc-900 rounded-2xl shadow-xl border border-zinc-200/60 dark:border-zinc-800/60 p-4">
-        <h4 className="text-base font-semibold mb-2">{title}</h4>
-        <p className="text-sm text-zinc-600 dark:text-zinc-300 mb-4">{message}</p>
+      <div className="relative w-full max-w-md rounded-2xl shadow-xl border p-4 hmo-card" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}>
+        <h4 className="text-base font-semibold mb-2 hmo-title">{title}</h4>
+        <p className="text-sm text-secondary mb-4">{message}</p>
         <div className="flex items-center justify-end gap-2">
           <button
             onClick={onCancel}
-            className="px-3 py-1.5 text-sm rounded-xl border border-zinc-300 dark:border-zinc-700"
+            className="px-3 py-1.5 text-sm rounded-xl text-white transition-colors duration-200"
+            style={{ backgroundColor: '#6b7280' }}
+            onMouseEnter={(e) => e.target.style.backgroundColor = '#4b5563'}
+            onMouseLeave={(e) => e.target.style.backgroundColor = '#6b7280'}
           >
             Cancel
           </button>
           <button
             onClick={onConfirm}
-            className="px-3 py-1.5 text-sm rounded-xl border border-red-300 text-red-700 hover:bg-red-50 dark:border-red-800 dark:text-red-300 dark:hover:bg-red-900/20"
+            className="px-3 py-1.5 text-sm rounded-xl text-white transition-colors duration-200"
+            style={{ backgroundColor: '#dc2626' }}
+            onMouseEnter={(e) => e.target.style.backgroundColor = '#b91c1c'}
+            onMouseLeave={(e) => e.target.style.backgroundColor = '#dc2626'}
           >
             Delete
           </button>
@@ -342,7 +376,12 @@ function TextField({ label, value, onChange, required }) {
       <Label required={required}>{label}</Label>
       <input
         type="text"
-        className="w-full mt-1 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-transparent p-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-400"
+        className="w-full mt-1 rounded-xl border p-2 text-sm input-field focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+        style={{
+          backgroundColor: 'var(--input-bg)',
+          borderColor: 'var(--input-border)',
+          color: 'var(--input-text)',
+        }}
         value={value}
         onChange={(e) => onChange(e.target.value)}
       />
@@ -353,7 +392,7 @@ function TextField({ label, value, onChange, required }) {
 
 function Label({ children, required = false }) {
   return (
-    <label className="text-sm text-zinc-700 dark:text-zinc-200">
+    <label className="text-sm hmo-form-label">
       {children} {required && <span className="text-red-600">*</span>}
     </label>
   );

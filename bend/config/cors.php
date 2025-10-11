@@ -24,7 +24,7 @@ return [
         'http://127.0.0.1:8000',
         'https://it-42-capstone.vercel.app',
         'https://4ce950038a1a.ngrok-free.app',
-        'https://hui-sacred-clemmie.ngrok-free.dev',
+        'https://hyperenthusiastic-fredric-adolescently.ngrok-free.dev',
     ],
 
     'allowed_origins_patterns' => [],

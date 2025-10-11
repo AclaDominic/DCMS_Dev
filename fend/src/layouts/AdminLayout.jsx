@@ -45,11 +45,9 @@ function AdminLayout() {
           </div>
         </div>
 
-        <ul className="nav flex-column nav-scroller">
- 
-
-
-          <li className="nav-item">
+        <div className="nav-scroller">
+          <ul className="nav flex-column">
+            <li className="nav-item">
             <NavLink
               to="/admin"
               end
@@ -64,7 +62,6 @@ function AdminLayout() {
             </NavLink>
           </li>
 
-          <li className="nav-item mt-2 small text-uppercase text-secondary ps-3">Devices</li>
           <li className="nav-item">
             <NavLink to="/admin/devices" className={({ isActive }) => "nav-link" + (isActive ? " active" : "")}>
               <svg className="icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
@@ -74,7 +71,6 @@ function AdminLayout() {
             </NavLink>
           </li>
 
-          <li className="nav-item mt-2 small text-uppercase text-secondary ps-3">People</li>
           <li className="nav-item">
             <NavLink to="/admin/staff-register" className={({ isActive }) => "nav-link" + (isActive ? " active" : "")}>
               <svg className="icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
@@ -92,7 +88,6 @@ function AdminLayout() {
             </NavLink>
           </li>
 
-          <li className="nav-item mt-2 small text-uppercase text-secondary ps-3">Appointments</li>
           <li className="nav-item">
             <NavLink to="/admin/schedule" className={({ isActive }) => "nav-link" + (isActive ? " active" : "")}>
               <svg className="icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
@@ -110,7 +105,6 @@ function AdminLayout() {
             </NavLink>
           </li>
 
-          <li className="nav-item mt-2 small text-uppercase text-secondary ps-3">Services</li>
           <li className="nav-item">
             <NavLink to="/admin/services" className={({ isActive }) => "nav-link" + (isActive ? " active" : "")}>
               <svg className="icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
@@ -136,7 +130,6 @@ function AdminLayout() {
             </NavLink>
           </li>
 
-          <li className="nav-item mt-2 small text-uppercase text-secondary ps-3">Ops</li>
           <li className="nav-item">
             <NavLink to="/admin/inventory" className={({ isActive }) => "nav-link" + (isActive ? " active" : "")}>
               <svg className="icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
@@ -178,7 +171,6 @@ function AdminLayout() {
             </NavLink>
           </li>
 
-          <li className="nav-item mt-2 small text-uppercase text-secondary ps-3">Account</li>
           <li className="nav-item">
             <NavLink to="/admin/profile" className={({ isActive }) => "nav-link" + (isActive ? " active" : "")}>
               <svg className="icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
@@ -189,23 +181,23 @@ function AdminLayout() {
           </li>
 
 
-          <li className="nav-item mt-4 px-3">
-  <button
-    className="btn btn-outline-danger w-100 d-flex align-items-center justify-content-center icon-only-btn"
-    onClick={handleLogout}
-    title="Logout"
-    aria-label="Logout"
-  >
-    {/* Bootstrap Icon */}
-    <i className="bi-box-arrow-right fs-5"></i>
-    {/* If you don’t use Bootstrap Icons, use the emoji instead:
-      <span role="img" aria-label="Logout" className="fs-5">🚪</span>
-    */}
-    <span className="visually-hidden">Logout</span>
-  </button>
-</li>
-
-        </ul>
+            <li className="nav-item mt-4 px-3">
+              <button
+                className="btn btn-outline-danger w-100 d-flex align-items-center justify-content-center icon-only-btn"
+                onClick={handleLogout}
+                title="Logout"
+                aria-label="Logout"
+              >
+                {/* Bootstrap Icon */}
+                <i className="bi-box-arrow-right fs-5"></i>
+                {/* If you don't use Bootstrap Icons, use the emoji instead:
+                  <span role="img" aria-label="Logout" className="fs-5">🚪</span>
+                */}
+                <span className="visually-hidden">Logout</span>
+              </button>
+            </li>
+          </ul>
+        </div>
       </aside>
 
       {/* Main area */}
@@ -235,8 +227,8 @@ function AdminLayout() {
 
       {/* Mobile overlay */}
       <div
-        // className={`sidebar-overlay ${sidebarOpen ? "show" : ""}`}
-        // onClick={() => setSidebarOpen(false)}
+        className={`sidebar-overlay ${sidebarOpen ? "show" : ""}`}
+        onClick={() => setSidebarOpen(false)}
       />
     </div>
   );

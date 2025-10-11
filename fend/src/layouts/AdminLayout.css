@@ -1,51 +1,233 @@
-/* Shell */
+/* Shell - Zoom-independent layout system */
 .admin-shell{
   display: flex;
   min-height: 100vh;
   position: relative;
-  background: #0b1520; /* subtle dark edge outside sidebar for contrast */
+  background: #0b1520;
+  width: 100vw;
+  max-width: 100vw;
+  overflow-x: hidden;
+  contain: layout style paint;
+  /* Ensure consistent layout at all zoom levels */
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
 
-/* Sidebar */
+/* Universal box-sizing and viewport handling */
+html, body {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  box-sizing: border-box;
+  /* Prevent zoom-related layout shifts */
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+/* Sidebar - Fixed position, reduced width for better space utilization */
 .sidebar{
-  width: 260px;
-  min-height: 100vh;
-  position: sticky;
+  /* Reduced viewport-based sizing for more content space */
+  width: clamp(200px, 16vw, 260px);
+  min-width: clamp(180px, 14vw, 240px);
+  max-width: clamp(240px, 20vw, 300px);
+  height: 100vh;
+  position: fixed;
   top: 0;
   left: 0;
-  background: #121a23 !important; /* deeper than default .bg-dark */
+  background: #121a23 !important;
   color: #fff;
-  transition: width 0.3s ease-in-out, transform 0.3s ease-in-out;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   z-index: 1050;
   display: flex;
   flex-direction: column;
-  will-change: width, transform;
+  will-change: transform, width;
+  overflow: hidden;
+  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+  flex-shrink: 0;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  contain: layout style paint;
+  /* Ensure consistent appearance at all zoom levels */
+  font-size: clamp(0.875rem, 0.9vw, 1rem);
+  /* Ensure sidebar matches viewport height exactly and stays fixed */
+  min-height: 100vh;
+  max-height: 100vh;
+  /* Prevent sidebar from scrolling with page content */
+  overflow-y: auto;
 }
 
 .sidebar-header{
   padding: .9rem .9rem;
   background: #0f1821;
   border-bottom: 1px solid rgba(255,255,255,.08);
+  flex-shrink: 0;
+  min-height: 70px;
+  display: flex;
+  align-items: center;
 }
 
 /* Scroll area for nav items */
 .nav-scroller{
-  padding: .5rem .25rem 1rem .25rem;
+  padding: .5rem .25rem 0 .25rem;
   overflow-y: auto;
+  overflow-x: hidden;
   flex: 1;
+  min-height: 0;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.3) transparent;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  /* Ensure scrolling is always available */
+  overflow-y: auto;
+  /* Ensure proper height calculation */
+  height: calc(100vh - 70px);
+  max-height: calc(100vh - 70px);
+  /* Force scrollbar to always be visible when needed */
+  overflow: auto;
 }
 
-/* Nav links */
+.nav-scroller::-webkit-scrollbar {
+  width: 8px;
+}
+
+.nav-scroller::-webkit-scrollbar-track {
+  background: rgba(255,255,255,0.1);
+  border-radius: 4px;
+}
+
+.nav-scroller::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.4);
+  border-radius: 4px;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+.nav-scroller::-webkit-scrollbar-thumb:hover {
+  background: rgba(255,255,255,0.6);
+}
+
+.nav-scroller::-webkit-scrollbar-thumb:active {
+  background: rgba(255,255,255,0.8);
+}
+
+/* Navigation list inside scroller */
+.nav-scroller .nav {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding-bottom: 0.5rem;
+  /* Ensure single column layout */
+  width: 100%;
+  max-width: 100%;
+  /* Prevent any multi-column layouts */
+  column-count: 1 !important;
+  column-gap: 0 !important;
+  column-fill: auto !important;
+  /* Ensure proper flex behavior */
+  align-items: stretch;
+  justify-content: flex-start;
+  /* Allow content to overflow for scrolling */
+  overflow: visible;
+  /* Ensure all items are accessible */
+  height: auto;
+  min-height: auto;
+}
+
+/* Ensure nav items are in single column */
+.sidebar .nav-item {
+  width: 100% !important;
+  max-width: 100% !important;
+  display: block !important;
+  flex-shrink: 0;
+  /* Prevent any float or positioning issues */
+  position: relative;
+  clear: both;
+  float: none;
+  margin: 0;
+  padding: 0;
+  /* Remove row overflow, ensure column behavior */
+  overflow: visible;
+}
+
+/* Nav links - Optimized for reduced sidebar width */
 .sidebar .nav-link{
   color: rgba(255,255,255,.9);
-  border-radius: .6rem;
-  padding: .55rem .75rem;
-  margin: .15rem .5rem;
+  border-radius: clamp(0.4rem, 0.5vw, 0.6rem);
+  padding: clamp(0.45rem, 0.5vw, 0.6rem) clamp(0.55rem, 0.65vw, 0.75rem);
+  margin: clamp(0.1rem, 0.15vw, 0.2rem) clamp(0.3rem, 0.4vw, 0.5rem);
   display: flex;
   align-items: center;
-  gap: .65rem;
-  transition: background .15s ease, color .15s ease;
+  gap: clamp(0.45rem, 0.55vw, 0.65rem);
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
   text-decoration: none;
+  min-height: clamp(38px, 42px, 46px);
+  flex-shrink: 0;
+  white-space: nowrap;
+  overflow: visible;
+  text-overflow: clip;
+  /* Ensure consistent appearance */
+  font-size: inherit;
+  line-height: 1.2;
+  /* Force single column layout with reduced margins */
+  width: calc(100% - clamp(0.6rem, 0.8vw, 1rem));
+  max-width: calc(100% - clamp(0.6rem, 0.8vw, 1rem));
+  box-sizing: border-box;
+  /* Ensure proper positioning and prevent any float or positioning issues */
+  position: relative;
+  clear: both;
+  float: none;
+}
+
+/* Navigation labels - Consistent sizing across all zoom levels */
+.sidebar .nav-link .label {
+  font-size: clamp(0.9rem, 0.95em, 1.05rem);
+  font-weight: 500;
+  line-height: 1.2;
+  flex: 1;
+  min-width: 0;
+  /* Ensure text remains crisp at all zoom levels */
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* Prevent text wrapping and ensure single line */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Desktop responsive improvements - Reduced width for better space utilization */
+@media (min-width: 992px) {
+  .sidebar {
+    width: clamp(220px, 18vw, 280px);
+    min-width: clamp(200px, 16vw, 260px);
+    max-width: clamp(260px, 22vw, 320px);
+  }
+  
+  .content-area {
+    margin-left: clamp(220px, 18vw, 280px);
+    width: calc(100vw - clamp(220px, 18vw, 280px));
+    max-width: calc(100vw - clamp(220px, 18vw, 280px));
+  }
+}
+
+/* Large desktop screens - Optimized spacing */
+@media (min-width: 1200px) {
+  .sidebar {
+    width: clamp(240px, 20vw, 300px);
+    min-width: clamp(220px, 18vw, 280px);
+    max-width: clamp(280px, 24vw, 340px);
+  }
+  
+  .content-area {
+    margin-left: clamp(240px, 20vw, 300px);
+    width: calc(100vw - clamp(240px, 20vw, 300px));
+    max-width: calc(100vw - clamp(240px, 20vw, 300px));
+  }
 }
 
 .sidebar .nav-link:hover{
@@ -60,21 +242,42 @@
 }
 
 .sidebar .icon{
-  width: 1.5rem;
+  width: clamp(1.2rem, 1.3em, 1.6rem);
+  height: clamp(1.2rem, 1.3em, 1.6rem);
+  min-width: clamp(1rem, 1.1em, 1.3rem);
+  max-width: clamp(1.4rem, 1.5em, 1.8rem);
   text-align: center;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Ensure consistent icon sizing */
+  font-size: inherit;
 }
-/* Keep the right side (content) white like before */
+
+/* Content area - Automatically adjusts to reduced sidebar width */
 .content-area{
   flex: 1;
   min-width: 0;
-  background: #f8f9fa !important;    /* ← light gray background with !important */
-  color: #0f172a;                    /* dark text for readability */
+  background: #f8f9fa !important;
+  color: #0f172a;
   display: flex;
   flex-direction: column;
-  transition: none;
+  transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   transform: translateZ(0);
   backface-visibility: hidden;
   position: relative;
+  /* Automatically adjust to reduced sidebar width */
+  margin-left: clamp(200px, 16vw, 260px);
+  min-height: 100vh;
+  width: calc(100vw - clamp(200px, 16vw, 260px));
+  max-width: calc(100vw - clamp(200px, 16vw, 260px));
+  overflow-x: hidden;
+  /* Ensure consistent spacing at all zoom levels */
+  font-size: clamp(0.875rem, 0.9vw, 1rem);
+  /* Ensure content area starts after fixed sidebar */
+  position: relative;
+  left: 0;
 }
 
 /* Device Approvals specific content area */
@@ -352,6 +555,30 @@ html {
   color: #fff;
 }
 
+/* Logout button container */
+.nav-scroller .nav .nav-item.mt-4.px-3 {
+  margin-top: auto !important;
+  padding-top: 1rem !important;
+  padding-bottom: 0.75rem !important;
+  border-top: 1px solid rgba(255,255,255,.08);
+  flex-shrink: 0;
+  margin-bottom: 0 !important;
+}
+
+.nav-scroller .nav .nav-item.mt-4.px-3 .btn {
+  border-radius: 8px !important;
+  padding: 0.75rem 1rem !important;
+  font-weight: 500 !important;
+  transition: all 0.2s ease !important;
+}
+
+.nav-scroller .nav .nav-item.mt-4.px-3 .btn:hover {
+  background-color: rgba(220, 53, 69, 0.1) !important;
+  border-color: #dc3545 !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(220, 53, 69, 0.2);
+}
+
 /* Overlay for mobile when sidebar is open */
 .sidebar-overlay{
   position: fixed;
@@ -359,8 +586,8 @@ html {
   background: rgba(0, 0, 0, 0.5);
   opacity: 0;
   pointer-events: none;
-  transition: opacity .2s ease;
-  z-index: 1030;
+  transition: opacity 0.3s ease;
+  z-index: 1040;
 }
 
 .sidebar-open .sidebar-overlay{
@@ -368,34 +595,209 @@ html {
   pointer-events: auto;
 }
 
+/* Mobile backdrop */
+@media (max-width: 991.98px) {
+  .sidebar-overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+    z-index: 1040;
+  }
+  
+  .sidebar-open .sidebar-overlay {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+@media (min-width: 992px) {
+  .sidebar-overlay {
+    display: none !important;
+  }
+}
+
+/* Additional breakpoint for very small screens */
+@media (max-width: 575.98px) {
+  .sidebar {
+    width: clamp(240px, 85vw, 300px) !important;
+    min-width: clamp(200px, 80vw, 260px) !important;
+    max-width: clamp(280px, 90vw, 340px) !important;
+  }
+}
+
+/* Ensure proper scaling at extreme zoom levels */
+@media (max-width: 400px) {
+  .sidebar {
+    width: clamp(85vw, 90vw, 95vw) !important;
+    min-width: clamp(80vw, 85vw, 90vw) !important;
+    max-width: clamp(90vw, 95vw, 100vw) !important;
+  }
+}
+
+/* Prevent horizontal scroll at any zoom level */
+@media (max-width: 320px) {
+  .admin-shell {
+    min-width: 320px;
+  }
+  
+  .sidebar {
+    width: clamp(90vw, 95vw, 100vw) !important;
+    min-width: clamp(85vw, 90vw, 95vw) !important;
+    max-width: clamp(95vw, 100vw, 100vw) !important;
+  }
+}
+
+/* Zoom-level consistency fixes */
+@media (max-width: 280px) {
+  .admin-shell {
+    min-width: 280px;
+  }
+  
+  .sidebar {
+    width: 100vw !important;
+    min-width: 95vw !important;
+    max-width: 100vw !important;
+  }
+}
+
 /* --------- Responsive behaviors --------- */
 
-/* Mobile: slide-in/out sidebar */
+/* Mobile: slide-in/out sidebar - Consistent overlay behavior */
 @media (max-width: 991.98px){
   .sidebar{
     position: fixed;
+    top: 0;
+    left: 0;
     transform: translateX(-100%);
+    height: 100vh !important;
+    overflow-y: auto;
+    z-index: 1050;
+    width: clamp(240px, 75vw, 320px);
+    min-width: clamp(200px, 70vw, 280px);
+    max-width: clamp(280px, 80vw, 360px);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
   .sidebar-open .sidebar{
     transform: translateX(0);
   }
+  
+  /* Remove margin on mobile since sidebar is overlay */
+  .content-area {
+    margin-left: 0 !important;
+    transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    width: 100vw !important;
+    max-width: 100vw !important;
+  }
+  
+  /* Ensure all buttons are visible on mobile */
+  .nav-scroller {
+    height: calc(100vh - 80px) !important;
+    overflow-y: auto !important;
+  }
+  
+  .nav-scroller .nav {
+    min-height: calc(100vh - 80px) !important;
+  }
 }
 
-/* Desktop: collapse to icon rail when closed */
+/* Desktop layout - Reduced width for better space utilization */
+@media (min-width: 992px) {
+  .sidebar {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    transform: translateX(0) !important;
+    width: clamp(220px, 18vw, 280px) !important;
+    min-width: clamp(200px, 16vw, 260px) !important;
+    max-width: clamp(260px, 22vw, 320px) !important;
+    height: 100vh !important;
+    overflow-y: auto !important;
+  }
+  
+  .content-area {
+    margin-left: clamp(220px, 18vw, 280px) !important;
+    width: calc(100vw - clamp(220px, 18vw, 280px)) !important;
+    max-width: calc(100vw - clamp(220px, 18vw, 280px)) !important;
+  }
+  
+  .sidebar-overlay {
+    display: none !important;
+  }
+  
+  /* Ensure consistent layout at all zoom levels */
+  .admin-shell {
+    min-width: 100vw;
+    width: 100vw;
+    max-width: 100vw;
+  }
+}
+
+/* Large desktop screens - Optimized width */
+@media (min-width: 1200px) {
+  .sidebar {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: clamp(240px, 20vw, 300px) !important;
+    min-width: clamp(220px, 18vw, 280px) !important;
+    max-width: clamp(280px, 24vw, 340px) !important;
+    height: 100vh !important;
+    overflow-y: auto !important;
+  }
+  
+  .content-area {
+    margin-left: clamp(240px, 20vw, 300px) !important;
+    width: calc(100vw - clamp(240px, 20vw, 300px)) !important;
+    max-width: calc(100vw - clamp(240px, 20vw, 300px)) !important;
+  }
+}
+
+@media (min-width: 1400px) {
+  .sidebar {
+    width: clamp(300px, 26vw, 380px) !important;
+    min-width: clamp(260px, 22vw, 340px) !important;
+    max-width: clamp(340px, 30vw, 420px) !important;
+  }
+  
+  .content-area {
+    margin-left: clamp(300px, 26vw, 380px) !important;
+    width: calc(100vw - clamp(300px, 26vw, 380px)) !important;
+    max-width: calc(100vw - clamp(300px, 26vw, 380px)) !important;
+  }
+}
+
+/* Desktop: collapse to icon rail when closed - Reduced width */
 @media (min-width: 992px){
   .admin-shell.sidebar-closed .sidebar{
-    width: 76px;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: clamp(60px, 5vw, 80px) !important;
+    min-width: clamp(55px, 4.5vw, 75px) !important;
+    max-width: clamp(65px, 5.5vw, 85px) !important;
+    height: 100vh !important;
+    overflow-y: auto !important;
+  }
+  .admin-shell.sidebar-closed .content-area {
+    margin-left: clamp(60px, 5vw, 80px) !important;
+    width: calc(100vw - clamp(60px, 5vw, 80px)) !important;
+    max-width: calc(100vw - clamp(60px, 5vw, 80px)) !important;
   }
   .admin-shell.sidebar-closed .sidebar .label{
-    display: none;
+    display: none !important;
   }
   .admin-shell.sidebar-closed .sidebar .nav-link{
-    justify-content: center;
+    justify-content: center !important;
+    padding: clamp(0.6rem, 0.7vw, 0.8rem) clamp(0.35rem, 0.45vw, 0.55rem) !important;
+    width: calc(100% - clamp(0.7rem, 0.9vw, 1.1rem)) !important;
+    max-width: calc(100% - clamp(0.7rem, 0.9vw, 1.1rem)) !important;
   }
-  .admin-shell.sidebar-closed .sidebar .nav-item.mt-2.small,
-  .admin-shell.sidebar-closed .sidebar .nav-item.mt-2.small + .nav-item{
-    /* group headers hidden when collapsed */
-    display: none;
+  .admin-shell.sidebar-closed .sidebar .nav-link .icon{
+    margin: 0 !important;
   }
 }
 
@@ -560,6 +962,19 @@ html {
   .capacity-planner-page .table th {
     font-size: 0.8rem !important;
   }
+  
+  /* Ensure sidebar nav items remain in single column on mobile */
+  .sidebar .nav-item {
+    width: 100% !important;
+    max-width: 100% !important;
+    display: block !important;
+  }
+  
+  .sidebar .nav-link {
+    width: calc(100% - clamp(0.6rem, 0.8vw, 1rem)) !important;
+    max-width: calc(100% - clamp(0.6rem, 0.8vw, 1rem)) !important;
+    margin: clamp(0.1rem, 0.15vw, 0.2rem) clamp(0.3rem, 0.4vw, 0.5rem) !important;
+  }
 }
 
 /* Tablet responsive adjustments */
@@ -574,6 +989,18 @@ html {
   
   .schedule-manager-page .btn {
     min-width: 110px !important;
+  }
+  
+  /* Ensure sidebar nav items remain in single column on tablet */
+  .sidebar .nav-item {
+    width: 100% !important;
+    max-width: 100% !important;
+    display: block !important;
+  }
+  
+  .sidebar .nav-link {
+    width: calc(100% - clamp(0.7rem, 0.9vw, 1.1rem)) !important;
+    max-width: calc(100% - clamp(0.7rem, 0.9vw, 1.1rem)) !important;
   }
 }
 

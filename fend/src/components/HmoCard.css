@@ -1,0 +1,89 @@
+/* HMO Card - White Background Theme */
+:root {
+  --card-bg: #ffffff;
+  --border-color: rgba(148, 163, 184, 0.3);
+  --text-primary: #1e40af;        /* Dark blue for titles */
+  --text-secondary: #6b7280;      /* Medium gray for labels */
+  --text-muted: #6b7280;          /* Medium gray for secondary text */
+  --text-input: #000000;          /* Black for input text */
+  --input-bg: #ffffff;
+  --input-border: #d1d5db;
+  --button-close-bg: #e5e7eb;
+  --button-close-text: #374151;
+  --button-close-hover-bg: #d1d5db;
+  --button-close-hover-text: #111827;
+}
+
+/* Force white background even in dark mode */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --card-bg: #ffffff;           /* Force white background */
+    --border-color: rgba(148, 163, 184, 0.3);
+    --text-primary: #1e40af;       /* Keep dark blue for titles */
+    --text-secondary: #6b7280;     /* Keep medium gray for labels */
+    --text-muted: #6b7280;         /* Keep medium gray for secondary text */
+    --text-input: #000000;         /* Keep black for input text */
+    --input-bg: #ffffff;           /* Force white input background */
+    --input-border: #d1d5db;
+    --button-close-bg: #e5e7eb;
+    --button-close-text: #374151;
+    --button-close-hover-bg: #d1d5db;
+    --button-close-hover-text: #111827;
+  }
+}
+
+.hmo-card {
+  background-color: var(--card-bg);
+  border-color: var(--border-color);
+}
+
+.hmo-card .text-primary {
+  color: var(--text-primary);
+}
+
+.hmo-card .text-secondary {
+  color: var(--text-secondary);
+}
+
+.hmo-card .text-muted {
+  color: var(--text-muted);
+}
+
+.hmo-card .input-field {
+  background-color: var(--input-bg);
+  border-color: var(--input-border);
+  color: var(--text-input);
+}
+
+.hmo-card .button-close {
+  background-color: var(--button-close-bg);
+  color: var(--button-close-text);
+}
+
+.hmo-card .button-close:hover {
+  background-color: var(--button-close-hover-bg);
+  color: var(--button-close-hover-text);
+}
+
+/* Additional classes for specific text elements */
+.hmo-title {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.hmo-provider-name {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.hmo-label {
+  color: var(--text-secondary);
+}
+
+.hmo-value {
+  color: var(--text-primary);
+}
+
+.hmo-form-label {
+  color: var(--text-secondary);
+}
