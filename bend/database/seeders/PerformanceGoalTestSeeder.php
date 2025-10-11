@@ -238,6 +238,7 @@ class PerformanceGoalTestSeeder extends Seeder
                 'start_time' => $visitDate->copy()->setTime(rand(8, 16), [0, 30][rand(0, 1)]),
                 'end_time' => $visitDate->copy()->setTime(rand(8, 16), [0, 30][rand(0, 1)])->addMinutes($service->estimated_minutes ?? 60),
                 'status' => 'completed',
+                'is_seeded' => true,
             ];
         }
         
@@ -254,6 +255,7 @@ class PerformanceGoalTestSeeder extends Seeder
                 'start_time' => null, // Not completed yet
                 'end_time' => null,
                 'status' => 'pending',
+                'is_seeded' => true,
             ];
         }
         
@@ -275,6 +277,7 @@ class PerformanceGoalTestSeeder extends Seeder
                     'start_time' => $visitDate->copy()->setTime(rand(8, 16), [0, 30][rand(0, 1)]),
                     'end_time' => $visitDate->copy()->setTime(rand(8, 16), [0, 30][rand(0, 1)])->addMinutes(60),
                     'status' => 'completed',
+                    'is_seeded' => true,
                 ];
             }
         }
@@ -292,6 +295,7 @@ class PerformanceGoalTestSeeder extends Seeder
                     'start_time' => $visitDate->copy()->setTime(rand(8, 16), [0, 30][rand(0, 1)]),
                     'end_time' => $visitDate->copy()->setTime(rand(8, 16), [0, 30][rand(0, 1)])->addMinutes(120),
                     'status' => 'completed',
+                    'is_seeded' => true,
                 ];
             }
         }
@@ -310,6 +314,7 @@ class PerformanceGoalTestSeeder extends Seeder
                     'start_time' => $visitDate->copy()->setTime(rand(8, 16), [0, 30][rand(0, 1)]),
                     'end_time' => $visitDate->copy()->setTime(rand(8, 16), [0, 30][rand(0, 1)])->addMinutes(90),
                     'status' => 'completed',
+                    'is_seeded' => true,
                 ];
             }
         }

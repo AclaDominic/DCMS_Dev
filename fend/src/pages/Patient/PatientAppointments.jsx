@@ -203,8 +203,15 @@ function PatientAppointments() {
       fetchAppointments(currentPage);
     } catch (err) {
       console.error("Reschedule failed", err);
-      const serverMsg = err.response?.data?.message || "Failed to reschedule appointment.";
-      alert(serverMsg);
+      const errorData = err.response?.data;
+      
+      // Check if this is a blocked patient error
+      if (errorData?.blocked) {
+        alert(errorData.message);
+      } else {
+        const serverMsg = errorData?.message || "Failed to reschedule appointment.";
+        alert(serverMsg);
+      }
     } finally {
       setRescheduleLoading(false);
     }

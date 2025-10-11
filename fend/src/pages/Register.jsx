@@ -10,6 +10,7 @@ function Register() {
     name: '',
     email: '',
     contact_number: '',
+    birthdate: '',
     password: '',
     confirmPassword: ''
   });
@@ -25,6 +26,18 @@ function Register() {
 
     if (!/^09\d{9}$/.test(form.contact_number)) {
       newErrors.contact_number = "Contact number must start with 09 and be 11 digits.";
+    }
+
+    if (!form.birthdate) {
+      newErrors.birthdate = "Birthdate is required.";
+    } else {
+      const birthDate = new Date(form.birthdate);
+      const today = new Date();
+      const age = today.getFullYear() - birthDate.getFullYear();
+      
+      if (age < 0 || age > 120) {
+        newErrors.birthdate = "Please enter a valid birthdate.";
+      }
     }
 
     if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}/.test(form.password)) {
@@ -58,24 +71,34 @@ function Register() {
         name: form.name,
         email: form.email,
         contact_number: form.contact_number,
+        birthdate: form.birthdate,
         password: form.password,
         password_confirmation: form.confirmPassword
       });
 
-      localStorage.setItem('token', res.data.token);
-      setMessage('Registration successful!');
+      // Check if IP is blocked
+      if (res.data.ip_blocked) {
+        setMessage(`⚠️ ${res.data.message}`);
+        // Still proceed with registration but show warning
+        localStorage.setItem('token', res.data.token);
+        setTimeout(() => navigate('/verify-email'), 3000);
+      } else {
+        localStorage.setItem('token', res.data.token);
+        setMessage('Registration successful!');
+        setTimeout(() => navigate('/verify-email'), 2000);
+      }
 
       setForm({
         name: '',
         email: '',
         contact_number: '',
+        birthdate: '',
         password: '',
         confirmPassword: ''
       });
 
       setErrors({});
 
-      setTimeout(() => navigate('/verify-email'), 2000);
     } catch (err) {
       setMessage(err.response?.data?.message || 'Registration failed');
     } finally {
@@ -138,6 +161,19 @@ function Register() {
                   required
                 />
                 {errors.contact_number && <div className="invalid-feedback">{errors.contact_number}</div>}
+              </div>
+
+              <div className="mb-3">
+                <label className="form-label"><i className="bi bi-calendar-date me-2" />Birthdate</label>
+                <input
+                  type="date"
+                  className={`form-control ${errors.birthdate ? 'is-invalid' : ''}`}
+                  name="birthdate"
+                  value={form.birthdate}
+                  onChange={handleChange}
+                  required
+                />
+                {errors.birthdate && <div className="invalid-feedback">{errors.birthdate}</div>}
               </div>
 
               <div className="mb-3">

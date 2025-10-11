@@ -17,6 +17,7 @@ api.interceptors.request.use((config) => {
 });
 
 // Be gentle on 401s — don't kick users out for harmless probes
+// Also handle 403s (blocking responses) as errors
 api.interceptors.response.use(
   (r) => r,
   (err) => {
@@ -38,7 +39,12 @@ api.interceptors.response.use(
       return Promise.reject(err);
     }
 
-    // 3) Optional: only redirect on 401 if we're currently under a protected area
+    // 3) Handle 403 responses (blocking) as errors - let caller handle them
+    if (status === 403) {
+      return Promise.reject(err);
+    }
+
+    // 4) Optional: only redirect on 401 if we're currently under a protected area
     const protectedPrefixes = ["/app/admin", "/app/staff", "/app/patient"];
     const here = window.location.pathname;
     const onProtected = protectedPrefixes.some((p) => here.startsWith(p));

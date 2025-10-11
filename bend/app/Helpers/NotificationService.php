@@ -14,8 +14,11 @@ class NotificationService
     /**
      * Generic send with SMS logging and whitelisting support.
      * Always creates a notification_logs row; decides whether to send via SNS based on env flags and whitelist.
+     * 
+     * SMS is automatically blocked during database seeding to prevent unwanted notifications.
+     * Set DB_SEEDING=true environment variable during seeding operations.
      */
-    public static function send(string $to = null, string $subject = 'Notification', string $message = ''): void
+    public static function send(?string $to = null, string $subject = 'Notification', string $message = ''): void
     {
         // 1) Always create a log row
         $log = NotificationLog::create([
@@ -29,14 +32,16 @@ class NotificationService
 
         // 2) Read toggle and whitelist from env (user will set values manually)
         $smsEnabled    = filter_var(env('SMS_ENABLED', false), FILTER_VALIDATE_BOOLEAN);
+        $isSeeding     = filter_var(env('DB_SEEDING', false), FILTER_VALIDATE_BOOLEAN);
         $envWhitelist  = array_filter(array_map('trim', explode(',', (string) env('SMS_WHITELIST', ''))));
         $inEnvWhitelist = $to && in_array($to, $envWhitelist, true);
         $inDbWhitelist  = $to ? SmsWhitelist::where('phone_e164', $to)->exists() : false;
 
-        // 3) If disabled or not whitelisted → block and log
-        if (!$smsEnabled || !$to || !($inEnvWhitelist || $inDbWhitelist)) {
-            $log->update(['status' => 'blocked_sandbox']);
-            Log::info("SMS blocked_sandbox: {$subject} to {$to}");
+        // 3) If disabled, seeding, or not whitelisted → block and log
+        if (!$smsEnabled || $isSeeding || !$to || !($inEnvWhitelist || $inDbWhitelist)) {
+            $reason = $isSeeding ? 'seeding' : 'blocked_sandbox';
+            $log->update(['status' => $reason]);
+            Log::info("SMS {$reason}: {$subject} to {$to}");
             return;
         }
 

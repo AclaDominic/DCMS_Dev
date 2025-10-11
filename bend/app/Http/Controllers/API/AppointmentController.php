@@ -15,6 +15,8 @@ use App\Helpers\NotificationService;
 use App\Http\Controllers\Controller;
 use App\Services\ClinicDateResolverService;
 use App\Services\NotificationService as SystemNotificationService;
+use App\Services\PatientManagerService;
+use App\Helpers\IpHelper;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 
@@ -86,6 +88,20 @@ class AppointmentController extends Controller
         return response()->json([
             'message' => 'Your account is not yet linked to a patient record. Please contact the clinic.',
         ], 422);
+    }
+
+    // Check if patient is blocked from booking appointments
+    $userIp = IpHelper::getRealIpAddress($request);
+    $blockInfo = PatientManagerService::getPatientBlockInfo($patient->id, $userIp);
+    
+    if ($blockInfo['blocked']) {
+        $message = self::getBlockedPatientMessage($blockInfo);
+        return response()->json([
+            'message' => $message,
+            'blocked' => true,
+            'block_type' => $blockInfo['block_type'],
+            'block_reason' => $blockInfo['block_reason'],
+        ], 403);
     }
 
     // Check for overlapping appointments for the same patient
@@ -785,6 +801,20 @@ class AppointmentController extends Controller
             return response()->json(['message' => "Time slot starting at {$fullAt} is already full."], 422);
         }
 
+        // Check if patient is blocked from booking appointments
+        $userIp = IpHelper::getRealIpAddress($request);
+        $blockInfo = PatientManagerService::getPatientBlockInfo($appointment->patient_id, $userIp);
+        
+        if ($blockInfo['blocked']) {
+            $message = self::getBlockedPatientMessage($blockInfo);
+            return response()->json([
+                'message' => $message,
+                'blocked' => true,
+                'block_type' => $blockInfo['block_type'],
+                'block_reason' => $blockInfo['block_reason'],
+            ], 403);
+        }
+
         // Check for overlapping appointments for the same patient (excluding current appointment)
         $timeSlot = $this->normalizeTime($startTime) . '-' . $this->normalizeTime($endTime);
         $hasOverlap = Appointment::where('patient_id', $appointment->patient_id)
@@ -835,5 +865,157 @@ class AppointmentController extends Controller
             'message' => 'Appointment rescheduled successfully. It will need staff approval.',
             'appointment' => $appointment->fresh(['service'])
         ]);
+    }
+
+    /**
+     * Generate appropriate blocked patient message based on block type and reason
+     */
+    private static function getBlockedPatientMessage(array $blockInfo): string
+    {
+        $blockType = $blockInfo['block_type'];
+        $blockReason = $blockInfo['block_reason'];
+        $blockedAt = $blockInfo['blocked_at'];
+
+        $baseMessage = '';
+        $resolutionMessage = '';
+
+        switch ($blockType) {
+            case 'account':
+                $baseMessage = "🚫 ACCOUNT BLOCKED\n\nYour account has been temporarily suspended from booking appointments";
+                if ($blockReason) {
+                    $baseMessage .= " due to:\n{$blockReason}";
+                } else {
+                    $baseMessage .= " due to multiple no-shows.";
+                }
+                $resolutionMessage = "\n\n🔧 TO RESOLVE:\n• Visit our clinic in person to discuss your account status\n• Bring a valid ID for verification\n• Speak with our staff to restore your booking privileges\n• You can still receive walk-in services";
+                break;
+
+            case 'ip':
+                $baseMessage = "🌐 NETWORK BLOCKED\n\nYour current network/IP address has been blocked from booking appointments";
+                if ($blockReason) {
+                    $baseMessage .= " due to:\n{$blockReason}";
+                } else {
+                    $baseMessage .= " due to security concerns.";
+                }
+                $resolutionMessage = "\n\n🔧 TO RESOLVE:\n• Try connecting from a different network (mobile data, different WiFi)\n• Use a different device if available\n• If the issue persists, contact our clinic for assistance\n• You can still visit us in person for services";
+                break;
+
+            case 'both':
+                $baseMessage = "🚫 ACCOUNT & NETWORK BLOCKED\n\nYour account and network have been blocked from booking appointments";
+                if ($blockReason) {
+                    $baseMessage .= " due to:\n{$blockReason}";
+                } else {
+                    $baseMessage .= " due to multiple no-shows and security concerns.";
+                }
+                $resolutionMessage = "\n\n🔧 TO RESOLVE:\n• First, try a different network (mobile data, different WiFi)\n• If that doesn't work, visit our clinic in person\n• Bring a valid ID and speak with our staff\n• We'll help restore your booking privileges\n• You can still receive walk-in services";
+                break;
+
+            default:
+                $baseMessage = "🚫 BOOKING RESTRICTED\n\nYour account has been temporarily blocked from booking appointments due to multiple no-shows.";
+                $resolutionMessage = "\n\n🔧 TO RESOLVE:\n• Visit our clinic in person to discuss your account status\n• Speak with our staff to restore your booking privileges\n• You can still receive walk-in services";
+                break;
+        }
+
+        $contactMessage = "\n\n📞 Need help? Contact our clinic if you believe this is an error.";
+        
+        return $baseMessage . $resolutionMessage . $contactMessage;
+    }
+
+    /**
+     * Debug authentication and blocking status
+     */
+    public function debugAuth(Request $request): \Illuminate\Http\JsonResponse
+    {
+        try {
+            $user = auth()->user();
+            $userId = auth()->id();
+            
+            $debug = [
+                'authenticated' => auth()->check(),
+                'user_id' => $userId,
+                'user' => $user ? [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'role' => $user->role,
+                    'status' => $user->status,
+                ] : null,
+                'patient' => null,
+                'block_info' => null,
+                'ip' => IpHelper::getRealIpAddress($request),
+                'user_agent' => $request->userAgent(),
+                'headers' => $request->headers->all(),
+            ];
+
+            if ($user) {
+                $patient = Patient::byUser($user->id);
+                $debug['patient'] = $patient ? [
+                    'id' => $patient->id,
+                    'first_name' => $patient->first_name,
+                    'last_name' => $patient->last_name,
+                    'is_linked' => $patient->is_linked,
+                ] : null;
+
+                if ($patient) {
+                    $userIp = IpHelper::getRealIpAddress($request);
+                    $blockInfo = PatientManagerService::getPatientBlockInfo($patient->id, $userIp);
+                    $debug['block_info'] = $blockInfo;
+                }
+            }
+
+            return response()->json($debug);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Check if the current patient is blocked from booking appointments
+     */
+    public function checkBlockedStatus(Request $request): \Illuminate\Http\JsonResponse
+    {
+        try {
+            $patient = Patient::byUser(auth()->id());
+            
+            if (!$patient) {
+                return response()->json([
+                    'blocked' => false,
+                    'message' => null,
+                ]);
+            }
+
+            $userIp = IpHelper::getRealIpAddress($request);
+            $blockInfo = PatientManagerService::getPatientBlockInfo($patient->id, $userIp);
+            
+            if ($blockInfo['blocked']) {
+                $message = self::getBlockedPatientMessage($blockInfo);
+                return response()->json([
+                    'blocked' => true,
+                    'block_type' => $blockInfo['block_type'],
+                    'block_reason' => $blockInfo['block_reason'],
+                    'message' => $message,
+                ]);
+            }
+
+            return response()->json([
+                'blocked' => false,
+                'message' => null,
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error checking blocked status', [
+                'user_id' => auth()->id(),
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'blocked' => false,
+                'message' => null,
+            ]);
+        }
     }
 }

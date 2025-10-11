@@ -80,6 +80,19 @@ Route::middleware(['auth:sanctum', 'check.account.status', AdminOnly::class])->g
         Route::post('/{id}/toggle-status', [StaffAccountController::class, 'toggleStatus']);
     });
 
+    // Patient manager (no-show tracking and warnings)
+    Route::prefix('admin/patient-manager')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Admin\PatientManagerController::class, 'index']);
+        Route::get('/statistics', [\App\Http\Controllers\Admin\PatientManagerController::class, 'getStatistics']);
+        Route::get('/{id}', [\App\Http\Controllers\Admin\PatientManagerController::class, 'show']);
+        Route::get('/{id}/no-show-history', [\App\Http\Controllers\Admin\PatientManagerController::class, 'getNoShowHistory']);
+        Route::post('/{id}/send-warning', [\App\Http\Controllers\Admin\PatientManagerController::class, 'sendWarning']);
+        Route::post('/{id}/block', [\App\Http\Controllers\Admin\PatientManagerController::class, 'blockPatient']);
+        Route::post('/{id}/unblock', [\App\Http\Controllers\Admin\PatientManagerController::class, 'unblockPatient']);
+        Route::post('/{id}/add-note', [\App\Http\Controllers\Admin\PatientManagerController::class, 'addNote']);
+        Route::post('/{id}/reset-no-shows', [\App\Http\Controllers\Admin\PatientManagerController::class, 'resetNoShowCount']);
+    });
+
     // Service management
     Route::post('/services', [ServiceController::class, 'store']);
     Route::put('/services/{service}', [ServiceController::class, 'update']);
@@ -198,6 +211,8 @@ Route::middleware(['auth:sanctum', 'check.account.status'])->group(function () {
     // Appointment (patient side)
     Route::prefix('appointment')->group(function () {
         Route::get('/available-services', [AppointmentServiceController::class, 'availableServices']);
+        Route::get('/check-blocked-status', [AppointmentController::class, 'checkBlockedStatus']);
+        Route::get('/debug-auth', [AppointmentController::class, 'debugAuth']); // Debug endpoint
         Route::post('/', [AppointmentController::class, 'store']);
         Route::get('/available-slots', [AppointmentSlotController::class, 'get']);
         Route::post('/{id}/cancel', [AppointmentController::class, 'cancel']);

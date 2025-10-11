@@ -110,6 +110,19 @@ class AuthenticatedSessionController extends Controller
         }
     }
 
+    // Track IP address for patient users (only valid public IPs)
+    if ($user->role === 'patient') {
+        $patient = \App\Models\Patient::byUser($user->id);
+        if ($patient) {
+            $userIp = $this->getRealUserIp($request);
+            
+            // Only track valid public IP addresses
+            if ($this->isValidPublicIp($userIp)) {
+                $patient->trackIpAddress($userIp);
+            }
+        }
+    }
+
     $request->session()->regenerate();
 
     return response()->json([
@@ -137,6 +150,84 @@ class AuthenticatedSessionController extends Controller
     private function generateDeviceFingerprint(Request $request): string
     {
         return hash('sha256', $request->ip() . '|' . $request->userAgent());
+    }
+
+    /**
+     * Check if an IP address is a valid public IP for tracking
+     */
+    private function isValidPublicIp(string $ip): bool
+    {
+        // Filter out invalid IPs
+        if (empty($ip) || $ip === 'unknown' || $ip === '::1') {
+            return false;
+        }
+
+        // Filter out localhost and private IP ranges
+        $invalidRanges = [
+            '127.0.0.0/8',      // 127.0.0.0 to 127.255.255.255 (localhost)
+            '10.0.0.0/8',       // 10.0.0.0 to 10.255.255.255 (private)
+            '172.16.0.0/12',    // 172.16.0.0 to 172.31.255.255 (private)
+            '192.168.0.0/16',   // 192.168.0.0 to 192.168.255.255 (private)
+            '169.254.0.0/16',   // 169.254.0.0 to 169.254.255.255 (link-local)
+            '0.0.0.0/8',        // 0.0.0.0 to 0.255.255.255 (reserved)
+        ];
+
+        foreach ($invalidRanges as $range) {
+            if ($this->ipInRange($ip, $range)) {
+                return false;
+            }
+        }
+
+        // Check if it's a valid IPv4 address
+        return filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) !== false;
+    }
+
+    /**
+     * Get the real user IP address, checking proxy headers first
+     */
+    private function getRealUserIp(Request $request): string
+    {
+        // Check various headers that might contain the real IP
+        $headers = [
+            'HTTP_X_FORWARDED_FOR',
+            'HTTP_X_REAL_IP',
+            'HTTP_CLIENT_IP',
+            'HTTP_X_CLUSTER_CLIENT_IP',
+            'HTTP_FORWARDED',
+        ];
+        
+        foreach ($headers as $header) {
+            $value = $request->server->get($header);
+            if ($value) {
+                // X-Forwarded-For can contain multiple IPs, get the first one
+                if ($header === 'HTTP_X_FORWARDED_FOR') {
+                    $ips = explode(',', $value);
+                    $value = trim($ips[0]);
+                }
+                
+                // Validate the IP
+                if (filter_var($value, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
+                    return $value;
+                }
+            }
+        }
+        
+        // Fall back to Laravel's default IP detection
+        return $request->ip();
+    }
+
+    /**
+     * Check if an IP address is within a CIDR range
+     */
+    private function ipInRange(string $ip, string $range): bool
+    {
+        list($subnet, $bits) = explode('/', $range);
+        
+        $ipLong = ip2long($ip);
+        $subnetLong = ip2long($subnet);
+        $mask = -1 << (32 - $bits);
+        
+        return ($ipLong & $mask) === ($subnetLong & $mask);
     }
 
 }

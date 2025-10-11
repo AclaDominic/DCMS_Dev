@@ -35,6 +35,7 @@ import AdminMonthlyReport from "../pages/Admin/AdminMonthlyReport";
 import AdminGoalsPage from "../pages/Admin/AdminGoalsPage";
 import SystemLogsPage from "../pages/Admin/SystemLogsPage";
 import AdminAnalyticsDashboard from "../pages/Admin/AdminAnalyticsDashboard";
+import PatientManager from "../pages/Admin/PatientManager";
 const DentistScheduleManager = lazy(() =>
   import("../pages/Admin/DentistScheduleManager")
 ); // Lazy load dentist schedule manager
@@ -126,6 +127,8 @@ export default function AppRouter() {
           />
           {/* Admin Appointments with Visit Tracking */}
           <Route path="appointments" element={<AdminAppointmentManager />} />
+          {/* Patient Manager */}
+          <Route path="patient-manager" element={<PatientManager />} />
           {/* System Logs */}
           <Route path="system-logs" element={<SystemLogsPage />} />
           {/* Add more admin routes as needed */}

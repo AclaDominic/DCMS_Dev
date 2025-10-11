@@ -9,6 +9,7 @@ use App\Models\Payment;
 use App\Models\PerformanceGoal;
 use App\Models\GoalProgressSnapshot;
 use App\Models\Service;
+use App\Models\ServiceDiscount;
 use App\Models\User;
 use App\Models\VisitNote;
 use App\Models\InventoryItem;
@@ -163,29 +164,93 @@ class AnalyticsSeeder extends Seeder
     {
         $this->command->info('Generating performance goals...');
         
+        // Get some services for specific goal types
+        $services = Service::where('is_active', true)->get();
+        $serviceDiscounts = ServiceDiscount::where('status', 'launched')->get();
+        
         $goals = [
             [
                 'period_type' => 'monthly',
                 'period_start' => $startDate->copy()->startOfMonth(),
+                'period_end' => $startDate->copy()->endOfMonth(),
                 'metric' => 'total_visits',
                 'target_value' => 200,
                 'status' => 'active',
+                'service_id' => null,
+                'package_id' => null,
+                'promo_id' => null,
             ],
             [
                 'period_type' => 'monthly',
                 'period_start' => $startDate->copy()->startOfMonth(),
+                'period_end' => $startDate->copy()->endOfMonth(),
                 'metric' => 'revenue',
                 'target_value' => 500000,
                 'status' => 'active',
+                'service_id' => null,
+                'package_id' => null,
+                'promo_id' => null,
             ],
             [
                 'period_type' => 'monthly',
                 'period_start' => $startDate->copy()->startOfMonth(),
+                'period_end' => $startDate->copy()->endOfMonth(),
                 'metric' => 'appointment_completion_rate',
                 'target_value' => 85,
                 'status' => 'active',
+                'service_id' => null,
+                'package_id' => null,
+                'promo_id' => null,
             ],
         ];
+        
+        // Add service-specific goals if services exist
+        if ($services->isNotEmpty()) {
+            $service = $services->first();
+            $goals[] = [
+                'period_type' => 'monthly',
+                'period_start' => $startDate->copy()->startOfMonth(),
+                'period_end' => $startDate->copy()->endOfMonth(),
+                'metric' => 'service_availment',
+                'target_value' => 50,
+                'status' => 'active',
+                'service_id' => $service->id,
+                'package_id' => null,
+                'promo_id' => null,
+            ];
+        }
+        
+        // Add package-specific goals if we have package services
+        $packageService = $services->where('category', 'Package')->first();
+        if ($packageService) {
+            $goals[] = [
+                'period_type' => 'monthly',
+                'period_start' => $startDate->copy()->startOfMonth(),
+                'period_end' => $startDate->copy()->endOfMonth(),
+                'metric' => 'package_availment',
+                'target_value' => 20,
+                'status' => 'active',
+                'service_id' => null,
+                'package_id' => $packageService->id,
+                'promo_id' => null,
+            ];
+        }
+        
+        // Add promo-specific goals if we have active promos
+        if ($serviceDiscounts->isNotEmpty()) {
+            $promo = $serviceDiscounts->first();
+            $goals[] = [
+                'period_type' => 'monthly',
+                'period_start' => $startDate->copy()->startOfMonth(),
+                'period_end' => $startDate->copy()->endOfMonth(),
+                'metric' => 'promo_availment',
+                'target_value' => 15,
+                'status' => 'active',
+                'service_id' => null,
+                'package_id' => null,
+                'promo_id' => $promo->id,
+            ];
+        }
         
         foreach ($goals as $goal) {
             PerformanceGoal::create(array_merge($goal, [

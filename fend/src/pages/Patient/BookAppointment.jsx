@@ -28,6 +28,7 @@ function BookAppointment() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [showServiceModal, setShowServiceModal] = useState(false);
+  const [bookingInProgress, setBookingInProgress] = useState(false);
 
   const [selectedService, setSelectedService] = useState(null);
   const [availableSlots, setAvailableSlots] = useState([]);
@@ -40,6 +41,7 @@ function BookAppointment() {
   const [myPatientId, setMyPatientId] = useState(null);
   const [patientHmoId, setPatientHmoId] = useState(null);
   const [loadingPatientId, setLoadingPatientId] = useState(false);
+
 
   // try to get the logged-in patient's id
   useEffect(() => {
@@ -121,6 +123,11 @@ function BookAppointment() {
   };
 
   const handleBookingSubmit = async () => {
+    // Prevent multiple submissions
+    if (bookingInProgress) {
+      return;
+    }
+
     if (!selectedDate || !selectedService || !selectedSlot || !paymentMethod) {
       setBookingMessage("Please complete all booking fields.");
       return;
@@ -130,6 +137,9 @@ function BookAppointment() {
       setBookingMessage("Please select an HMO for this appointment.");
       return;
     }
+
+    setBookingInProgress(true);
+    setBookingMessage(""); // Clear any previous messages
 
     try {
       const payload = {
@@ -152,21 +162,31 @@ function BookAppointment() {
         navigate("/patient");
       }, 2000);
     } catch (err) {
-      setBookingMessage(err?.response?.data?.message || "Booking failed.");
+      const errorData = err?.response?.data;
+      
+      // Check if this is a blocked patient error
+      if (errorData?.blocked) {
+        setBookingMessage(errorData.message);
+      } else {
+        setBookingMessage(errorData?.message || "Booking failed.");
+      }
+    } finally {
+      setBookingInProgress(false);
     }
   };
 
   return (
     <div className="w-100">
+      {/* Normal booking form */}
       <div className="card border-0 shadow-lg w-100 patient-page-card">
-            <div className="card-header bg-gradient bg-primary text-white text-center py-4">
-              <h2 className="h3 mb-2">
-                <i className="bi bi-calendar-plus me-2"></i>
-                Book an Appointment
-              </h2>
-              <p className="mb-0 opacity-75">Schedule your dental visit with ease</p>
-            </div>
-            <div className="card-body p-5">
+          <div className="card-header bg-gradient bg-primary text-white text-center py-4">
+            <h2 className="h3 mb-2">
+              <i className="bi bi-calendar-plus me-2"></i>
+              Book an Appointment
+            </h2>
+            <p className="mb-0 opacity-75">Schedule your dental visit with ease</p>
+          </div>
+          <div className="card-body p-5">
               <div className="mb-4">
                 <label className="form-label fw-semibold fs-5 mb-3">
                   <i className="bi bi-calendar3 me-2 text-primary"></i>
@@ -407,17 +427,41 @@ function BookAppointment() {
                           <button 
                             className="btn btn-success btn-lg py-3" 
                             onClick={handleBookingSubmit}
+                            disabled={bookingInProgress}
                             style={{ fontSize: '1.2rem', borderRadius: '10px' }}
                           >
-                            <i className="bi bi-check-circle me-2"></i>
-                            Confirm Appointment
+                            {bookingInProgress ? (
+                              <>
+                                <i className="bi bi-hourglass-split me-2"></i>
+                                Booking in Progress...
+                              </>
+                            ) : (
+                              <>
+                                <i className="bi bi-check-circle me-2"></i>
+                                Confirm Appointment
+                              </>
+                            )}
                           </button>
                         </div>
                         
                         {bookingMessage && (
-                          <div className={`alert mt-4 border-0 shadow-sm ${bookingMessage.includes('✅') ? 'alert-success' : 'alert-info'}`}>
-                            <i className={`bi ${bookingMessage.includes('✅') ? 'bi-check-circle' : 'bi-info-circle'} me-2`}></i>
-                            {bookingMessage}
+                          <div className={`alert mt-4 border-0 shadow-sm ${
+                            bookingMessage.includes('✅') 
+                              ? 'alert-success' 
+                              : bookingMessage.includes('blocked') || bookingMessage.includes('mistake')
+                              ? 'alert-danger'
+                              : 'alert-info'
+                          }`}>
+                            <i className={`bi ${
+                              bookingMessage.includes('✅') 
+                                ? 'bi-check-circle' 
+                                : bookingMessage.includes('blocked') || bookingMessage.includes('mistake')
+                                ? 'bi-exclamation-triangle'
+                                : 'bi-info-circle'
+                            } me-2`}></i>
+                            <div style={{ whiteSpace: 'pre-line' }}>
+                              {bookingMessage}
+                            </div>
                           </div>
                         )}
                       </>

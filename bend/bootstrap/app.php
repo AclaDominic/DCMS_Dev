@@ -12,6 +12,9 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
+        // Enable trusted proxies middleware for proper IP detection
+        $middleware->trustProxies(at: '*');
+        
         // Enable session + encryption for web routes (CSRF needs this)
         $middleware->web(prepend: [
             \Illuminate\Cookie\Middleware\EncryptCookies::class,
