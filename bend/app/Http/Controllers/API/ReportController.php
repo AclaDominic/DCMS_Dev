@@ -155,17 +155,22 @@ class ReportController extends Controller
             ->count();
 
         // Average visit duration (minutes) for completed/finished visits with end_time
+        // Use database-agnostic SQL for compatibility with SQLite and MySQL
         $avgDurCurr = (float) (DB::table('patient_visits')
             ->whereNotNull('start_time')
             ->whereNotNull('end_time')
             ->whereBetween('start_time', [$start, $end])
-            ->selectRaw('AVG(TIMESTAMPDIFF(MINUTE, start_time, end_time)) as avg_min')
+            ->selectRaw(DB::connection()->getDriverName() === 'sqlite' 
+                ? 'AVG((julianday(end_time) - julianday(start_time)) * 1440) as avg_min'
+                : 'AVG(TIMESTAMPDIFF(MINUTE, start_time, end_time)) as avg_min')
             ->value('avg_min') ?? 0);
         $avgDurPrev = (float) (DB::table('patient_visits')
             ->whereNotNull('start_time')
             ->whereNotNull('end_time')
             ->whereBetween('start_time', [$prevStart, $prevEnd])
-            ->selectRaw('AVG(TIMESTAMPDIFF(MINUTE, start_time, end_time)) as avg_min')
+            ->selectRaw(DB::connection()->getDriverName() === 'sqlite' 
+                ? 'AVG((julianday(end_time) - julianday(start_time)) * 1440) as avg_min'
+                : 'AVG(TIMESTAMPDIFF(MINUTE, start_time, end_time)) as avg_min')
             ->value('avg_min') ?? 0);
 
         // Top services (by visits) - exclude services marked as excluded from analytics
@@ -445,17 +450,27 @@ class ReportController extends Controller
             }
         }
 
-        // Generate actionable insights with error handling
+        // Check if there's data for last month - only show insights if there's meaningful data
+        $hasLastMonthData = $visitsPrev > 0 || $approvedPrev > 0 || $totalRevenuePrev > 0;
+        
+        // Check for clinic closures based on weekly schedule
+        $clinicClosureInfo = $this->checkClinicClosures($start, $end);
+        
+        // Generate actionable insights with error handling - only if there's data from last month
         $insights = [];
-        try {
-            Log::info('Generating insights with data: visits=' . $visitsCurr . ', revenue=' . $totalRevenueCurr . ', avgDur=' . $avgDurCurr);
-            $insights = $this->generateActionableInsights($visitsCurr, $visitsPrev, $totalRevenueCurr, $totalRevenuePrev, $topServices, $topRevenueServices, $avgDurCurr, $noShowCurr, $approvedCurr, $followUpRateCurr, $cashShareCurr, $hmoShareCurr, $mayaShareCurr, $start, $end);
-            Log::info('Generated ' . count($insights) . ' actionable insights');
-        } catch (\Exception $e) {
-            // Log the error but don't break the entire analytics
-            Log::error('Error generating actionable insights: ' . $e->getMessage());
-            Log::error('Stack trace: ' . $e->getTraceAsString());
-            $insights = [];
+        if ($hasLastMonthData) {
+            try {
+                Log::info('Generating insights with data: visits=' . $visitsCurr . ', revenue=' . $totalRevenueCurr . ', avgDur=' . $avgDurCurr);
+                $insights = $this->generateActionableInsights($visitsCurr, $visitsPrev, $totalRevenueCurr, $totalRevenuePrev, $topServices, $topRevenueServices, $avgDurCurr, $noShowCurr, $approvedCurr, $followUpRateCurr, $cashShareCurr, $hmoShareCurr, $mayaShareCurr, $start, $end);
+                Log::info('Generated ' . count($insights) . ' actionable insights');
+            } catch (\Exception $e) {
+                // Log the error but don't break the entire analytics
+                Log::error('Error generating actionable insights: ' . $e->getMessage());
+                Log::error('Stack trace: ' . $e->getTraceAsString());
+                $insights = [];
+            }
+        } else {
+            Log::info('No actionable insights generated - insufficient data from last month');
         }
 
         // Debug: Log the insights before returning
@@ -465,6 +480,8 @@ class ReportController extends Controller
         return response()->json([
             'month' => $start->format('Y-m'),
             'previous_month' => $prevStart->format('Y-m'),
+            'has_last_month_data' => $hasLastMonthData,
+            'clinic_closure_info' => $clinicClosureInfo,
             'kpis' => [
                 'total_visits' => [
                     'value' => (int) $visitsCurr,
@@ -1601,5 +1618,93 @@ class ReportController extends Controller
             'insights' => $insights,
             'count' => count($insights)
         ]);
+    }
+
+    /**
+     * Check for clinic closures based on weekly schedule vs actual visits
+     */
+    private function checkClinicClosures($start, $end)
+    {
+        try {
+            // Get the weekly schedule defaults
+            $weeklySchedule = DB::table('clinic_weekly_schedules')
+                ->orderBy('weekday')
+                ->get()
+                ->keyBy('weekday');
+
+            // Get all dates in the month
+            $current = $start->copy();
+            $closedDays = [];
+            $totalExpectedOpenDays = 0;
+            $totalActualOpenDays = 0;
+
+            while ($current->lte($end)) {
+                $weekday = $current->dayOfWeek; // 0 = Sunday, 6 = Saturday
+                $dateStr = $current->toDateString();
+                
+                // Check if clinic should be open based on weekly schedule
+                $shouldBeOpen = isset($weeklySchedule[$weekday]) && $weeklySchedule[$weekday]->is_open;
+                
+                if ($shouldBeOpen) {
+                    $totalExpectedOpenDays++;
+                    
+                    // Check if there were any visits on this day
+                    $hasVisits = DB::table('patient_visits')
+                        ->whereNotNull('start_time')
+                        ->whereDate('start_time', $dateStr)
+                        ->exists();
+                    
+                    if ($hasVisits) {
+                        $totalActualOpenDays++;
+                    } else {
+                        // Check if there's a calendar override for this day
+                        $calendarOverride = DB::table('clinic_calendar')
+                            ->where('date', $dateStr)
+                            ->first();
+                        
+                        // If no calendar override saying it should be closed, consider it an unexpected closure
+                        if (!$calendarOverride || $calendarOverride->is_open) {
+                            $closedDays[] = [
+                                'date' => $dateStr,
+                                'day_name' => $current->format('l'),
+                                'reason' => 'No visits recorded despite being scheduled to be open'
+                            ];
+                        }
+                    }
+                }
+                
+                $current->addDay();
+            }
+
+            $closureCount = count($closedDays);
+            $closureRate = $totalExpectedOpenDays > 0 ? ($closureCount / $totalExpectedOpenDays) * 100 : 0;
+
+            return [
+                'total_expected_open_days' => $totalExpectedOpenDays,
+                'total_actual_open_days' => $totalActualOpenDays,
+                'unexpected_closures' => $closedDays,
+                'closure_count' => $closureCount,
+                'closure_rate_percentage' => round($closureRate, 2),
+                'has_significant_closures' => $closureCount >= 5, // 5 or more days considered significant
+                'summary' => $closureCount >= 5 
+                    ? "Clinic was closed for {$closureCount} days when it should have been open based on weekly schedule. This may indicate operational issues or unexpected closures."
+                    : ($closureCount > 0 
+                        ? "Clinic was closed for {$closureCount} day(s) when it should have been open. Monitor for patterns."
+                        : "All scheduled operating days had activity recorded.")
+            ];
+
+        } catch (\Exception $e) {
+            Log::error('Error checking clinic closures: ' . $e->getMessage());
+            return [
+                'error' => 'Unable to check clinic closure status',
+                'total_expected_open_days' => 0,
+                'total_actual_open_days' => 0,
+                'unexpected_closures' => [],
+                'closure_count' => 0,
+                'closure_rate_percentage' => 0,
+                'has_significant_closures' => false,
+                'summary' => 'Unable to determine clinic closure status'
+            ];
+        }
     }
 }

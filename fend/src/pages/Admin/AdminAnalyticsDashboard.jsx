@@ -1540,8 +1540,119 @@ export default function AdminAnalyticsDashboard() {
               </div>
             )}
 
+            {/* Clinic Closure Warning Section */}
+            {data && data.clinic_closure_info && data.clinic_closure_info.has_significant_closures && (
+              <div className="mt-4">
+                <div
+                  className="card border-0 shadow-sm"
+                  style={{
+                    background: "linear-gradient(135deg, rgba(239, 68, 68, 0.05) 0%, rgba(254, 226, 226, 0.1) 100%)",
+                    borderRadius: "16px",
+                    border: "2px solid rgba(239, 68, 68, 0.2)",
+                    boxShadow: "0 10px 30px rgba(239, 68, 68, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.8)",
+                  }}
+                >
+                  <div className="card-header border-0 bg-transparent py-4">
+                    <h5
+                      className="mb-0 fw-bold d-flex align-items-center"
+                      style={{ color: "#DC2626" }}
+                    >
+                      <span className="me-2">🚨</span>
+                      Clinic Closure Alert
+                    </h5>
+                    <p className="mb-0 mt-2 text-muted small">
+                      Unexpected clinic closures detected this month
+                    </p>
+                  </div>
+                  <div className="card-body pt-0">
+                    <div className="alert alert-warning border-0 mb-0" style={{ 
+                      background: "rgba(245, 158, 11, 0.1)",
+                      border: "1px solid rgba(245, 158, 11, 0.3)",
+                      borderRadius: "12px"
+                    }}>
+                      <div className="d-flex align-items-start">
+                        <div className="me-3">
+                          <div
+                            className="d-flex align-items-center justify-content-center rounded-circle"
+                            style={{
+                              width: "40px",
+                              height: "40px",
+                              background: "linear-gradient(135deg, #F59E0B 0%, #D97706 100%)",
+                              color: "white",
+                              fontSize: "18px",
+                            }}
+                          >
+                            ⚠️
+                          </div>
+                        </div>
+                        <div className="flex-grow-1">
+                          <h6 className="fw-bold mb-2" style={{ color: "#92400E" }}>
+                            {data.clinic_closure_info.summary}
+                          </h6>
+                          <div className="row g-3">
+                            <div className="col-md-6">
+                              <div className="d-flex justify-content-between">
+                                <span className="text-muted">Expected Open Days:</span>
+                                <span className="fw-semibold">{data.clinic_closure_info.total_expected_open_days}</span>
+                              </div>
+                            </div>
+                            <div className="col-md-6">
+                              <div className="d-flex justify-content-between">
+                                <span className="text-muted">Days with Activity:</span>
+                                <span className="fw-semibold">{data.clinic_closure_info.total_actual_open_days}</span>
+                              </div>
+                            </div>
+                            <div className="col-md-6">
+                              <div className="d-flex justify-content-between">
+                                <span className="text-muted">Unexpected Closures:</span>
+                                <span className="fw-semibold text-danger">{data.clinic_closure_info.closure_count}</span>
+                              </div>
+                            </div>
+                            <div className="col-md-6">
+                              <div className="d-flex justify-content-between">
+                                <span className="text-muted">Closure Rate:</span>
+                                <span className="fw-semibold text-danger">{data.clinic_closure_info.closure_rate_percentage}%</span>
+                              </div>
+                            </div>
+                          </div>
+                          {data.clinic_closure_info.unexpected_closures && data.clinic_closure_info.unexpected_closures.length > 0 && (
+                            <div className="mt-3">
+                              <h6 className="fw-semibold mb-2" style={{ color: "#92400E", fontSize: "0.9rem" }}>
+                                Closed Days:
+                              </h6>
+                              <div className="d-flex flex-wrap gap-2">
+                                {data.clinic_closure_info.unexpected_closures.slice(0, 10).map((closure, idx) => (
+                                  <span
+                                    key={idx}
+                                    className="badge"
+                                    style={{
+                                      background: "rgba(239, 68, 68, 0.1)",
+                                      color: "#DC2626",
+                                      border: "1px solid rgba(239, 68, 68, 0.3)",
+                                      fontSize: "0.75rem"
+                                    }}
+                                  >
+                                    {closure.day_name} {closure.date.split('-')[2]}
+                                  </span>
+                                ))}
+                                {data.clinic_closure_info.unexpected_closures.length > 10 && (
+                                  <span className="badge bg-secondary" style={{ fontSize: "0.75rem" }}>
+                                    +{data.clinic_closure_info.unexpected_closures.length - 10} more
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Actionable Insights Section */}
-            {data && (
+            {data && data.has_last_month_data && (
               <div className="mt-4">
                 <div
                   className="card border-0 shadow-sm"
@@ -1689,6 +1800,56 @@ export default function AdminAnalyticsDashboard() {
                           </div>
                         </div>
                       )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* No Data Message Section */}
+            {data && !data.has_last_month_data && (
+              <div className="mt-4">
+                <div
+                  className="card border-0 shadow-sm"
+                  style={{
+                    background:
+                      "linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)",
+                    borderRadius: "16px",
+                  }}
+                >
+                  <div className="card-header border-0 bg-transparent py-4">
+                    <h5
+                      className="mb-0 fw-bold d-flex align-items-center"
+                      style={{ color: "#1e293b" }}
+                    >
+                      <span className="me-2">📊</span>
+                      Analytics Status
+                    </h5>
+                    <p className="mb-0 mt-2 text-muted small">
+                      Current month analytics overview
+                    </p>
+                  </div>
+                  <div className="card-body pt-0">
+                    <div className="text-center py-4">
+                      <div className="fs-1 mb-3">📈</div>
+                      <h6 className="fw-bold mb-2" style={{ color: "#374151" }}>
+                        Insufficient Historical Data
+                      </h6>
+                      <p className="text-muted mb-3">
+                        Actionable insights require comparison with previous month data. 
+                        Current month shows activity, but we need more historical data to generate meaningful recommendations.
+                      </p>
+                      <div className="alert alert-info border-0" style={{ 
+                        background: "rgba(59, 130, 246, 0.1)",
+                        border: "1px solid rgba(59, 130, 246, 0.3)",
+                        borderRadius: "12px"
+                      }}>
+                        <small className="text-muted">
+                          <strong>Tip:</strong> Once you have at least one month of historical data, 
+                          the system will automatically generate actionable insights and recommendations 
+                          to help optimize your clinic's performance.
+                        </small>
+                      </div>
                     </div>
                   </div>
                 </div>

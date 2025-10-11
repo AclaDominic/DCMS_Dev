@@ -467,11 +467,17 @@ class AnalyticsSeeder extends Seeder
 
     private function getAppointmentStatus(string $visitStatus): string
     {
+        // Add a 7% chance of no-show for all appointments (regardless of visit status)
+        $rand = rand(1, 100);
+        if ($rand <= 7) { // 7% chance of no-show
+            return 'no_show';
+        }
+        
         switch ($visitStatus) {
             case 'completed':
                 return 'completed';
-            case 'pending':
-                return 'approved';
+            case 'inquiry':
+                return 'approved'; // Inquiry visits can still have approved appointments
             case 'rejected':
                 return 'cancelled';
             default:
@@ -795,9 +801,11 @@ class AnalyticsSeeder extends Seeder
         
         for ($i = 0; $i < $lossEvents; $i++) {
             $item = $items->random();
-            $batch = $item->batches->where('qty_on_hand', '>', 0)->random();
+            $availableBatches = $item->batches->where('qty_on_hand', '>', 0);
             
-            if (!$batch) continue;
+            if ($availableBatches->isEmpty()) continue;
+            
+            $batch = $availableBatches->random();
             
             $lossQuantity = min(rand(1, 10), $batch->qty_on_hand);
             $lossReason = rand(1, 100) <= 70 ? 'expired' : 'theft'; // 70% expired, 30% theft
