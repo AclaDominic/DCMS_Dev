@@ -76,7 +76,7 @@ function AdminLayout() {
               <svg className="icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M16 4c0-1.11.89-2 2-2s2 .89 2 2-.89 2-2 2-2-.89-2-2zM4 18v-4h3v-2.5c0-.83.67-1.5 1.5-1.5h2c.83 0 1.5.67 1.5 1.5V16h3v2H4zM12.5 11.5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5-.67 1.5-1.5 1.5-1.5-.67-1.5-1.5zM24 16v2h-3v3h-2v-3h-3v-2h3v-3h2v3h3z"/>
               </svg>
-              <span className="label">Create Staff Account</span>
+              <span className="label">Manage Staff Account</span>
             </NavLink>
           </li>
           <li className="nav-item">

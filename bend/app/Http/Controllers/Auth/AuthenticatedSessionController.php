@@ -36,7 +36,20 @@ class AuthenticatedSessionController extends Controller
         ]);
     }
 
+    /** @var \App\Models\User $user */
     $user = Auth::user();
+
+    // Check if user account is deactivated
+    if ($user->isDeactivated()) {
+        Auth::logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        return response()->json([
+            'status' => 'error',
+            'message' => 'This account is deactivated. If you think this is a mistake, please contact the clinic.',
+        ], 403);
+    }
 
     // Check if password change is required for dentists
     if ($user->role === 'dentist') {

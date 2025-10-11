@@ -55,26 +55,13 @@ Route::post('/send-password-reset', [PasswordResetLinkController::class, 'sendFo
     ->middleware('auth:sanctum');
 
 // ------------------------
-// Authenticated user profile
+// Authenticated user profile (moved inside authenticated routes group)
 // ------------------------
-Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
-    $user = $request->user()->load('patient');
-
-    return response()->json([
-        'id' => $user->id,
-        'name' => $user->name,
-        'email' => $user->email,
-        'contact_number' => $user->contact_number,
-        'role' => $user->role,
-        'patient' => $user->patient,
-        'is_linked' => optional($user->patient)->is_linked ?? false,
-    ]);
-});
 
 // ------------------------
 // Admin-only routes
 // ------------------------
-Route::middleware(['auth:sanctum', AdminOnly::class])->group(function () {
+Route::middleware(['auth:sanctum', 'check.account.status', AdminOnly::class])->group(function () {
     // Pending device approvals
     Route::get('/admin/pending-devices', [DeviceApprovalController::class, 'index']);
     Route::post('/admin/approve-device', [DeviceApprovalController::class, 'approve']);
@@ -86,7 +73,12 @@ Route::middleware(['auth:sanctum', AdminOnly::class])->group(function () {
     Route::post('/revoke-device', [DeviceApprovalController::class, 'revokeDevice']);
 
     // Staff account management
-    Route::post('/admin/staff', [StaffAccountController::class, 'store']);
+    Route::prefix('admin/staff')->group(function () {
+        Route::get('/', [StaffAccountController::class, 'index']);
+        Route::post('/', [StaffAccountController::class, 'store']);
+        Route::get('/{id}', [StaffAccountController::class, 'show']);
+        Route::post('/{id}/toggle-status', [StaffAccountController::class, 'toggleStatus']);
+    });
 
     // Service management
     Route::post('/services', [ServiceController::class, 'store']);
@@ -177,7 +169,23 @@ Route::middleware(['auth:sanctum', AdminOnly::class])->group(function () {
 // ------------------------
 // Authenticated routes (any logged-in user)
 // ------------------------
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware(['auth:sanctum', 'check.account.status'])->group(function () {
+    // User profile endpoint
+    Route::get('/user', function (Request $request) {
+        $user = $request->user()->load('patient');
+
+        return response()->json([
+            'id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email,
+            'contact_number' => $user->contact_number,
+            'role' => $user->role,
+            'status' => $user->status,
+            'patient' => $user->patient,
+            'is_linked' => optional($user->patient)->is_linked ?? false,
+        ]);
+    });
+
     // Staff device status
     Route::get('/device-status', [DeviceStatusController::class, 'check']);
     Route::post('/staff/change-password', [\App\Http\Controllers\Staff\StaffAccountController::class, 'changePassword']);
@@ -260,7 +268,7 @@ Route::middleware('auth:sanctum')->group(function () {
 // ------------------------
 // Staff routes (only if device is approved)
 // ------------------------
-Route::middleware(['auth:sanctum', EnsureDeviceIsApproved::class])->group(function () {
+Route::middleware(['auth:sanctum', 'check.account.status', EnsureDeviceIsApproved::class])->group(function () {
     // Patients
 
     Route::post('/patients', [PatientController::class, 'store']);
@@ -319,7 +327,7 @@ Route::get('/maya/return/cancel', [MayaController::class, 'returnCapture'])->def
 // ------------------------
 // Dentist routes (authenticated dentists only)
 // ------------------------
-Route::middleware('auth:sanctum')->prefix('dentist')->group(function () {
+Route::middleware(['auth:sanctum', 'check.account.status'])->prefix('dentist')->group(function () {
   Route::post('/change-password', [DentistPasswordController::class, 'changePassword']);
   Route::get('/password-status', [DentistPasswordController::class, 'checkPasswordStatus']);
   

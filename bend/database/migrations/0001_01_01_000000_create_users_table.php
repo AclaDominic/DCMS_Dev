@@ -19,6 +19,7 @@ return new class extends Migration
             $table->string('contact_number')->unique()->nullable();
             $table->string('password');
             $table->enum('role', ['admin', 'staff','patient', 'dentist'])->default('patient');
+            $table->enum('status', ['activated', 'deactivated'])->default('activated');
             $table->rememberToken();
             $table->timestamps();
         });

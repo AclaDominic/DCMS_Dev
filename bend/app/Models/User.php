@@ -28,6 +28,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'contact_number',
         'password',
         'role',
+        'status',
     ];
 
     /**
@@ -51,6 +52,22 @@ class User extends Authenticatable implements MustVerifyEmail
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    /**
+     * Check if the user account is activated
+     */
+    public function isActivated(): bool
+    {
+        return $this->status === 'activated';
+    }
+
+    /**
+     * Check if the user account is deactivated
+     */
+    public function isDeactivated(): bool
+    {
+        return $this->status === 'deactivated';
     }
 
     public function patient()

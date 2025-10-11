@@ -24,7 +24,7 @@ import VerifySuccess from "../pages/VerifySuccess";
 import AdminLayout from "../layouts/AdminLayout";
 import AdminDashboard from "../pages/Admin/Dashboard";
 import AdminDeviceManager from "../pages/Admin/AdminDeviceManager";
-import AdminStaffRegister from "../pages/Admin/StaffRegister";
+import ManageStaffAccount from "../pages/Admin/ManageStaffAccount";
 import AdminProfile from "../pages/Admin/AdminProfile";
 import AdminServices from "../pages/Admin/ServiceManager";
 import ServiceDiscountManager from "../pages/Admin/ServiceDiscountManager";
@@ -94,7 +94,7 @@ export default function AppRouter() {
         <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<AdminDashboard />} />
           <Route path="devices" element={<AdminDeviceManager />} />
-          <Route path="staff-register" element={<AdminStaffRegister />} />
+          <Route path="staff-register" element={<ManageStaffAccount />} />
           <Route path="profile" element={<AdminProfile />} />
           <Route path="services" element={<AdminServices />} />
           <Route

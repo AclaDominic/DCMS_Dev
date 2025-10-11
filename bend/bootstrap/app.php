@@ -27,6 +27,11 @@ return Application::configure(basePath: dirname(__DIR__))
             \Illuminate\Session\Middleware\StartSession::class,
         ]);
 
+        // Add account status check middleware to authenticated API routes
+        $middleware->alias([
+            'check.account.status' => \App\Http\Middleware\CheckAccountStatus::class,
+        ]);
+
         // // Enable Sanctum for API authentication
         // $middleware->api(prepend: [
         //     \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
