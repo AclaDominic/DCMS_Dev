@@ -122,7 +122,18 @@ class ClinicDateResolverService
         $cur = Carbon::createFromTime($oh, $om);
         $end = Carbon::createFromTime($ch, $cm);
         $out = [];
+        
+        // Define lunch time (12:00 PM to 1:00 PM)
+        $lunchStart = Carbon::createFromTime(12, 0);
+        $lunchEnd = Carbon::createFromTime(13, 0);
+        
         while ($cur->lt($end)) {
+            // Skip lunch time (12:00 PM to 1:00 PM)
+            if ($cur->gte($lunchStart) && $cur->lt($lunchEnd)) {
+                $cur->addMinutes(30);
+                continue;
+            }
+            
             $out[] = $cur->format('H:i');
             $cur->addMinutes(30);
         }

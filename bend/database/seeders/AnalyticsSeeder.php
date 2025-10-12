@@ -448,8 +448,15 @@ class AnalyticsSeeder extends Seeder
 
     private function generateTimeSlot(Carbon $day): array
     {
-        // Clinic hours: 8 AM to 6 PM
+        // Clinic hours: 8 AM to 6 PM, excluding lunch time (12:00 PM to 1:00 PM)
         $hour = rand(8, 17);
+        
+        // Skip lunch time (12:00 PM to 1:00 PM)
+        if ($hour >= 12 && $hour < 13) {
+            // If we hit lunch time, move to 1:00 PM or later
+            $hour = 13;
+        }
+        
         $minute = [0, 15, 30, 45][array_rand([0, 1, 2, 3])];
         
         $start = $day->copy()->setTime($hour, $minute, 0);
