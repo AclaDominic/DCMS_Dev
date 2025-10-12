@@ -14,6 +14,7 @@ function ServiceSelectionModal({
 }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [viewMode, setViewMode] = useState("grid"); // "grid" or "single"
+  const [searchTimeout, setSearchTimeout] = useState(null);
 
   const formatDate = (dateStr) => {
     if (!dateStr) return '';
@@ -27,14 +28,26 @@ function ServiceSelectionModal({
   };
 
   const filteredServices = useMemo(() => {
-    if (!searchTerm.trim()) return services;
+    if (!searchTerm.trim() || searchTerm.length < 2) return services;
     return services.filter(service => 
       service.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [services, searchTerm]);
 
   const handleSearchChange = (e) => {
-    setSearchTerm(e.target.value);
+    const value = e.target.value;
+    setSearchTerm(value);
+    
+    // Clear existing timeout
+    if (searchTimeout) {
+      clearTimeout(searchTimeout);
+    }
+
+    // Only search if we have at least 2 characters or empty string
+    if (value.length === 0 || value.length >= 2) {
+      // For immediate visual feedback, we don't need debounce here since it's local filtering
+      // The filtering is handled by the useMemo above
+    }
   };
 
   const clearSearch = () => {
@@ -284,7 +297,7 @@ function ServiceSelectionModal({
                         <input
                           type="text"
                           className="form-control border-start-0 ps-0"
-                          placeholder="Search services by name..."
+                          placeholder="Search services by name... (min 2 characters)"
                           value={searchTerm}
                           onChange={handleSearchChange}
                           style={{ fontSize: '1.1rem' }}
@@ -305,7 +318,19 @@ function ServiceSelectionModal({
                 </div>
 
                 {/* Services Grid */}
-                {filteredServices.length === 0 && searchTerm ? (
+                {searchTerm.length > 0 && searchTerm.length < 2 ? (
+                  <div className="text-center py-5">
+                    <i className="bi bi-info-circle display-4 text-warning d-block mb-3"></i>
+                    <h4 className="text-warning">Please enter at least 2 characters</h4>
+                    <p className="text-muted fs-5">Type more characters to search for services</p>
+                    <button 
+                      className="btn btn-outline-primary btn-lg"
+                      onClick={clearSearch}
+                    >
+                      Clear Search
+                    </button>
+                  </div>
+                ) : filteredServices.length === 0 && searchTerm ? (
                   <div className="text-center py-5">
                     <i className="bi bi-search display-4 text-muted d-block mb-3"></i>
                     <h4 className="text-muted">No services found</h4>

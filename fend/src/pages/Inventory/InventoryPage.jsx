@@ -108,6 +108,7 @@ export default function InventoryPage() {
   const [q, setQ] = useState("");
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState(null);
+  const [searchTimeout, setSearchTimeout] = useState(null);
 
   // modal flags
   const [openAdd, setOpenAdd] = useState(false);
@@ -131,6 +132,23 @@ export default function InventoryPage() {
       setItems(data.data || []);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSearchChange = (value) => {
+    setQ(value);
+    
+    // Clear existing timeout
+    if (searchTimeout) {
+      clearTimeout(searchTimeout);
+    }
+
+    // Only search if we have at least 2 characters or empty string
+    if (value.length === 0 || value.length >= 2) {
+      const timeout = setTimeout(() => {
+        fetchItems(value);
+      }, 300); // 300ms debounce
+      setSearchTimeout(timeout);
     }
   };
 
@@ -189,9 +207,9 @@ export default function InventoryPage() {
           </span>
           <input
             className={`form-control ${isAnyModalOpen ? 'opacity-50' : ''}`}
-            placeholder="Search items..."
+            placeholder="Search items... (min 2 characters)"
             value={q}
-            onChange={(e) => !isAnyModalOpen && setQ(e.target.value)}
+            onChange={(e) => !isAnyModalOpen && handleSearchChange(e.target.value)}
             disabled={isAnyModalOpen}
           />
         </div>
@@ -199,10 +217,16 @@ export default function InventoryPage() {
         <button 
           className={`btn btn-outline-secondary ${isAnyModalOpen ? 'disabled' : ''}`} 
           onClick={() => !isAnyModalOpen && fetchItems(q)}
-          disabled={isAnyModalOpen}
+          disabled={isAnyModalOpen || (q.length > 0 && q.length < 2)}
         >
           Search
         </button>
+        {q.length > 0 && q.length < 2 && (
+          <div className="text-warning small mt-1">
+            <i className="bi bi-info-circle me-1"></i>
+            Please enter at least 2 characters to search
+          </div>
+        )}
 
         <div className="d-flex gap-2 ms-auto">
           <button 

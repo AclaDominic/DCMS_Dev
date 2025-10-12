@@ -33,6 +33,7 @@ const SystemLogsPage = () => {
   const [copySuccess, setCopySuccess] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
   const [popupPos, setPopupPos] = useState({ top: 0, left: 0 });
+  const [searchTimeout, setSearchTimeout] = useState(null);
 
   useEffect(() => {
     fetchFilterOptions();
@@ -40,7 +41,28 @@ const SystemLogsPage = () => {
   }, []);
 
   useEffect(() => {
-    fetchLogs();
+    // Clear existing timeout
+    if (searchTimeout) {
+      clearTimeout(searchTimeout);
+    }
+
+    // For search, add debounce and minimum character requirement
+    if (filters.search && filters.search.length >= 2) {
+      const timeout = setTimeout(() => {
+        fetchLogs();
+      }, 300); // 300ms debounce
+      setSearchTimeout(timeout);
+    } else if (filters.search.length === 0 || !filters.search) {
+      // Immediate fetch for empty search or other filters
+      fetchLogs();
+    }
+
+    // Cleanup function
+    return () => {
+      if (searchTimeout) {
+        clearTimeout(searchTimeout);
+      }
+    };
   }, [filters, pagination.current_page, pagination.per_page]);
 
   // Handle body scroll when modal is open and reposition listeners
@@ -561,10 +583,16 @@ const SystemLogsPage = () => {
                   type="text"
                   className="form-control border-0 shadow-sm"
                   style={{ borderRadius: '12px', padding: '12px 16px' }}
-                  placeholder="Search in message, category, action..."
+                  placeholder="Search in message, category, action... (min 2 characters)"
                   value={filters.search}
                   onChange={(e) => handleFilterChange('search', e.target.value)}
                 />
+                {filters.search && filters.search.length > 0 && filters.search.length < 2 && (
+                  <div className="form-text text-warning mt-1">
+                    <i className="bi bi-info-circle me-1"></i>
+                    Please enter at least 2 characters to search
+                  </div>
+                )}
               </div>
               
               <div className="col-12 col-md-6 col-lg-3">

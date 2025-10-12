@@ -9,6 +9,7 @@ const ManageStaffAccount = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [pagination, setPagination] = useState({});
+  const [searchTimeout, setSearchTimeout] = useState(null);
 
   // Create account form state
   const [form, setForm] = useState({
@@ -47,7 +48,28 @@ const ManageStaffAccount = () => {
 
   useEffect(() => {
     if (activeTab === "manage") {
-      fetchStaffAccounts(currentPage, searchTerm);
+      // Clear existing timeout
+      if (searchTimeout) {
+        clearTimeout(searchTimeout);
+      }
+
+      // For search, add debounce and minimum character requirement
+      if (searchTerm && searchTerm.length >= 2) {
+        const timeout = setTimeout(() => {
+          fetchStaffAccounts(currentPage, searchTerm);
+        }, 300); // 300ms debounce
+        setSearchTimeout(timeout);
+      } else if (searchTerm.length === 0) {
+        // Immediate fetch for empty search
+        fetchStaffAccounts(currentPage, searchTerm);
+      }
+
+      // Cleanup function
+      return () => {
+        if (searchTimeout) {
+          clearTimeout(searchTimeout);
+        }
+      };
     }
   }, [activeTab, currentPage, searchTerm]);
 
@@ -334,11 +356,17 @@ const ManageStaffAccount = () => {
                     <input
                       type="text"
                       className="form-control border-0 bg-light"
-                      placeholder="Search by name or email..."
+                      placeholder="Search by name or email... (min 2 characters)"
                       value={searchTerm}
                       onChange={handleSearch}
                       style={{ borderRadius: '8px' }}
                     />
+                    {searchTerm.length > 0 && searchTerm.length < 2 && (
+                      <div className="form-text text-warning mt-1">
+                        <i className="bi bi-info-circle me-1"></i>
+                        Please enter at least 2 characters to search
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

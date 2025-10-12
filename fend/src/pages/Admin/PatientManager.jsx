@@ -24,10 +24,33 @@ const PatientManager = () => {
     min_no_shows: '',
     search: ''
   });
+  const [searchTimeout, setSearchTimeout] = useState(null);
 
   useEffect(() => {
-    fetchPatients();
-    fetchStatistics();
+    // Clear existing timeout
+    if (searchTimeout) {
+      clearTimeout(searchTimeout);
+    }
+
+    // For search, add debounce and minimum character requirement
+    if (filters.search && filters.search.length >= 2) {
+      const timeout = setTimeout(() => {
+        fetchPatients();
+        fetchStatistics();
+      }, 300); // 300ms debounce
+      setSearchTimeout(timeout);
+    } else if (filters.search.length === 0 || filters.status || filters.min_no_shows) {
+      // Immediate fetch for non-search filters or empty search
+      fetchPatients();
+      fetchStatistics();
+    }
+
+    // Cleanup function
+    return () => {
+      if (searchTimeout) {
+        clearTimeout(searchTimeout);
+      }
+    };
   }, [filters]);
 
   const fetchPatients = async () => {
@@ -540,8 +563,14 @@ const PatientManager = () => {
                 className="form-control"
                 value={filters.search}
                 onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-                placeholder="Search by name or contact number..."
+                placeholder="Search by name or contact number... (min 2 characters)"
               />
+              {filters.search.length > 0 && filters.search.length < 2 && (
+                <div className="form-text text-warning">
+                  <i className="bi bi-info-circle me-1"></i>
+                  Please enter at least 2 characters to search
+                </div>
+              )}
             </div>
           </div>
         </div>
