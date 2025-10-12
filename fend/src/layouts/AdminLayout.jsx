@@ -106,6 +106,15 @@ function AdminLayout() {
           </li>
 
           <li className="nav-item">
+            <NavLink to="/admin/time-blocks" className={({ isActive }) => "nav-link" + (isActive ? " active" : "")}>
+              <svg className="icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/>
+              </svg>
+              <span className="label">Time Block Utilization</span>
+            </NavLink>
+          </li>
+
+          <li className="nav-item">
             <NavLink to="/admin/patient-manager" className={({ isActive }) => "nav-link" + (isActive ? " active" : "")}>
               <svg className="icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M16 4c0-1.11.89-2 2-2s2 .89 2 2-.89 2-2 2-2-.89-2-2zM4 18v-4h3v-2.5c0-.83.67-1.5 1.5-1.5h2c.83 0 1.5.67 1.5 1.5V16h3v2H4zM12.5 11.5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5-.67 1.5-1.5 1.5-1.5-.67-1.5-1.5zM24 16v2h-3v3h-2v-3h-3v-2h3v-3h2v3h3z"/>

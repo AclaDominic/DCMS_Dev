@@ -36,6 +36,7 @@ import AdminGoalsPage from "../pages/Admin/AdminGoalsPage";
 import SystemLogsPage from "../pages/Admin/SystemLogsPage";
 import AdminAnalyticsDashboard from "../pages/Admin/AdminAnalyticsDashboard";
 import PatientManager from "../pages/Admin/PatientManager";
+import TimeBlockUtilizationDashboard from "../pages/Admin/TimeBlockUtilizationDashboard";
 const DentistScheduleManager = lazy(() =>
   import("../pages/Admin/DentistScheduleManager")
 ); // Lazy load dentist schedule manager
@@ -132,6 +133,8 @@ export default function AppRouter() {
           <Route path="patient-manager" element={<PatientManager />} />
           {/* System Logs */}
           <Route path="system-logs" element={<SystemLogsPage />} />
+          {/* Time Block Utilization Dashboard */}
+          <Route path="time-blocks" element={<TimeBlockUtilizationDashboard />} />
           {/* Add more admin routes as needed */}
         </Route>
 

@@ -177,6 +177,9 @@ Route::middleware(['auth:sanctum', 'check.account.status', AdminOnly::class])->g
         Route::get('/{id}/progress', [GoalController::class, 'progress'])->whereNumber('id');
     });
 
+    // Time block utilization dashboard
+    Route::get('/admin/time-block-utilization', [\App\Http\Controllers\API\TimeBlockUtilizationController::class, 'getUtilizationData']);
+
     // Dentist account management
     Route::prefix('dentist')->group(function () {
         Route::post('/create-account', [DentistUserController::class, 'createAccount']);
