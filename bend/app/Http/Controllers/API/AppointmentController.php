@@ -478,7 +478,7 @@ class AppointmentController extends Controller
     {
         $normalized = $this->normalizeRef($code);
 
-        $appointment = Appointment::with('service', 'patient')
+        $appointment = Appointment::with(['service', 'patient'])
             ->whereRaw('UPPER(reference_code) = ?', [$normalized])
             ->where('status', 'approved')
             // ->whereDate('date', now()->toDateString()) // optional: enable later
@@ -488,13 +488,35 @@ class AppointmentController extends Controller
             return response()->json(['message' => 'Invalid or used reference code.'], 404);
         }
 
-        return response()->json([
+        // Get patient's last visit information
+        $lastVisit = \App\Models\PatientVisit::where('patient_id', $appointment->patient_id)
+            ->where('status', 'completed')
+            ->with(['service', 'visitNotes'])
+            ->orderBy('visit_date', 'desc')
+            ->first();
+
+        $responseData = [
             'id' => $appointment->id,
             'patient_name' => $appointment->patient->first_name . ' ' . $appointment->patient->last_name,
             'service_name' => $appointment->service->name,
             'date' => $appointment->date,
             'time_slot' => $appointment->time_slot,
-        ]);
+        ];
+
+        // Add last visit information if available
+        if ($lastVisit) {
+            $responseData['last_visit'] = [
+                'visit_date' => $lastVisit->visit_date,
+                'service_name' => $lastVisit->service?->name,
+                'has_notes' => $lastVisit->visitNotes ? true : false,
+                'notes_created_at' => $lastVisit->visitNotes?->created_at,
+                'teeth_treated' => $lastVisit->visitNotes?->teeth_treated,
+            ];
+        } else {
+            $responseData['last_visit'] = null;
+        }
+
+        return response()->json($responseData);
     }
 
 

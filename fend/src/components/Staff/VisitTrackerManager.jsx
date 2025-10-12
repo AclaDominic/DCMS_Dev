@@ -278,9 +278,32 @@ function VisitTrackerManager() {
             {searchError && <div className="text-danger">{searchError}</div>}
             {appointmentData && (
               <div className="alert alert-success">
-                <strong>{appointmentData.patient_name}</strong> —{" "}
-                {appointmentData.service_name} @ {appointmentData.date} /{" "}
-                {appointmentData.time_slot}
+                <div className="mb-2">
+                  <strong>{appointmentData.patient_name}</strong> —{" "}
+                  {appointmentData.service_name} @ {appointmentData.date} /{" "}
+                  {appointmentData.time_slot}
+                </div>
+                {appointmentData.last_visit && (
+                  <div className="mt-2 p-2 bg-light rounded">
+                    <small className="text-muted">📋 Last Visit:</small>
+                    <div className="small">
+                      <strong>Date:</strong> {new Date(appointmentData.last_visit.visit_date).toLocaleDateString('en-US', { 
+                        year: 'numeric', 
+                        month: 'short', 
+                        day: 'numeric' 
+                      })} |{" "}
+                      <strong>Service:</strong> {appointmentData.last_visit.service_name || 'N/A'}
+                      {appointmentData.last_visit.teeth_treated && (
+                        <> | <strong>Teeth Treated:</strong> {appointmentData.last_visit.teeth_treated}</>
+                      )}
+                    </div>
+                  </div>
+                )}
+                {!appointmentData.last_visit && (
+                  <div className="mt-2 p-2 bg-light rounded">
+                    <small className="text-muted">📋 No previous visits found</small>
+                  </div>
+                )}
               </div>
             )}
           </>
