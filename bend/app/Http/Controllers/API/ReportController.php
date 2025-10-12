@@ -652,53 +652,223 @@ class ReportController extends Controller
     public function analyticsTrend(Request $request)
     {
         $months = (int) $request->query('months', 6);
-        $months = max(3, min(12, $months)); // Limit between 3-12 months
+        $months = max(3, min(24, $months)); // Extended limit to support yearly data
+        $yearly = $request->query('yearly', false);
+        $startDate = $request->query('start_date');
+        $endDate = $request->query('end_date');
 
-        $end = now()->endOfMonth();
-        $start = (clone $end)->subMonths($months - 1)->startOfMonth();
+        // Handle custom date range
+        if ($startDate && $endDate) {
+            $start = \Carbon\Carbon::parse($startDate)->startOfDay();
+            $end = \Carbon\Carbon::parse($endDate)->endOfDay();
+            
+            // Calculate period based on date range
+            $diffInDays = $start->diffInDays($end);
+            $diffInMonths = $start->diffInMonths($end);
+            $diffInYears = $start->diffInYears($end);
+            
+            $labels = [];
+            $visits = [];
+            $appointments = [];
+            $revenue = [];
+            $loss = [];
+            
+            if ($diffInYears >= 1 || $yearly) {
+                // Yearly aggregation
+                $currentYear = $start->copy()->startOfYear();
+                $endYear = $end->copy()->endOfYear();
+                
+                while ($currentYear->lte($endYear)) {
+                    $yearStart = $currentYear->copy()->startOfYear();
+                    $yearEnd = $currentYear->copy()->endOfYear();
+                    
+                    // Adjust start/end if they're within the custom range
+                    if ($yearStart->lt($start)) $yearStart = $start->copy();
+                    if ($yearEnd->gt($end)) $yearEnd = $end->copy();
+                    
+                    $labels[] = $yearStart->format('Y');
+                    
+                    // Visits for this year
+                    $yearVisits = DB::table('patient_visits as v')
+                        ->whereNotNull('v.start_time')
+                        ->whereBetween('v.start_time', [$yearStart, $yearEnd])
+                        ->count();
+                    $visits[] = (int) $yearVisits;
+                    
+                    // Approved appointments for this year
+                    $yearAppointments = DB::table('appointments')
+                        ->where('status', 'approved')
+                        ->whereBetween('date', [$yearStart->toDateString(), $yearEnd->toDateString()])
+                        ->count();
+                    $appointments[] = (int) $yearAppointments;
+                    
+                    // Revenue for this year
+                    $yearRevenue = DB::table('payments')
+                        ->where('status', 'paid')
+                        ->whereBetween('paid_at', [$yearStart, $yearEnd])
+                        ->sum('amount_paid');
+                    $revenue[] = round((float) $yearRevenue, 2);
+                    
+                    // Loss cost for this year
+                    $yearLossCost = DB::table('inventory_movements as im')
+                        ->join('inventory_batches as ib', 'im.batch_id', '=', 'ib.id')
+                        ->where('im.type', 'adjust')
+                        ->whereIn('im.adjust_reason', ['expired', 'theft'])
+                        ->whereBetween('im.created_at', [$yearStart, $yearEnd])
+                        ->selectRaw('SUM(im.quantity * ib.cost_per_unit) as total_cost')
+                        ->value('total_cost');
+                    $loss[] = round((float) $yearLossCost, 2);
+                    
+                    $currentYear->addYear();
+                }
+            } else {
+                // Monthly aggregation for custom range
+                $currentMonth = $start->copy()->startOfMonth();
+                $endMonth = $end->copy()->endOfMonth();
+                
+                while ($currentMonth->lte($endMonth)) {
+                    $monthStart = $currentMonth->copy()->startOfMonth();
+                    $monthEnd = $currentMonth->copy()->endOfMonth();
+                    
+                    // Adjust start/end if they're within the custom range
+                    if ($monthStart->lt($start)) $monthStart = $start->copy();
+                    if ($monthEnd->gt($end)) $monthEnd = $end->copy();
+                    
+                    $labels[] = $monthStart->format('M Y');
+                    
+                    // Visits for this month
+                    $monthVisits = DB::table('patient_visits as v')
+                        ->whereNotNull('v.start_time')
+                        ->whereBetween('v.start_time', [$monthStart, $monthEnd])
+                        ->count();
+                    $visits[] = (int) $monthVisits;
+                    
+                    // Approved appointments for this month
+                    $monthAppointments = DB::table('appointments')
+                        ->where('status', 'approved')
+                        ->whereBetween('date', [$monthStart->toDateString(), $monthEnd->toDateString()])
+                        ->count();
+                    $appointments[] = (int) $monthAppointments;
+                    
+                    // Revenue for this month
+                    $monthRevenue = DB::table('payments')
+                        ->where('status', 'paid')
+                        ->whereBetween('paid_at', [$monthStart, $monthEnd])
+                        ->sum('amount_paid');
+                    $revenue[] = round((float) $monthRevenue, 2);
+                    
+                    // Loss cost for this month
+                    $monthLossCost = DB::table('inventory_movements as im')
+                        ->join('inventory_batches as ib', 'im.batch_id', '=', 'ib.id')
+                        ->where('im.type', 'adjust')
+                        ->whereIn('im.adjust_reason', ['expired', 'theft'])
+                        ->whereBetween('im.created_at', [$monthStart, $monthEnd])
+                        ->selectRaw('SUM(im.quantity * ib.cost_per_unit) as total_cost')
+                        ->value('total_cost');
+                    $loss[] = round((float) $monthLossCost, 2);
+                    
+                    $currentMonth->addMonth();
+                }
+            }
+        } else {
+            // Default behavior - check if yearly is requested
+            if ($yearly) {
+                // Yearly aggregation for default behavior
+                $end = now()->endOfYear();
+                $start = (clone $end)->subYears($months - 1)->startOfYear();
 
-        $labels = [];
-        $visits = [];
-        $appointments = [];
-        $revenue = [];
-        $loss = [];
+                $labels = [];
+                $visits = [];
+                $appointments = [];
+                $revenue = [];
+                $loss = [];
 
-        for ($i = 0; $i < $months; $i++) {
-            $monthStart = (clone $start)->addMonths($i)->startOfMonth();
-            $monthEnd = (clone $monthStart)->endOfMonth();
-            
-            $labels[] = $monthStart->format('M');
-            
-            // Visits for this month
-            $monthVisits = DB::table('patient_visits as v')
-                ->whereNotNull('v.start_time')
-                ->whereBetween('v.start_time', [$monthStart, $monthEnd])
-                ->count();
-            $visits[] = (int) $monthVisits;
-            
-            // Approved appointments for this month
-            $monthAppointments = DB::table('appointments')
-                ->where('status', 'approved')
-                ->whereBetween('date', [$monthStart->toDateString(), $monthEnd->toDateString()])
-                ->count();
-            $appointments[] = (int) $monthAppointments;
-            
-            // Revenue for this month
-            $monthRevenue = DB::table('payments')
-                ->where('status', 'paid')
-                ->whereBetween('paid_at', [$monthStart, $monthEnd])
-                ->sum('amount_paid');
-            $revenue[] = round((float) $monthRevenue, 2);
-            
-            // Loss cost for this month (expired + theft inventory adjustments)
-            $monthLossCost = DB::table('inventory_movements as im')
-                ->join('inventory_batches as ib', 'im.batch_id', '=', 'ib.id')
-                ->where('im.type', 'adjust')
-                ->whereIn('im.adjust_reason', ['expired', 'theft'])
-                ->whereBetween('im.created_at', [$monthStart, $monthEnd])
-                ->selectRaw('SUM(im.quantity * ib.cost_per_unit) as total_cost')
-                ->value('total_cost');
-            $loss[] = round((float) $monthLossCost, 2);
+                for ($i = 0; $i < $months; $i++) {
+                    $yearStart = (clone $start)->addYears($i)->startOfYear();
+                    $yearEnd = (clone $yearStart)->endOfYear();
+                    
+                    $labels[] = $yearStart->format('Y');
+                    
+                    // Visits for this year
+                    $yearVisits = DB::table('patient_visits as v')
+                        ->whereNotNull('v.start_time')
+                        ->whereBetween('v.start_time', [$yearStart, $yearEnd])
+                        ->count();
+                    $visits[] = (int) $yearVisits;
+                    
+                    // Approved appointments for this year
+                    $yearAppointments = DB::table('appointments')
+                        ->where('status', 'approved')
+                        ->whereBetween('date', [$yearStart->toDateString(), $yearEnd->toDateString()])
+                        ->count();
+                    $appointments[] = (int) $yearAppointments;
+                    
+                    // Revenue for this year
+                    $yearRevenue = DB::table('payments')
+                        ->where('status', 'paid')
+                        ->whereBetween('paid_at', [$yearStart, $yearEnd])
+                        ->sum('amount_paid');
+                    $revenue[] = round((float) $yearRevenue, 2);
+                    
+                    // Loss cost for this year
+                    $yearLossCost = DB::table('inventory_movements as im')
+                        ->join('inventory_batches as ib', 'im.batch_id', '=', 'ib.id')
+                        ->where('im.type', 'adjust')
+                        ->whereIn('im.adjust_reason', ['expired', 'theft'])
+                        ->whereBetween('im.created_at', [$yearStart, $yearEnd])
+                        ->selectRaw('SUM(im.quantity * ib.cost_per_unit) as total_cost')
+                        ->value('total_cost');
+                    $loss[] = round((float) $yearLossCost, 2);
+                }
+            } else {
+                // Monthly aggregation for default behavior
+                $end = now()->endOfMonth();
+                $start = (clone $end)->subMonths($months - 1)->startOfMonth();
+
+                $labels = [];
+                $visits = [];
+                $appointments = [];
+                $revenue = [];
+                $loss = [];
+
+                for ($i = 0; $i < $months; $i++) {
+                    $monthStart = (clone $start)->addMonths($i)->startOfMonth();
+                    $monthEnd = (clone $monthStart)->endOfMonth();
+                    
+                    $labels[] = $monthStart->format('M');
+                    
+                    // Visits for this month
+                    $monthVisits = DB::table('patient_visits as v')
+                        ->whereNotNull('v.start_time')
+                        ->whereBetween('v.start_time', [$monthStart, $monthEnd])
+                        ->count();
+                    $visits[] = (int) $monthVisits;
+                    
+                    // Approved appointments for this month
+                    $monthAppointments = DB::table('appointments')
+                        ->where('status', 'approved')
+                        ->whereBetween('date', [$monthStart->toDateString(), $monthEnd->toDateString()])
+                        ->count();
+                    $appointments[] = (int) $monthAppointments;
+                    
+                    // Revenue for this month
+                    $monthRevenue = DB::table('payments')
+                        ->where('status', 'paid')
+                        ->whereBetween('paid_at', [$monthStart, $monthEnd])
+                        ->sum('amount_paid');
+                    $revenue[] = round((float) $monthRevenue, 2);
+                    
+                    // Loss cost for this month (expired + theft inventory adjustments)
+                    $monthLossCost = DB::table('inventory_movements as im')
+                        ->join('inventory_batches as ib', 'im.batch_id', '=', 'ib.id')
+                        ->where('im.type', 'adjust')
+                        ->whereIn('im.adjust_reason', ['expired', 'theft'])
+                        ->whereBetween('im.created_at', [$monthStart, $monthEnd])
+                        ->selectRaw('SUM(im.quantity * ib.cost_per_unit) as total_cost')
+                        ->value('total_cost');
+                    $loss[] = round((float) $monthLossCost, 2);
+                }
+            }
         }
 
         return response()->json([

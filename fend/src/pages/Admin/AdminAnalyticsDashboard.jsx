@@ -37,26 +37,26 @@ export default function AdminAnalyticsDashboard() {
   const [trendRange, setTrendRange] = useState(6);
   const [selectedMetric, setSelectedMetric] = useState('visits');
   const [loading, setLoading] = useState(false);
+  const [trendLoading, setTrendLoading] = useState(false);
   const [error, setError] = useState("");
   const [data, setData] = useState(null);
   const [trendData, setTrendData] = useState(null);
+  
+  // New state for revenue-specific controls
+  const [revenueTimeframe, setRevenueTimeframe] = useState('monthly'); // 'monthly' or 'yearly'
+  const [revenueStartDate, setRevenueStartDate] = useState('');
+  const [revenueEndDate, setRevenueEndDate] = useState('');
 
-  const load = async () => {
+  // Load main analytics data (KPIs, insights, etc.)
+  const loadMainData = async () => {
     setLoading(true);
     setError("");
     try {
-      const [summaryRes, trendRes] = await Promise.all([
-        api.get("/api/analytics/summary", {
-          params: { period: month },
-        }),
-        api.get("/api/analytics/trend", {
-          params: { months: trendRange },
-        }),
-      ]);
+      const summaryRes = await api.get("/api/analytics/summary", {
+        params: { period: month },
+      });
       
-      // Validate and sanitize the data
       const summaryData = summaryRes.data || null;
-      const trendData = trendRes.data || null;
       
       // Debug logging
       console.log("Analytics API Response:", summaryData);
@@ -70,7 +70,6 @@ export default function AdminAnalyticsDashboard() {
       }
       
       setData(summaryData);
-      setTrendData(trendData);
     } catch (e) {
       console.error("Analytics loading error:", e);
       console.error("Error response:", e?.response?.data);
@@ -80,10 +79,80 @@ export default function AdminAnalyticsDashboard() {
     }
   };
 
+  // Load trend data only
+  const loadTrendData = async () => {
+    setTrendLoading(true);
+    try {
+      // Prepare trend parameters
+      const trendParams = { months: trendRange };
+      
+      // Add revenue-specific parameters if revenue is selected
+      if (selectedMetric === 'revenue') {
+        if (revenueTimeframe === 'yearly') {
+          trendParams.yearly = true;
+        }
+        if (revenueStartDate && revenueEndDate) {
+          trendParams.start_date = revenueStartDate;
+          trendParams.end_date = revenueEndDate;
+        }
+      }
+
+      const trendRes = await api.get("/api/analytics/trend", {
+        params: trendParams,
+      });
+      
+      const trendData = trendRes.data || null;
+      
+      // Debug trend parameters
+      console.log("Trend API Parameters:", trendParams);
+      console.log("Selected Metric:", selectedMetric);
+      console.log("Revenue Timeframe:", revenueTimeframe);
+      console.log("Revenue Start Date:", revenueStartDate);
+      console.log("Revenue End Date:", revenueEndDate);
+      console.log("Revenue Controls Should Show:", selectedMetric === 'revenue');
+      
+      setTrendData(trendData);
+    } catch (e) {
+      console.error("Trend loading error:", e);
+      console.error("Error response:", e?.response?.data);
+      // Don't set error for trend data failures, just log them
+    } finally {
+      setTrendLoading(false);
+    }
+  };
+
+  // Load both main data and trend data
+  const load = async () => {
+    await Promise.all([loadMainData(), loadTrendData()]);
+  };
+
+  // Load main data when month changes
+  useEffect(() => {
+    loadMainData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [month]);
+
+  // Clear revenue-specific controls when switching to non-revenue metrics
+  useEffect(() => {
+    if (selectedMetric !== 'revenue') {
+      console.log("Clearing revenue controls for metric:", selectedMetric);
+      setRevenueTimeframe('monthly');
+      setRevenueStartDate('');
+      setRevenueEndDate('');
+    }
+  }, [selectedMetric]);
+
+  // Load trend data when trend-related parameters change
+  useEffect(() => {
+    loadTrendData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [trendRange, selectedMetric, revenueTimeframe, revenueStartDate, revenueEndDate]);
+
+  // Initial load
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [month, trendRange]);
+  }, []);
 
   // Export functions
   const downloadPdf = async () => {
@@ -114,7 +183,27 @@ export default function AdminAnalyticsDashboard() {
       doc.setFontSize(10);
       doc.setFont('helvetica', 'normal');
       doc.text(`Report Period: ${month}`, 40, currentY);
-      currentY += 30;
+      currentY += 15;
+      
+      // Add current trend information
+      if (trendData && trendData.labels && trendData.labels.length > 0) {
+        const trendInfo = `Trend Analysis: ${selectedMetric.charAt(0).toUpperCase() + selectedMetric.slice(1)} over ${trendData.labels.length} periods`;
+        doc.text(trendInfo, 40, currentY);
+        currentY += 15;
+        
+        if (selectedMetric === 'revenue' && (revenueStartDate && revenueEndDate)) {
+          const customRangeInfo = `Custom Date Range: ${revenueStartDate} to ${revenueEndDate}`;
+          doc.text(customRangeInfo, 40, currentY);
+          currentY += 15;
+        }
+        
+        if (selectedMetric === 'revenue' && revenueTimeframe) {
+          const timeframeInfo = `Time Period: ${revenueTimeframe.charAt(0).toUpperCase() + revenueTimeframe.slice(1)}`;
+          doc.text(timeframeInfo, 40, currentY);
+          currentY += 15;
+        }
+      }
+      currentY += 15;
 
       // SECTION 1: KPI OVERVIEW
       currentY = addSectionTitle(doc, "Key Performance Indicators", currentY);
@@ -264,8 +353,24 @@ export default function AdminAnalyticsDashboard() {
 
       // Monthly Trends Sheet
       if (trendData?.labels?.length > 0) {
-        const trendSheet = workbook.addWorksheet('Monthly Trends');
-        trendSheet.addRow(['Month', 'Visits', 'Appointments', 'Revenue', 'Loss']);
+        const trendSheet = workbook.addWorksheet('Trend Analysis');
+        
+        // Add metadata rows
+        trendSheet.addRow(['Report Configuration']);
+        trendSheet.addRow(['Metric Selected:', selectedMetric.charAt(0).toUpperCase() + selectedMetric.slice(1)]);
+        trendSheet.addRow(['Time Range:', `${trendData.labels.length} periods`]);
+        
+        if (selectedMetric === 'revenue') {
+          if (revenueTimeframe) {
+            trendSheet.addRow(['Time Period:', revenueTimeframe.charAt(0).toUpperCase() + revenueTimeframe.slice(1)]);
+          }
+          if (revenueStartDate && revenueEndDate) {
+            trendSheet.addRow(['Custom Date Range:', `${revenueStartDate} to ${revenueEndDate}`]);
+          }
+        }
+        
+        trendSheet.addRow([]); // Empty row
+        trendSheet.addRow(['Period', 'Visits', 'Appointments', 'Revenue', 'Loss']);
         
         trendData.labels.forEach((label, index) => {
           trendSheet.addRow([
@@ -277,10 +382,11 @@ export default function AdminAnalyticsDashboard() {
           ]);
         });
         
-        // Style header row
+        // Style header rows
         trendSheet.getRow(1).font = { bold: true };
+        trendSheet.getRow(7).font = { bold: true }; // Data header row
         trendSheet.columns = [
-          { width: 15 },
+          { width: 20 },
           { width: 12 },
           { width: 15 },
           { width: 15 },
@@ -991,7 +1097,7 @@ export default function AdminAnalyticsDashboard() {
             />
             <button
               className="btn border-0"
-              onClick={load}
+              onClick={loadMainData}
               disabled={loading}
               style={{
                 background: "linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)",
@@ -1503,9 +1609,14 @@ export default function AdminAnalyticsDashboard() {
                           style={{ color: "#1e293b" }}
                         >
                           <span className="me-2">📈</span>
-                          Monthly Trends
+                          {selectedMetric === 'revenue' && (revenueStartDate && revenueEndDate) ? 'Revenue Trends' : 'Monthly Trends'}
+                          {trendLoading && (
+                            <span className="ms-2 spinner-border spinner-border-sm text-primary" role="status">
+                              <span className="visually-hidden">Loading...</span>
+                            </span>
+                          )}
                         </h5>
-                        <div className="d-flex gap-2">
+                        <div className="d-flex gap-2 flex-wrap">
                           <select 
                             value={selectedMetric} 
                             onChange={(e) => setSelectedMetric(e.target.value)} 
@@ -1530,10 +1641,93 @@ export default function AdminAnalyticsDashboard() {
                         </div>
                       </div>
                     </div>
+                    
+                    {/* Revenue-specific controls */}
+                    {selectedMetric === 'revenue' && (
+                      <div className="card-body pt-0 pb-3 border-top">
+                        <div className="row g-3">
+                          <div className="col-md-6">
+                            <label className="form-label small fw-medium text-muted">Time Period:</label>
+                            <div className="d-flex gap-3">
+                              <div className="form-check">
+                                <input
+                                  className="form-check-input"
+                                  type="radio"
+                                  name="revenueTimeframe"
+                                  id="revenueMonthly"
+                                  value="monthly"
+                                  checked={revenueTimeframe === 'monthly'}
+                                  onChange={(e) => setRevenueTimeframe(e.target.value)}
+                                />
+                                <label className="form-check-label small" htmlFor="revenueMonthly">
+                                  Monthly
+                                </label>
+                              </div>
+                              <div className="form-check">
+                                <input
+                                  className="form-check-input"
+                                  type="radio"
+                                  name="revenueTimeframe"
+                                  id="revenueYearly"
+                                  value="yearly"
+                                  checked={revenueTimeframe === 'yearly'}
+                                  onChange={(e) => setRevenueTimeframe(e.target.value)}
+                                />
+                                <label className="form-check-label small" htmlFor="revenueYearly">
+                                  Yearly
+                                </label>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="col-md-6">
+                            <label className="form-label small fw-medium text-muted">Custom Date Range (Optional):</label>
+                            <div className="d-flex gap-2">
+                              <input
+                                type="date"
+                                className="form-control form-control-sm"
+                                value={revenueStartDate}
+                                onChange={(e) => setRevenueStartDate(e.target.value)}
+                                placeholder="Start Date"
+                                style={{ fontSize: "0.8rem" }}
+                              />
+                              <input
+                                type="date"
+                                className="form-control form-control-sm"
+                                value={revenueEndDate}
+                                onChange={(e) => setRevenueEndDate(e.target.value)}
+                                placeholder="End Date"
+                                style={{ fontSize: "0.8rem" }}
+                              />
+                            </div>
+                            {revenueStartDate && revenueEndDate ? (
+                              <small className="text-muted">
+                                Showing data from {revenueStartDate} to {revenueEndDate}
+                              </small>
+                            ) : (
+                              <small className="text-muted">
+                                Leave empty to use default time range
+                              </small>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    
                     <div className="card-body pt-0">
-                    <div className="px-1 px-md-2" style={{ height: "300px" }}>
-                      <Line data={trendChartData} options={trendChartOptions} />
-                    </div>
+                      {trendLoading ? (
+                        <div className="d-flex justify-content-center align-items-center" style={{ height: "300px" }}>
+                          <div className="text-center">
+                            <div className="spinner-border text-primary mb-3" role="status">
+                              <span className="visually-hidden">Loading trend data...</span>
+                            </div>
+                            <p className="text-muted mb-0">Loading trend data...</p>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="px-1 px-md-2" style={{ height: "300px" }}>
+                          <Line data={trendChartData} options={trendChartOptions} />
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
