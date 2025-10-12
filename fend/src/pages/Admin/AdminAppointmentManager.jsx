@@ -1,6 +1,9 @@
-import { useState } from "react";
+import { useState, Suspense, lazy } from "react";
 import StaffAppointmentManager from "../Staff/StaffAppointmentManager";
 import VisitTrackerManager from "../../components/Staff/VisitTrackerManager";
+
+// Lazy load AppointmentFinder to only load when tab is selected
+const AppointmentFinder = lazy(() => import("../Staff/AppointmentFinder"));
 
 function AdminAppointmentManager() {
   const [activeTab, setActiveTab] = useState("appointments");
@@ -25,7 +28,7 @@ function AdminAppointmentManager() {
         minWidth: '140px'
       }}
     >
-      <i className={`bi bi-${icon === "📅" ? "calendar" : icon === "👥" ? "people" : "calendar-check"} me-2`}></i>
+      <i className={`bi bi-${icon === "📅" ? "calendar" : icon === "👥" ? "people" : icon === "🔍" ? "search" : "calendar-check"} me-2`}></i>
       <span className="d-none d-sm-inline">{label}</span>
       <span className="d-sm-none">{label.split(' ')[0]}</span>
     </button>
@@ -61,12 +64,13 @@ function AdminAppointmentManager() {
                 <i className="bi bi-calendar-check me-2"></i>
                 Admin Appointment & Visit Management
               </h2>
-              <p className="mb-0 mt-2" style={{ color: '#6b7280' }}>Comprehensive appointment approval and patient visit tracking system</p>
+              <p className="mb-0 mt-2" style={{ color: '#6b7280' }}>Comprehensive appointment approval, finder, and patient visit tracking system</p>
             </div>
             <div className="card-body p-4" style={{ width: '100%', maxWidth: '100%' }}>
               {/* Responsive Tab Navigation */}
               <div className="d-flex flex-column flex-sm-row gap-2 mb-4" role="group" aria-label="Appointment tabs">
                 <TabButton id="appointments" icon="📅" label="Appointment Approval" />
+                <TabButton id="appointment-finder" icon="🔍" label="Appointment Finder" />
                 <TabButton id="visits" icon="👥" label="Visit Tracking" />
               </div>
 
@@ -74,6 +78,20 @@ function AdminAppointmentManager() {
                 {activeTab === "appointments" && (
                   <div className="tab-pane fade show active" style={{ width: '100%', maxWidth: '100%' }}>
                     <StaffAppointmentManager />
+                  </div>
+                )}
+                {activeTab === "appointment-finder" && (
+                  <div className="tab-pane fade show active" style={{ width: '100%', maxWidth: '100%' }}>
+                    <Suspense fallback={
+                      <div className="text-center py-5">
+                        <div className="spinner-border text-primary" role="status">
+                          <span className="visually-hidden">Loading...</span>
+                        </div>
+                        <p className="mt-3 text-muted">Loading Appointment Finder...</p>
+                      </div>
+                    }>
+                      <AppointmentFinder />
+                    </Suspense>
                   </div>
                 )}
                 {activeTab === "visits" && (
