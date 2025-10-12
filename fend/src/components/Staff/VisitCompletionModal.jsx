@@ -92,9 +92,9 @@ export default function VisitCompletionModal({ visit, onClose, onComplete }) {
         findings: findings,
         treatment_plan: treatmentPlan,
         teeth_treated: teethTreated,
-        payment_status: paymentStatus,
-        onsite_payment_amount: onsitePaymentAmount ? Number(onsitePaymentAmount) : null,
-        payment_method_change: paymentMethodChange || null,
+        payment_status: isMayaPaymentCompleted ? "paid" : paymentStatus,
+        onsite_payment_amount: isMayaPaymentCompleted ? null : (onsitePaymentAmount ? Number(onsitePaymentAmount) : null),
+        payment_method_change: isMayaPaymentCompleted ? null : (paymentMethodChange || null),
       };
 
       await api.post(`/api/visits/${visit.id}/complete-with-details`, payload);
@@ -130,6 +130,10 @@ export default function VisitCompletionModal({ visit, onClose, onComplete }) {
   const totalPaid = visit.payments?.reduce((sum, p) => sum + (p.amount_paid || 0), 0) || 0;
   const servicePrice = visit.service?.price || 0;
   const balance = servicePrice - totalPaid;
+  
+  // Check if there's a paid Maya payment
+  const paidMayaPayment = visit.payments?.find(p => p.method === 'maya' && p.status === 'paid');
+  const isMayaPaymentCompleted = !!paidMayaPayment;
 
   return (
     <div className="modal fade show d-block" style={{backgroundColor: 'rgba(0,0,0,0.5)'}} tabIndex="-1" role="dialog">
@@ -429,6 +433,33 @@ export default function VisitCompletionModal({ visit, onClose, onComplete }) {
                       </div>
                     </div>
 
+                    {/* Show Maya payment completion info if applicable */}
+                    {isMayaPaymentCompleted && (
+                      <div className="col-12">
+                        <div className="alert alert-success border-0 shadow-sm">
+                          <div className="d-flex align-items-center">
+                            <i className="fas fa-check-circle fa-2x text-success me-3"></i>
+                            <div>
+                              <h6 className="alert-heading mb-1">
+                                <i className="fas fa-credit-card me-2"></i>
+                                Maya Payment Completed
+                              </h6>
+                              <p className="mb-1">
+                                <strong>Amount Paid:</strong> ₱{paidMayaPayment.amount_paid?.toLocaleString()}
+                              </p>
+                              <p className="mb-0">
+                                <strong>Payment Date:</strong> {new Date(paidMayaPayment.paid_at).toLocaleString()}
+                              </p>
+                              <small className="text-muted">
+                                <i className="fas fa-lock me-1"></i>
+                                Payment information is read-only as the Maya payment has been successfully completed.
+                              </small>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
                     <div className="col-12">
                       <label className="form-label fw-semibold">
                         <i className="fas fa-credit-card text-primary me-1"></i>
@@ -438,15 +469,22 @@ export default function VisitCompletionModal({ visit, onClose, onComplete }) {
                         className="form-select"
                         value={paymentStatus}
                         onChange={(e) => setPaymentStatus(e.target.value)}
+                        disabled={isMayaPaymentCompleted}
                       >
                         <option value="paid">Fully Paid</option>
                         <option value="hmo_fully_covered">HMO Fully Covered</option>
                         <option value="partial">Partially Paid (HMO didn't cover all)</option>
                         <option value="unpaid">Unpaid (Maya failed)</option>
                       </select>
+                      {isMayaPaymentCompleted && (
+                        <div className="form-text text-muted">
+                          <i className="fas fa-lock me-1"></i>
+                          Payment status cannot be changed as Maya payment is already completed.
+                        </div>
+                      )}
                     </div>
 
-                    {paymentStatus === "partial" && (
+                    {paymentStatus === "partial" && !isMayaPaymentCompleted && (
                       <div className="col-12">
                         <label className="form-label fw-semibold">
                           <i className="fas fa-money-bill text-primary me-1"></i>
@@ -471,7 +509,7 @@ export default function VisitCompletionModal({ visit, onClose, onComplete }) {
                       </div>
                     )}
 
-                    {paymentStatus === "unpaid" && (
+                    {paymentStatus === "unpaid" && !isMayaPaymentCompleted && (
                       <div className="col-12">
                         <label className="form-label fw-semibold">
                           <i className="fas fa-exchange-alt text-primary me-1"></i>

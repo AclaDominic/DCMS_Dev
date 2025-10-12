@@ -35,7 +35,7 @@ class PatientVisitController extends Controller
         $totalVisits = PatientVisit::count();
         Log::info('🔍 INDEX: Total visits in database: ' . $totalVisits);
         
-        $visits = PatientVisit::with(['patient', 'service', 'visitNotes'])
+        $visits = PatientVisit::with(['patient', 'service', 'visitNotes', 'payments'])
             ->orderBy('created_at', 'desc')
             ->take(50)
             ->get();
