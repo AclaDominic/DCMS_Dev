@@ -47,6 +47,7 @@ import StaffProfile from "../pages/Staff/StaffProfile";
 import StaffAppointmentManager from "../pages/Staff/StaffAppointmentManager"; // Appointment management
 import AdminAppointmentManager from "../pages/Admin/AdminAppointmentManager"; // Admin appointment management
 import AppointmentReminders from "../pages/Staff/AppointmentReminders";
+import AppointmentFinder from "../pages/Staff/AppointmentFinder";
 import ConsumeStockPage from "../pages/Staff/ConsumeStockPage";
 
 // Patient layout and pages
@@ -139,6 +140,7 @@ export default function AppRouter() {
           <Route index element={<StaffDashboard />} />
           <Route path="profile" element={<StaffProfile />} />
           <Route path="appointments" element={<StaffAppointmentManager />} />
+          <Route path="appointment-finder" element={<AppointmentFinder />} />
           <Route
             path="appointment-reminders"
             element={<AppointmentReminders />}

@@ -275,6 +275,11 @@ class AppointmentController extends Controller
             $query->where('status', $request->status);
         }
 
+        // Optional filter by patient_id (for appointment finder)
+        if ($request->has('patient_id')) {
+            $query->where('patient_id', $request->patient_id);
+        }
+
         // Optional filter by date range (future-proofing)
         if ($request->has('start_date') && $request->has('end_date')) {
             $query->whereBetween('date', [$request->start_date, $request->end_date]);
