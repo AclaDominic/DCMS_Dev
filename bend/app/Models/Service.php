@@ -13,7 +13,7 @@ class Service extends Model
         'name',
         'description',
         'price',
-        'category',
+        'service_category_id',
         'is_excluded_from_analytics',
         'is_special',
         'special_start_date',
@@ -26,6 +26,11 @@ class Service extends Model
     public function discounts()
     {
         return $this->hasMany(ServiceDiscount::class);
+    }
+
+    public function category()
+    {
+        return $this->belongsTo(ServiceCategory::class, 'service_category_id');
     }
 
     public function getPriceForDate($date)

@@ -40,52 +40,63 @@ class PerformanceGoalTestSeeder extends Seeder
 
     private function createTestServices()
     {
+        // Get categories for mapping
+        $categories = \App\Models\ServiceCategory::all()->keyBy('name');
+        
         $services = [
             [
                 'name' => 'Regular Cleaning',
                 'description' => 'Basic dental cleaning service',
                 'price' => 1500.00,
-                'category' => 'Cleaning',
+                'category_name' => 'Preventive',
                 'estimated_minutes' => 60,
             ],
             [
                 'name' => 'Deep Cleaning',
                 'description' => 'Thorough dental cleaning',
                 'price' => 2500.00,
-                'category' => 'Cleaning',
+                'category_name' => 'Preventive',
                 'estimated_minutes' => 90,
             ],
             [
                 'name' => 'Tooth Extraction',
                 'description' => 'Simple tooth extraction',
                 'price' => 3000.00,
-                'category' => 'Surgery',
+                'category_name' => 'Surgical',
                 'estimated_minutes' => 45,
             ],
             [
                 'name' => 'Dental Filling',
                 'description' => 'Tooth filling service',
                 'price' => 2000.00,
-                'category' => 'Restorative',
+                'category_name' => 'Restorative',
                 'estimated_minutes' => 30,
             ],
             [
                 'name' => 'Dental Checkup Package',
                 'description' => 'Complete dental checkup package',
                 'price' => 3500.00,
-                'category' => 'Package',
+                'category_name' => 'Other',
                 'estimated_minutes' => 120,
             ],
             [
                 'name' => 'Whitening Treatment',
                 'description' => 'Professional teeth whitening',
                 'price' => 8000.00,
-                'category' => 'Cosmetic',
+                'category_name' => 'Cosmetic',
                 'estimated_minutes' => 90,
             ],
         ];
 
         foreach ($services as $service) {
+            $categoryName = $service['category_name'];
+            unset($service['category_name']);
+            
+            $category = $categories->get($categoryName);
+            if ($category) {
+                $service['service_category_id'] = $category->id;
+            }
+            
             Service::updateOrCreate(
                 ['name' => $service['name']],
                 $service

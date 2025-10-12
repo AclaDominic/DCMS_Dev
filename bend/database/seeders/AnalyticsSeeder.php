@@ -133,18 +133,29 @@ class AnalyticsSeeder extends Seeder
         if ($services->count() < 10) {
             $this->command->info('Generating additional services for analytics...');
             
+            // Get categories for mapping
+            $categories = \App\Models\ServiceCategory::all()->keyBy('name');
+            
             $additionalServices = [
-                ['name' => 'Root Canal Treatment', 'price' => 8000, 'category' => 'Endodontic', 'estimated_minutes' => 120],
-                ['name' => 'Crown Placement', 'price' => 12000, 'category' => 'Prosthodontic', 'estimated_minutes' => 90],
-                ['name' => 'Orthodontic Consultation', 'price' => 1500, 'category' => 'Orthodontic', 'estimated_minutes' => 30],
-                ['name' => 'Dental Implant', 'price' => 25000, 'category' => 'Surgical', 'estimated_minutes' => 180],
-                ['name' => 'Gum Treatment', 'price' => 4000, 'category' => 'Periodontic', 'estimated_minutes' => 60],
-                ['name' => 'Oral Surgery', 'price' => 15000, 'category' => 'Surgical', 'estimated_minutes' => 120],
-                ['name' => 'Dental Checkup', 'price' => 1000, 'category' => 'Preventive', 'estimated_minutes' => 20],
-                ['name' => 'X-Ray', 'price' => 500, 'category' => 'Diagnostic', 'estimated_minutes' => 10],
+                ['name' => 'Root Canal Treatment', 'price' => 8000, 'category_name' => 'Restorative', 'estimated_minutes' => 120],
+                ['name' => 'Crown Placement', 'price' => 12000, 'category_name' => 'Restorative', 'estimated_minutes' => 90],
+                ['name' => 'Orthodontic Consultation', 'price' => 1500, 'category_name' => 'Orthodontic', 'estimated_minutes' => 30],
+                ['name' => 'Dental Implant', 'price' => 25000, 'category_name' => 'Surgical', 'estimated_minutes' => 180],
+                ['name' => 'Gum Treatment', 'price' => 4000, 'category_name' => 'Preventive', 'estimated_minutes' => 60],
+                ['name' => 'Oral Surgery', 'price' => 15000, 'category_name' => 'Surgical', 'estimated_minutes' => 120],
+                ['name' => 'Dental Checkup', 'price' => 1000, 'category_name' => 'Preventive', 'estimated_minutes' => 20],
+                ['name' => 'X-Ray', 'price' => 500, 'category_name' => 'Other', 'estimated_minutes' => 10],
             ];
             
             foreach ($additionalServices as $service) {
+                $categoryName = $service['category_name'];
+                unset($service['category_name']);
+                
+                $category = $categories->get($categoryName);
+                if ($category) {
+                    $service['service_category_id'] = $category->id;
+                }
+                
                 Service::create(array_merge($service, [
                     'description' => 'Professional ' . strtolower($service['name']),
                     'is_excluded_from_analytics' => false,

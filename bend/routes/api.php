@@ -7,6 +7,7 @@ use App\Http\Controllers\API\MayaController;
 
 use App\Http\Controllers\API\PatientController;
 use App\Http\Controllers\API\ServiceController;
+use App\Http\Controllers\API\ServiceCategoryController;
 use App\Http\Middleware\EnsureDeviceIsApproved;
 use App\Http\Controllers\DeviceStatusController;
 
@@ -97,6 +98,12 @@ Route::middleware(['auth:sanctum', 'check.account.status', AdminOnly::class])->g
     Route::post('/services', [ServiceController::class, 'store']);
     Route::put('/services/{service}', [ServiceController::class, 'update']);
     Route::delete('/services/{service}', [ServiceController::class, 'destroy']);
+
+    // Service category management
+    Route::get('/service-categories', [ServiceCategoryController::class, 'index']);
+    Route::post('/service-categories', [ServiceCategoryController::class, 'store']);
+    Route::put('/service-categories/{category}', [ServiceCategoryController::class, 'update']);
+    Route::delete('/service-categories/{category}', [ServiceCategoryController::class, 'destroy']);
 
     // Service discount management
     Route::get('/services/{service}/discounts', [ServiceDiscountController::class, 'index']);

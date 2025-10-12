@@ -13,7 +13,7 @@ class ServiceController extends Controller
      */
     public function index()
     {
-        return response()->json(Service::with(['bundledServices', 'bundleItems'])->get());
+        return response()->json(Service::with(['bundledServices', 'bundleItems', 'category'])->get());
     }
 
     /**
@@ -25,7 +25,7 @@ class ServiceController extends Controller
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'price' => 'required|numeric|min:0',
-            'category' => 'required|string|max:255',
+            'service_category_id' => 'required|exists:service_categories,id',
             'is_excluded_from_analytics' => 'boolean',
             'is_special' => 'boolean',
             'special_start_date' => 'nullable|date',
@@ -45,7 +45,7 @@ class ServiceController extends Controller
             $service->bundledServices()->sync($request->input('bundled_service_ids'));
         }
 
-        return response()->json($service->load(['bundledServices', 'bundleItems']), 201);
+        return response()->json($service->load(['bundledServices', 'bundleItems', 'category']), 201);
     }
 
     /**
@@ -53,7 +53,7 @@ class ServiceController extends Controller
      */
     public function show(string $id)
     {
-        return response()->json(Service::with(['bundledServices', 'bundleItems'])->findOrFail($id));
+        return response()->json(Service::with(['bundledServices', 'bundleItems', 'category'])->findOrFail($id));
     }
 
     /**
@@ -67,7 +67,7 @@ class ServiceController extends Controller
             'name' => 'sometimes|required|string|max:255',
             'description' => 'nullable|string',
             'price' => 'sometimes|required|numeric|min:0',
-            'category' => 'nullable|string|max:255',
+            'service_category_id' => 'nullable|exists:service_categories,id',
             'is_excluded_from_analytics' => 'boolean',
             'is_special' => 'boolean',
             'special_start_date' => 'nullable|date',
@@ -88,7 +88,7 @@ class ServiceController extends Controller
             $service->bundledServices()->sync($request->input('bundled_service_ids'));
         }
 
-        return response()->json($service->load(['bundledServices', 'bundleItems']));
+        return response()->json($service->load(['bundledServices', 'bundleItems', 'category']));
     }
 
     /**
@@ -107,7 +107,7 @@ class ServiceController extends Controller
     public function publicIndex()
     {
         $services = Service::where('is_active', true)
-            ->with(['bundledServices', 'bundleItems', 'discounts' => function($query) {
+            ->with(['bundledServices', 'bundleItems', 'category', 'discounts' => function($query) {
                 $query->whereIn('status', ['planned', 'launched'])
                       ->orderBy('start_date');
             }])

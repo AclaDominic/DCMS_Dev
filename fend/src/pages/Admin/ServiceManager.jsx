@@ -2,18 +2,21 @@ import { useRef } from "react";
 import { useEffect, useState } from "react";
 import api from "../../api/api";
 import LoadingSpinner from "../../components/LoadingSpinner";
+import AddCategoryModal from "../../components/AddCategoryModal";
 
 export default function ServiceManager() {
   const [services, setServices] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showAddCategoryModal, setShowAddCategoryModal] = useState(false);
   const [serviceToDelete, setServiceToDelete] = useState(null);
   const [formData, setFormData] = useState({
     name: "",
     description: "",
     price: "",
-    category: "",
+    service_category_id: "",
     is_excluded_from_analytics: false,
     estimated_minutes: "",
     is_special: false,
@@ -32,6 +35,7 @@ export default function ServiceManager() {
 
   useEffect(() => {
     fetchServices();
+    fetchCategories();
   }, []);
 
   const fetchServices = async () => {
@@ -43,6 +47,24 @@ export default function ServiceManager() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchCategories = async () => {
+    try {
+      const res = await api.get("/api/service-categories");
+      setCategories(res.data);
+    } catch (err) {
+      console.error("Failed to fetch categories", err);
+    }
+  };
+
+  const handleCategoryAdded = (newCategory) => {
+    setCategories(prev => [...prev, newCategory]);
+    // Auto-select the newly added category
+    setFormData(prev => ({
+      ...prev,
+      service_category_id: newCategory.id.toString()
+    }));
   };
 
   const handleChange = (e) => {
@@ -138,7 +160,7 @@ export default function ServiceManager() {
       name: service.name,
       description: service.description,
       price: service.price,
-      category: service.category || "",
+      service_category_id: service.category?.id?.toString() || service.service_category_id?.toString() || "",
       is_excluded_from_analytics: service.is_excluded_from_analytics || false,
       estimated_minutes: service.estimated_minutes || "",
       is_special: service.is_special || false,
@@ -272,7 +294,7 @@ export default function ServiceManager() {
                     </div>
                   </td>
                   <td className="px-4 py-3 border-0" style={{ fontSize: '1rem' }}>
-                    <span className="badge bg-light text-dark">{service.category || "-"}</span>
+                    <span className="badge bg-light text-dark">{service.category?.name || "-"}</span>
                   </td>
                   <td className="px-4 py-3 border-0" style={{ fontSize: '1rem' }}>
                     <div className="d-flex flex-column">
@@ -420,25 +442,35 @@ export default function ServiceManager() {
                   <label className="form-label">
                     Category <span className="text-danger">*</span>
                   </label>
-                  <select
-                    name="category"
-                    className={`form-select ${
-                      formErrors.category ? "is-invalid" : ""
-                    }`}
-                    value={formData.category}
-                    onChange={handleChange}
-                    required
-                  >
-                    <option value="">-- Select Category --</option>
-                    <option value="Preventive">Preventive</option>
-                    <option value="Restorative">Restorative</option>
-                    <option value="Cosmetic">Cosmetic</option>
-                    <option value="Surgical">Surgical</option>
-                    <option value="Other">Other</option>
-                  </select>
-                  {formErrors.category && (
+                  <div className="input-group">
+                    <select
+                      name="service_category_id"
+                      className={`form-select ${
+                        formErrors.service_category_id ? "is-invalid" : ""
+                      }`}
+                      value={formData.service_category_id}
+                      onChange={handleChange}
+                      required
+                    >
+                      <option value="">-- Select Category --</option>
+                      {categories.map((category) => (
+                        <option key={category.id} value={category.id}>
+                          {category.name}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      className="btn btn-outline-secondary"
+                      onClick={() => setShowAddCategoryModal(true)}
+                      title="Add new category"
+                    >
+                      <i className="bi bi-plus"></i>
+                    </button>
+                  </div>
+                  {formErrors.service_category_id && (
                     <div className="invalid-feedback">
-                      {formErrors.category[0]}
+                      {formErrors.service_category_id[0]}
                     </div>
                   )}
                 </div>
@@ -755,6 +787,13 @@ export default function ServiceManager() {
           </div>
         </div>
       )}
+      
+      {/* Add Category Modal */}
+      <AddCategoryModal
+        show={showAddCategoryModal}
+        onClose={() => setShowAddCategoryModal(false)}
+        onCategoryAdded={handleCategoryAdded}
+      />
     </div>
   );
 }

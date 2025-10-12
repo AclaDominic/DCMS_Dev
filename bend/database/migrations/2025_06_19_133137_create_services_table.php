@@ -15,7 +15,6 @@ return new class extends Migration {
             $table->string('name');
             $table->text('description')->nullable();
             $table->decimal('price', 10, 2);
-            $table->string('category')->nullable(); // e.g., Preventive, Surgical
             $table->boolean('is_excluded_from_analytics')->default(false);
             $table->boolean('is_special')->default(false);
             $table->date('special_start_date')->nullable();
