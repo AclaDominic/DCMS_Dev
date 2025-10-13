@@ -1,13 +1,12 @@
 import { useEffect, useState } from "react";
 import api from "../../api/api";
-import LoadingSpinner from "../LoadingSpinner";
 import VisitCompletionModal from "./VisitCompletionModal";
 import VisitNotesModal from "./VisitNotesModal";
 import SendVisitCodeModal from "./SendVisitCodeModal";
 
 function VisitTrackerManager() {
   const [visits, setVisits] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [visitType, setVisitType] = useState("walkin");
   const [refCode, setRefCode] = useState("");
@@ -318,12 +317,19 @@ function VisitTrackerManager() {
         </button>
       </div>
 
-      {loading ? (
-        <LoadingSpinner message="Loading patient visits..." />
-      ) : (
-        <div className="flex-grow-1 d-flex flex-column">
-          <div className="d-flex justify-content-between align-items-center mb-3">
-            <h5>Ongoing Visits ({visits.length} total, {visits.filter(v => v.status === 'pending').length} pending)</h5>
+      <div className="flex-grow-1 d-flex flex-column">
+        <div className="d-flex justify-content-between align-items-center mb-3">
+          <div className="d-flex align-items-center">
+            <h5 className="mb-0">Ongoing Visits ({visits.length} total, {visits.filter(v => v.status === 'pending').length} pending)</h5>
+            {loading && (
+              <div className="d-flex align-items-center text-muted ms-3">
+                <div className="spinner-border spinner-border-sm me-2" role="status">
+                  <span className="visually-hidden">Loading...</span>
+                </div>
+                <small>Loading visits...</small>
+              </div>
+            )}
+          </div>
             <div className="d-flex gap-2">
               <button
                 className="btn btn-sm btn-outline-primary"
@@ -339,9 +345,9 @@ function VisitTrackerManager() {
                   ? "🔽 Hide Completed/Rejected"
                   : "🔼 Show All Today's Visits"}
               </button>
-            </div>
           </div>
-          <div className="table-responsive flex-grow-1">
+        </div>
+        <div className="table-responsive flex-grow-1">
             <table className="table table-bordered table-hover mb-0">
               <thead className="table-light sticky-top">
                 <tr>
@@ -489,9 +495,8 @@ function VisitTrackerManager() {
                 })}
             </tbody>
             </table>
-          </div>
         </div>
-      )}
+      </div>
 
       {/* Reject Modal */}
       {showRejectModal && (

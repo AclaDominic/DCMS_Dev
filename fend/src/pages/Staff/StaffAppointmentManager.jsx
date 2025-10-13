@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import api from "../../api/api";
-import LoadingSpinner from "../../components/LoadingSpinner";
 
 // Local helpers
 function onlyDate(v) {
@@ -11,7 +10,7 @@ function onlyDate(v) {
 
 export default function StaffAppointmentManager() {
   const [appointments, setAppointments] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [selected, setSelected] = useState(null); // for rejection modal
   const [note, setNote] = useState("");
   const [processingId, setProcessingId] = useState(null); // holds appointment ID being processed
@@ -26,6 +25,7 @@ export default function StaffAppointmentManager() {
   }, []);
 
   const fetchAppointments = async () => {
+    setLoading(true);
     try {
       const res = await api.get("/api/appointments?status=pending");
       setAppointments(res.data);
@@ -108,15 +108,23 @@ export default function StaffAppointmentManager() {
     }
   };
 
-  if (loading) return <LoadingSpinner />;
-
   return (
     <div className="w-100" style={{ padding: 0, margin: 0 }}>
       <div className="container-fluid px-0 py-0">
         <div className="row g-0">
           <div className="col-12">
             <div className="bg-white p-4" style={{ minHeight: '100vh' }}>
-              <h1 className="h3 fw-bold mb-4" style={{ color: '#1e293b' }}>Pending Appointments</h1>
+              <div className="d-flex justify-content-between align-items-center mb-4">
+                <h1 className="h3 fw-bold mb-0" style={{ color: '#1e293b' }}>Pending Appointments</h1>
+                {loading && (
+                  <div className="d-flex align-items-center text-muted">
+                    <div className="spinner-border spinner-border-sm me-2" role="status">
+                      <span className="visually-hidden">Loading...</span>
+                    </div>
+                    <small>Loading appointments...</small>
+                  </div>
+                )}
+              </div>
               {appointments.length === 0 ? (
                 <div className="d-flex flex-column justify-content-center align-items-center" style={{ minHeight: '60vh' }}>
                   <i className="bi bi-calendar-x display-1 d-block mb-3 text-muted"></i>

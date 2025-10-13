@@ -1,9 +1,9 @@
 import { useState, Suspense, lazy } from "react";
-import StaffAppointmentManager from "../Staff/StaffAppointmentManager";
-import VisitTrackerManager from "../../components/Staff/VisitTrackerManager";
 
-// Lazy load AppointmentFinder to only load when tab is selected
+// Lazy load all components to only load when their respective tabs are selected
+const StaffAppointmentManager = lazy(() => import("../Staff/StaffAppointmentManager"));
 const AppointmentFinder = lazy(() => import("../Staff/AppointmentFinder"));
+const VisitTrackerManager = lazy(() => import("../../components/Staff/VisitTrackerManager"));
 
 function AdminAppointmentManager() {
   const [activeTab, setActiveTab] = useState("appointments");
@@ -77,7 +77,16 @@ function AdminAppointmentManager() {
               <div className="tab-content" style={{ width: '100%', maxWidth: '100%' }}>
                 {activeTab === "appointments" && (
                   <div className="tab-pane fade show active" style={{ width: '100%', maxWidth: '100%' }}>
-                    <StaffAppointmentManager />
+                    <Suspense fallback={
+                      <div className="text-center py-5">
+                        <div className="spinner-border text-primary" role="status">
+                          <span className="visually-hidden">Loading...</span>
+                        </div>
+                        <p className="mt-3 text-muted">Loading Appointment Manager...</p>
+                      </div>
+                    }>
+                      <StaffAppointmentManager />
+                    </Suspense>
                   </div>
                 )}
                 {activeTab === "appointment-finder" && (
@@ -96,7 +105,16 @@ function AdminAppointmentManager() {
                 )}
                 {activeTab === "visits" && (
                   <div className="tab-pane fade show active" style={{ width: '100%', maxWidth: '100%' }}>
-                    <VisitTrackerManager />
+                    <Suspense fallback={
+                      <div className="text-center py-5">
+                        <div className="spinner-border text-primary" role="status">
+                          <span className="visually-hidden">Loading...</span>
+                        </div>
+                        <p className="mt-3 text-muted">Loading Visit Tracker...</p>
+                      </div>
+                    }>
+                      <VisitTrackerManager />
+                    </Suspense>
                   </div>
                 )}
               </div>

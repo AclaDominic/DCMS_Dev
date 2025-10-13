@@ -309,17 +309,22 @@ export default function AppointmentFinder() {
             {/* Appointments List */}
             {selectedPatient && (
               <div>
-                <h5 className="fw-semibold mb-3">
-                  <i className="bi bi-calendar-check me-2"></i>
-                  Approved Appointments
-                </h5>
+                <div className="d-flex align-items-center mb-3">
+                  <h5 className="fw-semibold mb-0">
+                    <i className="bi bi-calendar-check me-2"></i>
+                    Approved Appointments
+                  </h5>
+                  {loading && (
+                    <div className="d-flex align-items-center text-muted ms-3">
+                      <div className="spinner-border spinner-border-sm me-2" role="status">
+                        <span className="visually-hidden">Loading...</span>
+                      </div>
+                      <small>Loading appointments...</small>
+                    </div>
+                  )}
+                </div>
                 
-                {loading ? (
-                  <div className="text-center py-4">
-                    <LoadingSpinner />
-                    <p className="text-muted mt-2">Loading appointments...</p>
-                  </div>
-                ) : appointments.length === 0 ? (
+                {appointments.length === 0 && !loading ? (
                   <div className="text-center py-5">
                     <i className="bi bi-calendar-x display-1 text-muted mb-3"></i>
                     <h4 className="fw-normal text-muted">No Approved Appointments</h4>
