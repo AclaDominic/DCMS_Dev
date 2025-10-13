@@ -285,14 +285,9 @@ export default function PromoArchive() {
                           </div>
                           <h3 className="text-muted mb-3">No promos found for {year}</h3>
                           <p className="text-muted mb-4 fs-5">This year doesn't have any promotional campaigns yet.</p>
-                          <div className="d-flex gap-3">
-                            <button className="btn btn-outline-primary">
-                              <i className="bi bi-plus-circle me-2"></i>Create New Promo
-                            </button>
-                            <button className="btn btn-outline-secondary">
-                              <i className="bi bi-calendar me-2"></i>Try Different Year
-                            </button>
-                          </div>
+                          <button className="btn btn-outline-secondary">
+                            <i className="bi bi-calendar me-2"></i>Try Different Year
+                          </button>
                         </div>
                       </td>
                     </tr>
