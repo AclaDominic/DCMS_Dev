@@ -104,16 +104,17 @@ export default function ServicesAndPromos() {
       
       // Fetch all active services with discounts from public endpoint
       const servicesRes = await api.get("/api/public/services");
-      const allServices = servicesRes.data;
-      
-      // Extract promos from services data (already included in the response)
+      const allServices = Array.isArray(servicesRes.data)
+        ? servicesRes.data
+        : Array.isArray(servicesRes.data?.data)
+          ? servicesRes.data.data
+          : [];
+
+      // Extract promos from services data (already included in the response on each service)
       const promosMap = {};
-      allServices.forEach(service => {
-        if (service.discounts && service.discounts.length > 0) {
-          promosMap[service.id] = service.discounts;
-        } else {
-          promosMap[service.id] = [];
-        }
+      allServices.forEach((service) => {
+        const discounts = Array.isArray(service?.discounts) ? service.discounts : [];
+        promosMap[service.id] = discounts;
       });
       
       setServices(allServices);
@@ -474,7 +475,7 @@ export default function ServicesAndPromos() {
         )}
 
         <div className="row g-4">
-          {services.map((service) => {
+          {Array.isArray(services) && services.map((service) => {
             const priceInfo = getCurrentPrice(service);
             const bookable = isBookable(service);
             
@@ -500,7 +501,7 @@ export default function ServicesAndPromos() {
                       
                       {service.category && (
                         <span className="badge bg-secondary mb-2">
-                          {service.category}
+                          {typeof service.category === 'string' ? service.category : (service.category?.name || "")}
                         </span>
                       )}
                     </div>
