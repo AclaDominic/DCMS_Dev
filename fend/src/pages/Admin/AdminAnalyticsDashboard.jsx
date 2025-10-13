@@ -209,12 +209,12 @@ export default function AdminAnalyticsDashboard() {
       currentY = addSectionTitle(doc, "Key Performance Indicators", currentY);
       
       const kpiData = [
-        ["Metric", "Current Value", "Previous Value", "Change (%)", "Trend"],
+        ["Metric", "Current", "Previous", "Change", "Trend"],
         ["Total Visits", String(k?.total_visits?.value ?? 0), String(k?.total_visits?.prev ?? 0), `${k?.total_visits?.pct_change ?? 0}%`, (k?.total_visits?.pct_change ?? 0) >= 0 ? "↗ Positive" : "↘ Negative"],
-        ["Approved Appointments", String(k?.approved_appointments?.value ?? 0), String(k?.approved_appointments?.prev ?? 0), `${k?.approved_appointments?.pct_change ?? 0}%`, (k?.approved_appointments?.pct_change ?? 0) >= 0 ? "↗ Positive" : "↘ Negative"],
-        ["No-shows", String(k?.no_shows?.value ?? 0), String(k?.no_shows?.prev ?? 0), `${k?.no_shows?.pct_change ?? 0}%`, (k?.no_shows?.pct_change ?? 0) >= 0 ? "↗ Concerning" : "↘ Improving"],
-        ["Avg Visit Duration (min)", String(k?.avg_visit_duration_min?.value ?? 0), String(k?.avg_visit_duration_min?.prev ?? 0), `${k?.avg_visit_duration_min?.pct_change ?? 0}%`, (k?.avg_visit_duration_min?.pct_change ?? 0) >= 0 ? "↗ Longer" : "↘ Shorter"],
-        ["Total Revenue", `₱${(k?.total_revenue?.value ?? 0).toLocaleString()}`, `₱${(k?.total_revenue?.prev ?? 0).toLocaleString()}`, `${k?.total_revenue?.pct_change ?? 0}%`, (k?.total_revenue?.pct_change ?? 0) >= 0 ? "↗ Growth" : "↘ Decline"]
+        ["Approved Appts", String(k?.approved_appointments?.value ?? 0), String(k?.approved_appointments?.prev ?? 0), `${k?.approved_appointments?.pct_change ?? 0}%`, (k?.approved_appointments?.pct_change ?? 0) >= 0 ? "↗ Positive" : "↘ Negative"],
+        ["No-shows", String(k?.no_shows?.value ?? 0), String(k?.no_shows?.prev ?? 0), `${k?.no_shows?.pct_change ?? 0}%`, (k?.no_shows?.pct_change ?? 0) >= 0 ? "↗ Concern" : "↘ Better"],
+        ["Avg Duration (min)", String(k?.avg_visit_duration_min?.value ?? 0), String(k?.avg_visit_duration_min?.prev ?? 0), `${k?.avg_visit_duration_min?.pct_change ?? 0}%`, (k?.avg_visit_duration_min?.pct_change ?? 0) >= 0 ? "↗ Longer" : "↘ Shorter"],
+        ["Revenue", `₱${(k?.total_revenue?.value ?? 0).toLocaleString()}`, `₱${(k?.total_revenue?.prev ?? 0).toLocaleString()}`, `${k?.total_revenue?.pct_change ?? 0}%`, (k?.total_revenue?.pct_change ?? 0) >= 0 ? "↗ Growth" : "↘ Decline"]
       ];
 
       autoTable(doc, {
@@ -222,6 +222,24 @@ export default function AdminAnalyticsDashboard() {
         head: [kpiData[0]],
         body: kpiData.slice(1),
         theme: "striped",
+        styles: {
+          fontSize: 9,
+          cellPadding: 4,
+          overflow: 'linebreak',
+        },
+        headStyles: {
+          fillColor: [59, 130, 246],
+          textColor: 255,
+          fontStyle: 'bold',
+          fontSize: 9
+        },
+        columnStyles: {
+          0: { cellWidth: 100 }, // Metric
+          1: { cellWidth: 80 },  // Current
+          2: { cellWidth: 80 },  // Previous
+          3: { cellWidth: 60 },  // Change
+          4: { cellWidth: 70 }   // Trend
+        }
       });
 
       // SECTION 2: PAYMENT METHOD SHARE
@@ -263,6 +281,56 @@ export default function AdminAnalyticsDashboard() {
         });
       }
 
+      // SECTION 4: MONTHLY TRENDS DATA
+      if (trendData && trendData.labels && trendData.labels.length > 0) {
+        currentY = addSectionTitle(doc, "Monthly Trends Analysis", (doc.lastAutoTable?.finalY || 100) + 20);
+        
+        // Add trend metadata
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`Metric: ${selectedMetric.charAt(0).toUpperCase() + selectedMetric.slice(1)}`, 40, currentY);
+        currentY += 12;
+        
+        if (selectedMetric === 'revenue') {
+          doc.text(`Time Period: ${revenueTimeframe.charAt(0).toUpperCase() + revenueTimeframe.slice(1)}`, 40, currentY);
+          currentY += 12;
+          
+          if (revenueStartDate && revenueEndDate) {
+            doc.text(`Custom Range: ${revenueStartDate} to ${revenueEndDate}`, 40, currentY);
+            currentY += 12;
+          }
+        }
+        
+        currentY += 5;
+        
+        // Create trend data table
+        const trendTableData = [
+          ["Period", "Visits", "Appointments", "Revenue", "Loss"],
+          ...trendData.labels.map((label, index) => [
+            label,
+            String(trendData.visits?.[index] ?? 0),
+            String(trendData.appointments?.[index] ?? 0),
+            `₱${(trendData.revenue?.[index] ?? 0).toLocaleString()}`,
+            `₱${(trendData.loss?.[index] ?? 0).toLocaleString()}`
+          ])
+        ];
+
+        autoTable(doc, {
+          startY: currentY,
+          head: [trendTableData[0]],
+          body: trendTableData.slice(1),
+          theme: "striped",
+          styles: {
+            fontSize: 8,
+          },
+          headStyles: {
+            fillColor: [59, 130, 246],
+            textColor: 255,
+            fontStyle: 'bold'
+          },
+        });
+      }
+
       doc.save(`analytics-report-${month}.pdf`);
     } catch (e) {
       console.error(e);
@@ -300,14 +368,22 @@ export default function AdminAnalyticsDashboard() {
         })()
       ]);
       kpiSheet.addRow(['Avg Visit Duration (min)', k?.avg_visit_duration_min?.value ?? 0, k?.avg_visit_duration_min?.prev ?? 0, k?.avg_visit_duration_min?.pct_change ?? 0, (k?.avg_visit_duration_min?.pct_change ?? 0) >= 0 ? "Longer" : "Shorter"]);
-      kpiSheet.addRow(['Total Revenue', k?.total_revenue?.value ?? 0, k?.total_revenue?.prev ?? 0, k?.total_revenue?.pct_change ?? 0, (k?.total_revenue?.pct_change ?? 0) >= 0 ? "Growth" : "Decline"]);
+      
+      // Format Total Revenue row with currency formatting
+      const revenueRow = kpiSheet.addRow([
+        'Total Revenue', 
+        `₱${(k?.total_revenue?.value ?? 0).toLocaleString()}`, 
+        `₱${(k?.total_revenue?.prev ?? 0).toLocaleString()}`, 
+        k?.total_revenue?.pct_change ?? 0, 
+        (k?.total_revenue?.pct_change ?? 0) >= 0 ? "Growth" : "Decline"
+      ]);
       
       // Style header row
       kpiSheet.getRow(1).font = { bold: true };
       kpiSheet.columns = [
         { width: 25 },
-        { width: 15 },
-        { width: 15 },
+        { width: 20 },
+        { width: 20 },
         { width: 12 },
         { width: 15 }
       ];
@@ -335,8 +411,8 @@ export default function AdminAnalyticsDashboard() {
         data.top_revenue_services.forEach(service => {
           serviceSheet.addRow([
             service.service_name,
-            service.revenue,
-            service.prev_revenue || 0,
+            `₱${(service.revenue || 0).toLocaleString()}`,
+            `₱${(service.prev_revenue || 0).toLocaleString()}`,
             service.pct_change || 0
           ]);
         });
@@ -345,8 +421,8 @@ export default function AdminAnalyticsDashboard() {
         serviceSheet.getRow(1).font = { bold: true };
         serviceSheet.columns = [
           { width: 30 },
-          { width: 18 },
-          { width: 18 },
+          { width: 20 },
+          { width: 20 },
           { width: 12 }
         ];
       }
@@ -377,20 +453,22 @@ export default function AdminAnalyticsDashboard() {
             label,
             trendData.visits?.[index] ?? 0,
             trendData.appointments?.[index] ?? 0,
-            trendData.revenue?.[index] ?? 0,
-            trendData.loss?.[index] ?? 0
+            `₱${(trendData.revenue?.[index] ?? 0).toLocaleString()}`,
+            `₱${(trendData.loss?.[index] ?? 0).toLocaleString()}`
           ]);
         });
         
         // Style header rows
         trendSheet.getRow(1).font = { bold: true };
-        trendSheet.getRow(7).font = { bold: true }; // Data header row
+        const headerRowIndex = selectedMetric === 'revenue' && revenueStartDate && revenueEndDate ? 7 : 
+                              selectedMetric === 'revenue' && revenueTimeframe ? 6 : 5;
+        trendSheet.getRow(headerRowIndex).font = { bold: true }; // Data header row
         trendSheet.columns = [
           { width: 20 },
           { width: 12 },
           { width: 15 },
-          { width: 15 },
-          { width: 12 }
+          { width: 18 },
+          { width: 18 }
         ];
       }
 
