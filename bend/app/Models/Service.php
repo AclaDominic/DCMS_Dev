@@ -118,6 +118,70 @@ class Service extends Model
         return count($teeth);
     }
 
+    // Helper method to determine if teeth are primary (letters) or adult (numbers)
+    public static function isPrimaryTeeth($teethString): bool
+    {
+        if (empty($teethString)) {
+            return false;
+        }
+        
+        $teeth = array_map('trim', explode(',', $teethString));
+        $teeth = array_filter($teeth); // Remove empty values
+        
+        // Check if any tooth is a letter (A-T for primary teeth)
+        foreach ($teeth as $tooth) {
+            if (preg_match('/^[A-T]$/', $tooth)) {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+
+    // Helper method to get teeth type description
+    public static function getTeethTypeDescription($teethString): string
+    {
+        if (empty($teethString)) {
+            return '';
+        }
+        
+        return self::isPrimaryTeeth($teethString) ? 'Primary Teeth' : 'Adult Teeth';
+    }
+
+    // Helper method to validate teeth format
+    public static function validateTeethFormat($teethString): array
+    {
+        $errors = [];
+        
+        if (empty($teethString)) {
+            return $errors;
+        }
+        
+        $teeth = array_map('trim', explode(',', $teethString));
+        $teeth = array_filter($teeth); // Remove empty values
+        
+        $hasNumbers = false;
+        $hasLetters = false;
+        
+        foreach ($teeth as $tooth) {
+            if (preg_match('/^[1-9]|[1-2][0-9]|3[0-2]$/', $tooth)) {
+                // Adult teeth: 1-32
+                $hasNumbers = true;
+            } elseif (preg_match('/^[A-T]$/', $tooth)) {
+                // Primary teeth: A-T
+                $hasLetters = true;
+            } else {
+                $errors[] = "Invalid tooth identifier: {$tooth}. Use numbers 1-32 for adult teeth or letters A-T for primary teeth.";
+            }
+        }
+        
+        if ($hasNumbers && $hasLetters) {
+            $errors[] = "Cannot mix adult teeth (numbers 1-32) and primary teeth (letters A-T) in the same entry.";
+        }
+        
+        return $errors;
+    }
+
     // Method to calculate total price for per-teeth services
     public function calculateTotalPrice($teethTreated = null): float
     {

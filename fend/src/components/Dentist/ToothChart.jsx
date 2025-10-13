@@ -1,9 +1,12 @@
 import { useState } from "react";
 import teethChartImage from "../../pages/Dentist/Teeth_Chart.png";
+import primaryTeethChartImage from "../../pages/Dentist/Primary_Teeth_Chart.png";
 
 const ToothChart = ({ selectedTeeth = [], onTeethChange, showChart = false, onToggleChart }) => {
-  // Tooth data based on the Universal Numbering System
-  const toothData = [
+  const [activeTab, setActiveTab] = useState("adult"); // "adult" or "primary"
+
+  // Adult teeth data based on the Universal Numbering System (1-32)
+  const adultToothData = [
     // Upper Right (1-8)
     { number: 1, name: "Third Molar", quadrant: "Upper Right" },
     { number: 2, name: "Second Molar", quadrant: "Upper Right" },
@@ -45,8 +48,39 @@ const ToothChart = ({ selectedTeeth = [], onTeethChange, showChart = false, onTo
     { number: 32, name: "Third Molar", quadrant: "Lower Right" },
   ];
 
-  const handleToothClick = (toothNumber) => {
-    const toothStr = toothNumber.toString();
+  // Primary teeth data based on the Universal Numbering System (A-T)
+  const primaryToothData = [
+    // Upper Right (A-E)
+    { letter: "A", name: "Second Molar", quadrant: "Upper Right" },
+    { letter: "B", name: "First Molar", quadrant: "Upper Right" },
+    { letter: "C", name: "Canine", quadrant: "Upper Right" },
+    { letter: "D", name: "Lateral Incisor", quadrant: "Upper Right" },
+    { letter: "E", name: "Central Incisor", quadrant: "Upper Right" },
+    
+    // Upper Left (F-J)
+    { letter: "F", name: "Central Incisor", quadrant: "Upper Left" },
+    { letter: "G", name: "Lateral Incisor", quadrant: "Upper Left" },
+    { letter: "H", name: "Canine", quadrant: "Upper Left" },
+    { letter: "I", name: "First Molar", quadrant: "Upper Left" },
+    { letter: "J", name: "Second Molar", quadrant: "Upper Left" },
+    
+    // Lower Left (K-O)
+    { letter: "K", name: "Second Molar", quadrant: "Lower Left" },
+    { letter: "L", name: "First Molar", quadrant: "Lower Left" },
+    { letter: "M", name: "Canine", quadrant: "Lower Left" },
+    { letter: "N", name: "Lateral Incisor", quadrant: "Lower Left" },
+    { letter: "O", name: "Central Incisor", quadrant: "Lower Left" },
+    
+    // Lower Right (P-T)
+    { letter: "P", name: "Central Incisor", quadrant: "Lower Right" },
+    { letter: "Q", name: "Lateral Incisor", quadrant: "Lower Right" },
+    { letter: "R", name: "Canine", quadrant: "Lower Right" },
+    { letter: "S", name: "First Molar", quadrant: "Lower Right" },
+    { letter: "T", name: "Second Molar", quadrant: "Lower Right" },
+  ];
+
+  const handleToothClick = (toothIdentifier) => {
+    const toothStr = toothIdentifier.toString();
     let newSelectedTeeth = [...selectedTeeth];
     
     if (newSelectedTeeth.includes(toothStr)) {
@@ -57,8 +91,12 @@ const ToothChart = ({ selectedTeeth = [], onTeethChange, showChart = false, onTo
       newSelectedTeeth.push(toothStr);
     }
     
-    // Sort teeth numerically and join with commas
-    newSelectedTeeth.sort((a, b) => parseInt(a) - parseInt(b));
+    // Sort teeth appropriately based on type
+    if (activeTab === "adult") {
+      newSelectedTeeth.sort((a, b) => parseInt(a) - parseInt(b));
+    } else {
+      newSelectedTeeth.sort();
+    }
     onTeethChange(newSelectedTeeth.join(','));
   };
 
@@ -67,7 +105,12 @@ const ToothChart = ({ selectedTeeth = [], onTeethChange, showChart = false, onTo
   };
 
   const selectAllTeeth = () => {
-    const allTeeth = toothData.map(tooth => tooth.number.toString());
+    let allTeeth;
+    if (activeTab === "adult") {
+      allTeeth = adultToothData.map(tooth => tooth.number.toString());
+    } else {
+      allTeeth = primaryToothData.map(tooth => tooth.letter);
+    }
     onTeethChange(allTeeth.join(','));
   };
 
@@ -108,7 +151,35 @@ const ToothChart = ({ selectedTeeth = [], onTeethChange, showChart = false, onTo
           {/* Chart Header */}
           <div className="text-center mb-3">
             <h6 className="text-muted">Universal Numbering System</h6>
-            <p className="text-muted small mb-0">Click on tooth numbers below to select/deselect</p>
+            <p className="text-muted small mb-0">Click on tooth numbers/letters below to select/deselect</p>
+          </div>
+
+          {/* Tab Navigation */}
+          <div className="d-flex justify-content-center mb-4">
+            <div className="btn-group" role="group" aria-label="Tooth chart tabs">
+              <button
+                type="button"
+                className={`btn ${activeTab === "adult" ? "btn-primary" : "btn-outline-primary"}`}
+                onClick={() => setActiveTab("adult")}
+              >
+                <i className="bi bi-person me-1"></i>
+                Adult Teeth (1-32)
+              </button>
+              <button
+                type="button"
+                className={`btn ${activeTab === "primary" ? "btn-primary" : "btn-outline-primary"}`}
+                onClick={() => setActiveTab("primary")}
+              >
+                <i className="bi bi-person-heart me-1"></i>
+                Primary Teeth (A-T)
+              </button>
+            </div>
+          </div>
+
+          {/* General Note */}
+          <div className="alert alert-info mb-4">
+            <i className="bi bi-info-circle me-2"></i>
+            <strong>Note:</strong> If the teeth done is in letters (A-T), it's primary teeth. If it's in numbers (1-32), it's adult teeth.
           </div>
           
            {/* Larger Layout with Image and Buttons Side by Side */}
@@ -117,8 +188,8 @@ const ToothChart = ({ selectedTeeth = [], onTeethChange, showChart = false, onTo
              <div className="col-md-5 mb-3">
                <div className="text-center">
                  <img 
-                   src={teethChartImage} 
-                   alt="Dental Chart Reference" 
+                   src={activeTab === "adult" ? teethChartImage : primaryTeethChartImage} 
+                   alt={activeTab === "adult" ? "Adult Dental Chart Reference" : "Primary Teeth Chart Reference"} 
                    className="img-fluid"
                    style={{ 
                      maxWidth: '300px', 
@@ -128,7 +199,9 @@ const ToothChart = ({ selectedTeeth = [], onTeethChange, showChart = false, onTo
                      backgroundColor: '#f8f9fa'
                    }}
                  />
-                 <small className="text-muted d-block mt-2">Reference Chart</small>
+                 <small className="text-muted d-block mt-2">
+                   {activeTab === "adult" ? "Adult Teeth Reference Chart" : "Primary Teeth Reference Chart"}
+                 </small>
                </div>
              </div>
              
@@ -141,69 +214,139 @@ const ToothChart = ({ selectedTeeth = [], onTeethChange, showChart = false, onTo
                  </h6>
                </div>
                
-               {/* Upper Teeth - Correct Incremental Layout (1-16) */}
-               <div className="mb-4">
-                 <div className="text-center mb-3">
-                   <strong className="text-primary">UPPER TEETH (1-16)</strong>
-                 </div>
-                 <div className="d-flex justify-content-center flex-wrap gap-2">
-                   {[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16].map(toothNumber => {
-                     const tooth = toothData.find(t => t.number === toothNumber);
-                     return (
-                       <button
-                         key={toothNumber}
-                         type="button"
-                         className={`btn ${selectedTeeth.includes(toothNumber.toString()) 
-                           ? 'btn-warning' 
-                           : 'btn-outline-primary'
-                         }`}
-                         style={{ 
-                           width: '45px', 
-                           height: '45px',
-                           fontSize: '1rem',
-                           fontWeight: 'bold'
-                         }}
-                         onClick={() => handleToothClick(toothNumber)}
-                         title={`Tooth ${toothNumber}: ${tooth?.name}`}
-                       >
-                         {toothNumber}
-                       </button>
-                     );
-                   })}
-                 </div>
-               </div>
-               
-               {/* Lower Teeth - Correct Decremental Layout (32-17) */}
-               <div className="mb-3">
-                 <div className="text-center mb-3">
-                   <strong className="text-primary">LOWER TEETH (32-17)</strong>
-                 </div>
-                 <div className="d-flex justify-content-center flex-wrap gap-2">
-                   {[32,31,30,29,28,27,26,25,24,23,22,21,20,19,18,17].map(toothNumber => {
-                     const tooth = toothData.find(t => t.number === toothNumber);
-                     return (
-                       <button
-                         key={toothNumber}
-                         type="button"
-                         className={`btn ${selectedTeeth.includes(toothNumber.toString()) 
-                           ? 'btn-warning' 
-                           : 'btn-outline-primary'
-                         }`}
-                         style={{ 
-                           width: '45px', 
-                           height: '45px',
-                           fontSize: '1rem',
-                           fontWeight: 'bold'
-                         }}
-                         onClick={() => handleToothClick(toothNumber)}
-                         title={`Tooth ${toothNumber}: ${tooth?.name}`}
-                       >
-                         {toothNumber}
-                       </button>
-                     );
-                   })}
-                 </div>
-               </div>
+               {activeTab === "adult" ? (
+                 <>
+                   {/* Adult Teeth - Upper Teeth (1-16) */}
+                   <div className="mb-4">
+                     <div className="text-center mb-3">
+                       <strong className="text-primary">UPPER TEETH (1-16)</strong>
+                     </div>
+                     <div className="d-flex justify-content-center flex-wrap gap-2">
+                       {[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16].map(toothNumber => {
+                         const tooth = adultToothData.find(t => t.number === toothNumber);
+                         return (
+                           <button
+                             key={toothNumber}
+                             type="button"
+                             className={`btn ${selectedTeeth.includes(toothNumber.toString()) 
+                               ? 'btn-warning' 
+                               : 'btn-outline-primary'
+                             }`}
+                             style={{ 
+                               width: '45px', 
+                               height: '45px',
+                               fontSize: '1rem',
+                               fontWeight: 'bold'
+                             }}
+                             onClick={() => handleToothClick(toothNumber)}
+                             title={`Tooth ${toothNumber}: ${tooth?.name}`}
+                           >
+                             {toothNumber}
+                           </button>
+                         );
+                       })}
+                     </div>
+                   </div>
+                   
+                   {/* Adult Teeth - Lower Teeth (32-17) */}
+                   <div className="mb-3">
+                     <div className="text-center mb-3">
+                       <strong className="text-primary">LOWER TEETH (32-17)</strong>
+                     </div>
+                     <div className="d-flex justify-content-center flex-wrap gap-2">
+                       {[32,31,30,29,28,27,26,25,24,23,22,21,20,19,18,17].map(toothNumber => {
+                         const tooth = adultToothData.find(t => t.number === toothNumber);
+                         return (
+                           <button
+                             key={toothNumber}
+                             type="button"
+                             className={`btn ${selectedTeeth.includes(toothNumber.toString()) 
+                               ? 'btn-warning' 
+                               : 'btn-outline-primary'
+                             }`}
+                             style={{ 
+                               width: '45px', 
+                               height: '45px',
+                               fontSize: '1rem',
+                               fontWeight: 'bold'
+                             }}
+                             onClick={() => handleToothClick(toothNumber)}
+                             title={`Tooth ${toothNumber}: ${tooth?.name}`}
+                           >
+                             {toothNumber}
+                           </button>
+                         );
+                       })}
+                     </div>
+                   </div>
+                 </>
+               ) : (
+                 <>
+                   {/* Primary Teeth - Upper Teeth (A-J) */}
+                   <div className="mb-4">
+                     <div className="text-center mb-3">
+                       <strong className="text-primary">UPPER TEETH (A-J)</strong>
+                     </div>
+                     <div className="d-flex justify-content-center flex-wrap gap-2">
+                       {["A","B","C","D","E","F","G","H","I","J"].map(toothLetter => {
+                         const tooth = primaryToothData.find(t => t.letter === toothLetter);
+                         return (
+                           <button
+                             key={toothLetter}
+                             type="button"
+                             className={`btn ${selectedTeeth.includes(toothLetter) 
+                               ? 'btn-warning' 
+                               : 'btn-outline-primary'
+                             }`}
+                             style={{ 
+                               width: '45px', 
+                               height: '45px',
+                               fontSize: '1rem',
+                               fontWeight: 'bold'
+                             }}
+                             onClick={() => handleToothClick(toothLetter)}
+                             title={`Tooth ${toothLetter}: ${tooth?.name}`}
+                           >
+                             {toothLetter}
+                           </button>
+                         );
+                       })}
+                     </div>
+                   </div>
+                   
+                   {/* Primary Teeth - Lower Teeth (K-T) */}
+                   <div className="mb-3">
+                     <div className="text-center mb-3">
+                       <strong className="text-primary">LOWER TEETH (K-T)</strong>
+                     </div>
+                     <div className="d-flex justify-content-center flex-wrap gap-2">
+                       {["K","L","M","N","O","P","Q","R","S","T"].map(toothLetter => {
+                         const tooth = primaryToothData.find(t => t.letter === toothLetter);
+                         return (
+                           <button
+                             key={toothLetter}
+                             type="button"
+                             className={`btn ${selectedTeeth.includes(toothLetter) 
+                               ? 'btn-warning' 
+                               : 'btn-outline-primary'
+                             }`}
+                             style={{ 
+                               width: '45px', 
+                               height: '45px',
+                               fontSize: '1rem',
+                               fontWeight: 'bold'
+                             }}
+                             onClick={() => handleToothClick(toothLetter)}
+                             title={`Tooth ${toothLetter}: ${tooth?.name}`}
+                           >
+                             {toothLetter}
+                           </button>
+                         );
+                       })}
+                     </div>
+                   </div>
+                 </>
+               )}
              </div>
            </div>
           

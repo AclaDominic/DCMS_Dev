@@ -12,6 +12,7 @@ export default function ServiceManager() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showAddCategoryModal, setShowAddCategoryModal] = useState(false);
   const [serviceToDelete, setServiceToDelete] = useState(null);
+  const [categoryFilter, setCategoryFilter] = useState("");
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -65,6 +66,22 @@ export default function ServiceManager() {
       ...prev,
       service_category_id: newCategory.id.toString()
     }));
+  };
+
+  // Filter services based on selected category
+  const filteredServices = categoryFilter 
+    ? services.filter(service => 
+        service.category?.id?.toString() === categoryFilter || 
+        service.service_category_id?.toString() === categoryFilter
+      )
+    : services;
+
+  const handleCategoryFilterChange = (e) => {
+    setCategoryFilter(e.target.value);
+  };
+
+  const clearCategoryFilter = () => {
+    setCategoryFilter("");
   };
 
   const handleChange = (e) => {
@@ -215,6 +232,56 @@ export default function ServiceManager() {
         </div>
       </div>
 
+      {/* Category Filter */}
+      <div className="card border-0 shadow-sm mb-4" style={{ borderRadius: '16px' }}>
+        <div className="card-body p-4">
+          <div className="row align-items-center">
+            <div className="col-md-6">
+              <h6 className="mb-0 fw-semibold" style={{ color: '#1e293b' }}>
+                <i className="bi bi-funnel me-2"></i>
+                Filter Services by Category
+              </h6>
+              <small className="text-muted">Show services from a specific category</small>
+            </div>
+            <div className="col-md-6">
+              <div className="d-flex gap-2 align-items-center">
+                <select
+                  className="form-select border-0 shadow-sm"
+                  style={{ borderRadius: '12px', padding: '12px 16px' }}
+                  value={categoryFilter}
+                  onChange={handleCategoryFilterChange}
+                >
+                  <option value="">All Categories</option>
+                  {categories.map((category) => (
+                    <option key={category.id} value={category.id}>
+                      {category.name}
+                    </option>
+                  ))}
+                </select>
+                {categoryFilter && (
+                  <button
+                    className="btn btn-outline-secondary border-0 shadow-sm"
+                    style={{ borderRadius: '12px', padding: '12px 16px' }}
+                    onClick={clearCategoryFilter}
+                    title="Clear filter"
+                  >
+                    <i className="bi bi-x-lg"></i>
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+          {categoryFilter && (
+            <div className="mt-3">
+              <div className="alert alert-info mb-0" style={{ borderRadius: '12px' }}>
+                <i className="bi bi-info-circle me-2"></i>
+                Showing {filteredServices.length} service{filteredServices.length !== 1 ? 's' : ''} from category: <strong>{categories.find(c => c.id.toString() === categoryFilter)?.name}</strong>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
       <div className="card border-0 shadow-sm" style={{ borderRadius: '16px' }}>
         <div className="card-body p-4">
 
@@ -262,7 +329,23 @@ export default function ServiceManager() {
               </tr>
             </thead>
             <tbody>
-              {services.map((service) => (
+              {filteredServices.length === 0 ? (
+                <tr>
+                  <td colSpan="9" className="text-center py-5">
+                    <div className="text-muted">
+                      <i className="bi bi-inbox display-4 d-block mb-3"></i>
+                      <h5>No services found</h5>
+                      <p className="mb-0">
+                        {categoryFilter 
+                          ? `No services found in the selected category.`
+                          : "No services available. Add your first service to get started."
+                        }
+                      </p>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                filteredServices.map((service) => (
                 <tr key={service.id} className="align-middle" style={{ height: '60px' }}>
                   <td className="px-4 py-3 fw-medium border-0" style={{ fontSize: '1rem' }}>
                     <div className="d-flex align-items-center">
@@ -347,7 +430,8 @@ export default function ServiceManager() {
                     </div>
                   </td>
                 </tr>
-              ))}
+                ))
+              )}
             </tbody>
           </table>
         </div>

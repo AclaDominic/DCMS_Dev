@@ -198,6 +198,17 @@ class PatientVisitController extends Controller
             'payment_method_change' => ['nullable', 'in:maya_to_cash'],
         ]);
 
+        // Validate teeth format if provided
+        if (!empty($validated['teeth_treated'])) {
+            $teethErrors = \App\Models\Service::validateTeethFormat($validated['teeth_treated']);
+            if (!empty($teethErrors)) {
+                return response()->json([
+                    'message' => 'Invalid teeth format',
+                    'errors' => ['teeth_treated' => $teethErrors]
+                ], 422);
+            }
+        }
+
         $userId = $request->user()->id;
         return DB::transaction(function () use ($visit, $validated, $userId) {
             // 1. Consume stock items and update batch quantities
@@ -560,6 +571,17 @@ class PatientVisitController extends Controller
             'teeth_treated' => ['nullable', 'string', 'max:200'],
         ]);
 
+        // Validate teeth format if provided
+        if (!empty($validated['teeth_treated'])) {
+            $teethErrors = \App\Models\Service::validateTeethFormat($validated['teeth_treated']);
+            if (!empty($teethErrors)) {
+                return response()->json([
+                    'message' => 'Invalid teeth format',
+                    'errors' => ['teeth_treated' => $teethErrors]
+                ], 422);
+            }
+        }
+
         $userId = $request->user()->id;
         $userRole = $request->user()->role;
 
@@ -787,6 +809,9 @@ class PatientVisitController extends Controller
             'findings' => $visit->visitNotes->findings_encrypted,
             'treatment_plan' => $visit->visitNotes->treatment_plan_encrypted,
             'teeth_treated' => $visit->visitNotes->teeth_treated,
+            'teeth_type' => $visit->visitNotes->teeth_type,
+            'is_primary_teeth' => $visit->visitNotes->is_primary_teeth,
+            'teeth_treated_with_count' => $visit->visitNotes->teeth_treated_with_count,
             'created_by' => $visit->visitNotes->createdBy?->name,
             'created_at' => $visit->visitNotes->created_at,
             'updated_by' => $visit->visitNotes->updatedBy?->name,

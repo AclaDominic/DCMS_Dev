@@ -79,6 +79,13 @@ class VisitNote extends Model
     // Helper method to set sanitized teeth treated
     public function setTeethTreatedAttribute($value)
     {
+        // Validate teeth format before sanitizing
+        $errors = Service::validateTeethFormat($value);
+        if (!empty($errors)) {
+            // Log validation errors but don't throw exception to avoid breaking the flow
+            \Log::warning('Teeth format validation errors: ' . implode(', ', $errors));
+        }
+        
         $this->attributes['teeth_treated'] = Service::sanitizeTeethTreated($value);
     }
 
@@ -115,7 +122,20 @@ class VisitNote extends Model
 
         $formatted = $this->formatted_teeth_treated;
         $count = Service::countTeeth($this->teeth_treated);
+        $type = Service::getTeethTypeDescription($this->teeth_treated);
         
-        return $formatted . " ({$count} teeth)";
+        return $formatted . " ({$count} {$type})";
+    }
+
+    // Method to get teeth type information
+    public function getTeethTypeAttribute(): string
+    {
+        return Service::getTeethTypeDescription($this->teeth_treated);
+    }
+
+    // Method to check if teeth are primary
+    public function getIsPrimaryTeethAttribute(): bool
+    {
+        return Service::isPrimaryTeeth($this->teeth_treated);
     }
 }

@@ -358,6 +358,9 @@ class AppointmentController extends Controller
                 'visit_date' => $visit->visit_date->format('Y-m-d'),
                 'service_name' => $visit->service?->name,
                 'teeth_treated' => $visit->visitNotes?->teeth_treated,
+                'teeth_type' => $visit->visitNotes?->teeth_type,
+                'is_primary_teeth' => $visit->visitNotes?->is_primary_teeth,
+                'teeth_treated_with_count' => $visit->visitNotes?->teeth_treated_with_count,
                 'created_at' => $visit->created_at,
                 'has_notes' => $visit->visitNotes ? true : false,
             ];
@@ -516,6 +519,9 @@ class AppointmentController extends Controller
                 'has_notes' => $lastVisit->visitNotes ? true : false,
                 'notes_created_at' => $lastVisit->visitNotes?->created_at,
                 'teeth_treated' => $lastVisit->visitNotes?->teeth_treated,
+                'teeth_type' => $lastVisit->visitNotes?->teeth_type,
+                'is_primary_teeth' => $lastVisit->visitNotes?->is_primary_teeth,
+                'teeth_treated_with_count' => $lastVisit->visitNotes?->teeth_treated_with_count,
             ];
         } else {
             $responseData['last_visit'] = null;
