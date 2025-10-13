@@ -103,6 +103,7 @@ class PatientVisitController extends Controller
             // Create the visit
             $visit = PatientVisit::create([
                 'patient_id' => $appointment->patient_id,
+                'appointment_id' => $appointment->id,
                 'service_id' => $appointment->service_id,
                 'visit_date' => now()->toDateString(),
                 'start_time' => now(),
@@ -650,7 +651,7 @@ class PatientVisitController extends Controller
         }
 
         // Find the visit by code
-        $visit = PatientVisit::with(['patient', 'service', 'visitNotes'])
+        $visit = PatientVisit::with(['patient', 'service', 'visitNotes', 'appointment'])
             ->where('visit_code', $code)
             ->first();
 
@@ -739,6 +740,10 @@ class PatientVisitController extends Controller
             'service' => $visit->service ? [
                 'id' => $visit->service->id,
                 'name' => $visit->service->name,
+            ] : null,
+            'appointment' => $visit->appointment ? [
+                'id' => $visit->appointment->id,
+                'teeth_count' => $visit->appointment->teeth_count,
             ] : null,
             'patient_history' => $patientHistory,
             'has_existing_notes' => $visit->visitNotes ? true : false,

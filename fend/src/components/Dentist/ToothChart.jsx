@@ -2,7 +2,7 @@ import { useState } from "react";
 import teethChartImage from "../../pages/Dentist/Teeth_Chart.png";
 import primaryTeethChartImage from "../../pages/Dentist/Primary_Teeth_Chart.png";
 
-const ToothChart = ({ selectedTeeth = [], onTeethChange, showChart = false, onToggleChart }) => {
+const ToothChart = ({ selectedTeeth = [], onTeethChange, showChart = false, onToggleChart, maxSelection = null }) => {
   const [activeTab, setActiveTab] = useState("adult"); // "adult" or "primary"
 
   // Adult teeth data based on the Universal Numbering System (1-32)
@@ -87,6 +87,11 @@ const ToothChart = ({ selectedTeeth = [], onTeethChange, showChart = false, onTo
       // Remove tooth if already selected
       newSelectedTeeth = newSelectedTeeth.filter(t => t !== toothStr);
     } else {
+      // Check if we've reached the maximum selection limit
+      if (maxSelection && newSelectedTeeth.length >= maxSelection) {
+        alert(`You can only select up to ${maxSelection} teeth as specified in the appointment.`);
+        return;
+      }
       // Add tooth if not selected
       newSelectedTeeth.push(toothStr);
     }
@@ -111,7 +116,22 @@ const ToothChart = ({ selectedTeeth = [], onTeethChange, showChart = false, onTo
     } else {
       allTeeth = primaryToothData.map(tooth => tooth.letter);
     }
+    
+    // Apply max selection limit if specified
+    if (maxSelection && allTeeth.length > maxSelection) {
+      allTeeth = allTeeth.slice(0, maxSelection);
+      alert(`Selection limited to ${maxSelection} teeth as specified in the appointment.`);
+    }
+    
     onTeethChange(allTeeth.join(','));
+  };
+
+  // Handle tab switching - clear selection when switching between adult and primary
+  const handleTabSwitch = (newTab) => {
+    if (newTab !== activeTab) {
+      setActiveTab(newTab);
+      onTeethChange(''); // Clear the selection
+    }
   };
 
   if (!showChart) {
@@ -160,7 +180,7 @@ const ToothChart = ({ selectedTeeth = [], onTeethChange, showChart = false, onTo
               <button
                 type="button"
                 className={`btn ${activeTab === "adult" ? "btn-primary" : "btn-outline-primary"}`}
-                onClick={() => setActiveTab("adult")}
+                onClick={() => handleTabSwitch("adult")}
               >
                 <i className="bi bi-person me-1"></i>
                 Adult Teeth (1-32)
@@ -168,7 +188,7 @@ const ToothChart = ({ selectedTeeth = [], onTeethChange, showChart = false, onTo
               <button
                 type="button"
                 className={`btn ${activeTab === "primary" ? "btn-primary" : "btn-outline-primary"}`}
-                onClick={() => setActiveTab("primary")}
+                onClick={() => handleTabSwitch("primary")}
               >
                 <i className="bi bi-person-heart me-1"></i>
                 Primary Teeth (A-T)
@@ -180,6 +200,12 @@ const ToothChart = ({ selectedTeeth = [], onTeethChange, showChart = false, onTo
           <div className="alert alert-info mb-4">
             <i className="bi bi-info-circle me-2"></i>
             <strong>Note:</strong> If the teeth done is in letters (A-T), it's primary teeth. If it's in numbers (1-32), it's adult teeth.
+            {maxSelection && (
+              <div className="mt-2">
+                <i className="bi bi-exclamation-triangle me-2"></i>
+                <strong>Selection Limit:</strong> You can select up to {maxSelection} teeth as specified in the appointment.
+              </div>
+            )}
           </div>
           
            {/* Larger Layout with Image and Buttons Side by Side */}

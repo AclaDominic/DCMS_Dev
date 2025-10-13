@@ -12,6 +12,7 @@ class PatientVisit extends Model
 
     protected $fillable = [
         'patient_id',
+        'appointment_id',
         'service_id',
         'visit_date',
         'start_time',
@@ -70,6 +71,11 @@ class PatientVisit extends Model
     public function visitNotes()
     {
         return $this->hasOne(VisitNote::class);
+    }
+
+    public function appointment()
+    {
+        return $this->belongsTo(Appointment::class);
     }
 
     // Helper method to get encrypted notes

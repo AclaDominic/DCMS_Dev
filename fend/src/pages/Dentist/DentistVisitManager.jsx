@@ -251,6 +251,9 @@ function DentistVisitManager() {
                       {visitData.service && (
                         <p><strong>Service:</strong> {visitData.service.name}</p>
                       )}
+                      {visitData.appointment && visitData.appointment.teeth_count && (
+                        <p><strong>Number of Teeth to be Treated:</strong> {visitData.appointment.teeth_count}</p>
+                      )}
                       <p><strong>Visit Date:</strong> {new Date(visitData.visit.visit_date).toLocaleDateString()}</p>
                       <p><strong>Consultation Started:</strong> {new Date(visitData.visit.consultation_started_at).toLocaleString()}</p>
                     </div>
@@ -330,6 +333,7 @@ function DentistVisitManager() {
                                 onTeethChange={(teeth) => setNotes({...notes, teeth_treated: teeth})}
                                 showChart={showToothChart}
                                 onToggleChart={() => setShowToothChart(!showToothChart)}
+                                maxSelection={visitData.appointment?.teeth_count || null}
                               />
                             </div>
                           </div>
