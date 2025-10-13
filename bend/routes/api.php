@@ -33,6 +33,7 @@ use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\API\ClinicWeeklyScheduleController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Admin\SystemLogController;
+use App\Http\Controllers\Admin\PaymentRecordController;
 use App\Http\Controllers\API\ReportController;
 use App\Http\Controllers\API\GoalController;
 use App\Http\Controllers\API\DentistUserController;
@@ -92,6 +93,12 @@ Route::middleware(['auth:sanctum', 'check.account.status', AdminOnly::class])->g
         Route::post('/{id}/unblock', [\App\Http\Controllers\Admin\PatientManagerController::class, 'unblockPatient']);
         Route::post('/{id}/add-note', [\App\Http\Controllers\Admin\PatientManagerController::class, 'addNote']);
         Route::post('/{id}/reset-no-shows', [\App\Http\Controllers\Admin\PatientManagerController::class, 'resetNoShowCount']);
+    });
+
+    // Payment records (search and view receipts)
+    Route::prefix('admin/payment-records')->group(function () {
+        Route::get('/', [PaymentRecordController::class, 'index']);
+        Route::get('/{paymentId}/receipt-data', [PaymentRecordController::class, 'getReceiptData']);
     });
 
     // Service management
@@ -294,6 +301,12 @@ Route::middleware(['auth:sanctum', 'check.account.status'])->group(function () {
 // Staff routes (only if device is approved)
 // ------------------------
 Route::middleware(['auth:sanctum', 'check.account.status', EnsureDeviceIsApproved::class])->group(function () {
+    // Payment records (staff can also access)
+    Route::prefix('staff/payment-records')->group(function () {
+        Route::get('/', [PaymentRecordController::class, 'index']);
+        Route::get('/{paymentId}/receipt-data', [PaymentRecordController::class, 'getReceiptData']);
+    });
+
     // Patients
 
     Route::post('/patients', [PatientController::class, 'store']);

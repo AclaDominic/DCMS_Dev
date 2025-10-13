@@ -140,6 +140,22 @@ function StaffLayout() {
             </NavLink>
           </li>
 
+          <li className="nav-item">
+            <NavLink
+              to="/staff/payment-records"
+              className={({ isActive }) =>
+                linkState(isActive) + (maybeDisable() ? " disabled text-muted" : "")
+              }
+              onClick={(e) => { if (maybeDisable()) e.preventDefault(); }}
+              style={{ cursor: maybeDisable() ? "not-allowed" : "pointer", opacity: maybeDisable() ? 0.5 : 1 }}
+            >
+              <svg className="icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M19 14V6c0-1.1-.9-2-2-2H3c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zm-9-1c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm13-6v11c0 1.1-.9 2-2 2H4v-2h17V7h2z"/>
+              </svg>
+              <span className="label">Payment Records</span>
+            </NavLink>
+          </li>
+
           {loaded && allowInventory && (
             <>
               <li className="nav-item mt-2 small text-uppercase text-secondary ps-3">Operations</li>
