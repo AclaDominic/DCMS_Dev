@@ -136,10 +136,36 @@ export default function VisitCompletionModal({ visit, onClose, onComplete }) {
   const isMayaPaymentCompleted = !!paidMayaPayment;
 
   return (
-    <div className="modal fade show d-block" style={{backgroundColor: 'rgba(0,0,0,0.5)'}} tabIndex="-1" role="dialog">
-      <div className="modal-dialog modal-lg" role="document" style={{maxWidth: '800px', maxHeight: '90vh'}}>
-        <div className="modal-content d-flex flex-column" style={{maxHeight: '90vh'}}>
-          <div className="modal-header bg-primary text-white py-2 flex-shrink-0">
+    <div className="modal fade show d-block" style={{
+      backgroundColor: 'rgba(0,0,0,0.5)',
+      position: "fixed",
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      zIndex: 1050,
+      overflowY: "auto",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: "1rem"
+    }} tabIndex="-1" role="dialog">
+      <div className="modal-dialog modal-lg" role="document" style={{
+        maxWidth: '800px', 
+        maxHeight: 'calc(100vh - 2rem)',
+        margin: "0 auto",
+        width: "100%"
+      }}>
+        <div className="modal-content d-flex flex-column" style={{
+          maxHeight: 'calc(100vh - 2rem)',
+          overflow: "hidden"
+        }}>
+          <div className="modal-header bg-primary text-white py-2 flex-shrink-0" style={{
+            position: "sticky",
+            top: 0,
+            zIndex: 1,
+            borderBottom: "1px solid #dee2e6"
+          }}>
             <h5 className="modal-title fw-bold mb-0">
               <i className="fas fa-check-circle me-2"></i>
               Complete Visit
@@ -152,7 +178,12 @@ export default function VisitCompletionModal({ visit, onClose, onComplete }) {
               style={{fontSize: '1.2rem'}}
             ></button>
           </div>
-          <div className="modal-body p-3 flex-grow-1 overflow-auto">
+          <div className="modal-body p-3 flex-grow-1" style={{
+            overflowY: "auto",
+            overflowX: "hidden",
+            flex: "1 1 auto",
+            minHeight: 0
+          }}>
 
             {/* Progress Steps */}
             <div className="d-flex justify-content-center mb-3">
@@ -533,7 +564,12 @@ export default function VisitCompletionModal({ visit, onClose, onComplete }) {
           </div>
           
           {/* Fixed Navigation Footer */}
-          <div className="modal-footer bg-light border-top flex-shrink-0 py-3">
+          <div className="modal-footer bg-light border-top flex-shrink-0 py-3" style={{
+            position: "sticky",
+            bottom: 0,
+            zIndex: 1,
+            backgroundColor: "#f8f9fa"
+          }}>
             <div className="d-flex justify-content-between w-100 align-items-center">
               <div>
                 {step > 1 && (

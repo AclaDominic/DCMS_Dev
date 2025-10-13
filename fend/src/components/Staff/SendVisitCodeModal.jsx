@@ -94,10 +94,38 @@ export default function SendVisitCodeModal({ visit, onClose, onSuccess }) {
   };
 
   return (
-    <div className="modal show d-block" tabIndex="-1">
-      <div className="modal-dialog modal-lg">
-        <div className="modal-content">
-          <div className="modal-header">
+    <div className="modal show d-block" tabIndex="-1" style={{
+      position: "fixed",
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: "rgba(0, 0, 0, 0.5)",
+      zIndex: 1050,
+      overflowY: "auto",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: "1rem"
+    }}>
+      <div className="modal-dialog modal-lg" style={{
+        margin: "0 auto",
+        maxHeight: "calc(100vh - 2rem)",
+        width: "100%"
+      }}>
+        <div className="modal-content" style={{
+          display: "flex",
+          flexDirection: "column",
+          maxHeight: "calc(100vh - 2rem)",
+          overflow: "hidden"
+        }}>
+          <div className="modal-header flex-shrink-0" style={{
+            position: "sticky",
+            top: 0,
+            zIndex: 1,
+            backgroundColor: "#fff",
+            borderBottom: "1px solid #dee2e6"
+          }}>
             <h5 className="modal-title">
               <i className="bi bi-send me-2"></i>
               Send Visit Code to Dentist
@@ -109,7 +137,12 @@ export default function SendVisitCodeModal({ visit, onClose, onSuccess }) {
             ></button>
           </div>
           
-          <div className="modal-body">
+          <div className="modal-body flex-grow-1" style={{
+            overflowY: "auto",
+            overflowX: "hidden",
+            flex: "1 1 auto",
+            minHeight: 0
+          }}>
             {/* Visit Information */}
             <div className="alert alert-info mb-4">
               <h6 className="alert-heading">
@@ -236,7 +269,13 @@ export default function SendVisitCodeModal({ visit, onClose, onSuccess }) {
             )}
           </div>
 
-          <div className="modal-footer">
+          <div className="modal-footer flex-shrink-0" style={{
+            position: "sticky",
+            bottom: 0,
+            zIndex: 1,
+            backgroundColor: "#fff",
+            borderTop: "1px solid #dee2e6"
+          }}>
             <button
               className="btn btn-secondary"
               onClick={onClose}

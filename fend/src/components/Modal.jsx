@@ -68,26 +68,40 @@ export default function Modal({ open, onClose, title, children, maxWidth = "md" 
         bottom: 0,
         zIndex: 2000,
         backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        overflowY: 'auto' // Allow scrolling when content exceeds viewport
+        overflowY: 'auto',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '1rem'
       }}
       onMouseDown={(e) => {
         // close only when clicking the dark backdrop (not inside the panel)
         if (e.target === e.currentTarget) onClose?.();
       }}
     >
-      <div className="modal-dialog modal-dialog-centered modal-dialog-scrollable" style={{ maxHeight: '95vh', margin: '1.75rem auto' }}>
+      <div className={`modal-dialog modal-dialog-scrollable ${sizes[maxWidth]}`} style={{ 
+        maxHeight: 'calc(100vh - 2rem)',
+        margin: '0 auto',
+        width: '100%'
+      }}>
         <div
           ref={panelRef}
           tabIndex={-1}
-          className={`modal-content ${sizes[maxWidth]}`}
+          className="modal-content"
           style={{ 
-            maxHeight: '95vh',
+            maxHeight: 'calc(100vh - 2rem)',
             display: 'flex',
             flexDirection: 'column',
             overflow: 'hidden'
           }}
         >
-          <div className="modal-header flex-shrink-0">
+          <div className="modal-header flex-shrink-0" style={{
+            position: 'sticky',
+            top: 0,
+            zIndex: 1,
+            backgroundColor: '#fff',
+            borderBottom: '1px solid #dee2e6'
+          }}>
             <h5 className="modal-title">{title}</h5>
             <button
               type="button"
@@ -98,8 +112,10 @@ export default function Modal({ open, onClose, title, children, maxWidth = "md" 
           </div>
           <div className="modal-body flex-grow-1" style={{ 
             overflowY: 'auto',
+            overflowX: 'hidden',
             minHeight: 0,
-            padding: '1rem'
+            padding: '1rem',
+            flex: '1 1 auto'
           }}>
             {children}
           </div>

@@ -65,7 +65,13 @@ export function ServiceSelectModal({ show, services, onSelect, onClose }) {
           flexDirection: 'column',
           overflow: 'hidden'
         }}>
-          <div className="modal-header flex-shrink-0">
+          <div className="modal-header flex-shrink-0" style={{
+            position: "sticky",
+            top: 0,
+            zIndex: 1,
+            backgroundColor: "#fff",
+            borderBottom: "1px solid #dee2e6"
+          }}>
             <h5 className="modal-title">🦷 Select Service</h5>
             <button type="button" className="btn-close" onClick={onClose}></button>
           </div>
@@ -105,6 +111,9 @@ export function ServiceSelectModal({ show, services, onSelect, onClose }) {
             </ul>
           </div>
           <div className="modal-footer flex-shrink-0" style={{ 
+            position: "sticky",
+            bottom: 0,
+            zIndex: 1,
             borderTop: '1px solid #dee2e6',
             padding: '1rem',
             backgroundColor: '#f8f9fa'
@@ -218,7 +227,12 @@ export function EditPromoModal({ show, promo, service, onSave, onCancel, loading
           flexDirection: 'column',
           overflow: 'hidden'
         }}>
-          <div className={`modal-header ${isCreatingNew ? 'bg-success' : 'bg-info'} text-white flex-shrink-0`}>
+          <div className={`modal-header ${isCreatingNew ? 'bg-success' : 'bg-info'} text-white flex-shrink-0`} style={{
+            position: "sticky",
+            top: 0,
+            zIndex: 1,
+            borderBottom: "1px solid #dee2e6"
+          }}>
             <h5 className="modal-title">
               <i className={`bi ${isCreatingNew ? 'bi-plus-circle' : 'bi-pencil'} me-2`}></i>
               {isCreatingNew ? 'Create New Promo' : 'Edit Promo'}
@@ -296,11 +310,12 @@ export function EditPromoModal({ show, promo, service, onSave, onCancel, loading
               )}
             </div>
             <div className="modal-footer flex-shrink-0" style={{ 
+              position: "sticky",
+              bottom: 0,
               borderTop: '1px solid #dee2e6',
               padding: '1rem',
               backgroundColor: '#f8f9fa',
-              position: 'relative',
-              zIndex: 10
+              zIndex: 1
             }}>
               <button type="button" className="btn btn-secondary" onClick={onCancel} disabled={loading}>
                 Cancel
@@ -371,7 +386,12 @@ export function DeletePromoModal({ show, promo, onConfirm, onCancel }) {
           flexDirection: 'column',
           overflow: 'hidden'
         }}>
-          <div className="modal-header bg-danger text-white flex-shrink-0">
+          <div className="modal-header bg-danger text-white flex-shrink-0" style={{
+            position: "sticky",
+            top: 0,
+            zIndex: 1,
+            borderBottom: "1px solid #dee2e6"
+          }}>
             <h5 className="modal-title">⚠️ Confirm Promo Deletion</h5>
             <button type="button" className="btn-close" onClick={onCancel}></button>
           </div>
@@ -387,7 +407,13 @@ export function DeletePromoModal({ show, promo, onConfirm, onCancel }) {
               <span className="text-danger">This action is permanent.</span>
             </p>
           </div>
-          <div className="modal-footer flex-shrink-0">
+          <div className="modal-footer flex-shrink-0" style={{
+            position: "sticky",
+            bottom: 0,
+            zIndex: 1,
+            borderTop: "1px solid #dee2e6",
+            backgroundColor: "#fff"
+          }}>
             <button className="btn btn-secondary" onClick={onCancel}>Cancel</button>
             <button className="btn btn-danger" onClick={onConfirm}>Yes, Delete Promo</button>
           </div>

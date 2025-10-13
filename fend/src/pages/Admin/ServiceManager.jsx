@@ -444,11 +444,39 @@ export default function ServiceManager() {
           className="modal d-block"
           tabIndex="-1"
           role="dialog"
-          style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
+          style={{ 
+            backgroundColor: "rgba(0,0,0,0.5)",
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 1050,
+            overflowY: "auto",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "1rem"
+          }}
         >
-          <div className="modal-dialog">
-            <div className="modal-content">
-              <div className="modal-header">
+          <div className="modal-dialog" style={{
+            margin: "0 auto",
+            maxHeight: "calc(100vh - 2rem)",
+            width: "100%"
+          }}>
+            <div className="modal-content" style={{
+              display: "flex",
+              flexDirection: "column",
+              maxHeight: "calc(100vh - 2rem)",
+              overflow: "hidden"
+            }}>
+              <div className="modal-header flex-shrink-0" style={{
+                position: "sticky",
+                top: 0,
+                zIndex: 1,
+                backgroundColor: "#fff",
+                borderBottom: "1px solid #dee2e6"
+              }}>
                 <h5 className="modal-title">
                   {isEditMode ? "Edit Service" : "Add Service"}
                 </h5>
@@ -461,7 +489,12 @@ export default function ServiceManager() {
                   }}
                 ></button>
               </div>
-              <div className="modal-body">
+              <div className="modal-body flex-grow-1" style={{
+                overflowY: "auto",
+                overflowX: "hidden",
+                flex: "1 1 auto",
+                minHeight: 0
+              }}>
                 <div className="mb-3">
                   <label className="form-label">
                     Service Name <span className="text-danger">*</span>
@@ -760,7 +793,13 @@ export default function ServiceManager() {
                   </div>
                 )}
               </div>
-              <div className="modal-footer">
+              <div className="modal-footer flex-shrink-0" style={{
+                position: "sticky",
+                bottom: 0,
+                zIndex: 1,
+                backgroundColor: "#fff",
+                borderTop: "1px solid #dee2e6"
+              }}>
                 <button
                   type="button"
                   className="btn btn-secondary"
@@ -789,11 +828,38 @@ export default function ServiceManager() {
           className="modal d-block"
           tabIndex="-1"
           role="dialog"
-          style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
+          style={{ 
+            backgroundColor: "rgba(0,0,0,0.5)",
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 1050,
+            overflowY: "auto",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "1rem"
+          }}
         >
-          <div className="modal-dialog">
-            <div className="modal-content">
-              <div className="modal-header bg-danger text-white">
+          <div className="modal-dialog" style={{
+            margin: "0 auto",
+            maxHeight: "calc(100vh - 2rem)",
+            width: "100%"
+          }}>
+            <div className="modal-content" style={{
+              display: "flex",
+              flexDirection: "column",
+              maxHeight: "calc(100vh - 2rem)",
+              overflow: "hidden"
+            }}>
+              <div className="modal-header bg-danger text-white flex-shrink-0" style={{
+                position: "sticky",
+                top: 0,
+                zIndex: 1,
+                borderBottom: "1px solid #dee2e6"
+              }}>
                 <h5 className="modal-title">⚠️ Confirm Deletion</h5>
                 <button
                   type="button"
@@ -801,7 +867,12 @@ export default function ServiceManager() {
                   onClick={() => setShowDeleteModal(false)}
                 ></button>
               </div>
-              <div className="modal-body">
+              <div className="modal-body flex-grow-1" style={{
+                overflowY: "auto",
+                overflowX: "hidden",
+                flex: "1 1 auto",
+                minHeight: 0
+              }}>
                 <p>
                   Are you sure you want to delete{" "}
                   <strong>{serviceToDelete?.name}</strong>?<br />
@@ -810,7 +881,13 @@ export default function ServiceManager() {
                   </span>
                 </p>
               </div>
-              <div className="modal-footer">
+              <div className="modal-footer flex-shrink-0" style={{
+                position: "sticky",
+                bottom: 0,
+                zIndex: 1,
+                backgroundColor: "#fff",
+                borderTop: "1px solid #dee2e6"
+              }}>
                 <button
                   className="btn btn-secondary"
                   onClick={() => setShowDeleteModal(false)}
@@ -830,11 +907,39 @@ export default function ServiceManager() {
           className="modal d-block"
           tabIndex="-1"
           role="dialog"
-          style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
+          style={{ 
+            backgroundColor: "rgba(0,0,0,0.5)",
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 1050,
+            overflowY: "auto",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "1rem"
+          }}
         >
-          <div className="modal-dialog">
-            <div className="modal-content">
-              <div className="modal-header">
+          <div className="modal-dialog" style={{
+            margin: "0 auto",
+            maxHeight: "calc(100vh - 2rem)",
+            width: "100%"
+          }}>
+            <div className="modal-content" style={{
+              display: "flex",
+              flexDirection: "column",
+              maxHeight: "calc(100vh - 2rem)",
+              overflow: "hidden"
+            }}>
+              <div className="modal-header flex-shrink-0" style={{
+                position: "sticky",
+                top: 0,
+                zIndex: 1,
+                backgroundColor: "#fff",
+                borderBottom: "1px solid #dee2e6"
+              }}>
                 <h5 className="modal-title">Confirm Permanent Special</h5>
                 <button
                   type="button"
@@ -842,7 +947,12 @@ export default function ServiceManager() {
                   onClick={() => setShowPermanentConfirm(false)}
                 ></button>
               </div>
-              <div className="modal-body">
+              <div className="modal-body flex-grow-1" style={{
+                overflowY: "auto",
+                overflowX: "hidden",
+                flex: "1 1 auto",
+                minHeight: 0
+              }}>
                 <p>
                   This special service has no start or end date.
                   <br />
@@ -850,7 +960,13 @@ export default function ServiceManager() {
                   ?
                 </p>
               </div>
-              <div className="modal-footer">
+              <div className="modal-footer flex-shrink-0" style={{
+                position: "sticky",
+                bottom: 0,
+                zIndex: 1,
+                backgroundColor: "#fff",
+                borderTop: "1px solid #dee2e6"
+              }}>
                 <button
                   className="btn btn-secondary"
                   onClick={() => setShowPermanentConfirm(false)}

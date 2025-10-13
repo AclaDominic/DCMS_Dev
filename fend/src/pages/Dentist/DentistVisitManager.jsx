@@ -462,10 +462,38 @@ function DentistVisitManager() {
 
       {/* Visit Notes Modal */}
       {fetchedNotes && (
-        <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-          <div className="modal-dialog modal-lg">
-            <div className="modal-content">
-              <div className="modal-header">
+        <div className="modal show d-block" tabIndex="-1" style={{ 
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          zIndex: 1050,
+          overflowY: "auto",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "1rem"
+        }}>
+          <div className="modal-dialog modal-lg" style={{
+            margin: "0 auto",
+            maxHeight: "calc(100vh - 2rem)",
+            width: "100%"
+          }}>
+            <div className="modal-content" style={{
+              display: "flex",
+              flexDirection: "column",
+              maxHeight: "calc(100vh - 2rem)",
+              overflow: "hidden"
+            }}>
+              <div className="modal-header flex-shrink-0" style={{
+                position: "sticky",
+                top: 0,
+                zIndex: 1,
+                backgroundColor: "#fff",
+                borderBottom: "1px solid #dee2e6"
+              }}>
                 <h5 className="modal-title">
                   <i className="bi bi-file-text me-2"></i>
                   Visit Notes - {new Date(visitData.patient_history.find(v => v.id === fetchedNotes.visitId)?.visit_date).toLocaleDateString()}
@@ -476,7 +504,12 @@ function DentistVisitManager() {
                   onClick={handleCloseNotesModal}
                 ></button>
               </div>
-              <div className="modal-body">
+              <div className="modal-body flex-grow-1" style={{
+                overflowY: "auto",
+                overflowX: "hidden",
+                flex: "1 1 auto",
+                minHeight: 0
+              }}>
                 {fetchedNotes.dentist_notes && (
                   <div className="mb-4">
                     <h6 className="text-primary">
@@ -561,7 +594,13 @@ function DentistVisitManager() {
                   </div>
                 )}
               </div>
-              <div className="modal-footer">
+              <div className="modal-footer flex-shrink-0" style={{
+                position: "sticky",
+                bottom: 0,
+                zIndex: 1,
+                backgroundColor: "#fff",
+                borderTop: "1px solid #dee2e6"
+              }}>
                 <button
                   type="button"
                   className="btn btn-secondary"

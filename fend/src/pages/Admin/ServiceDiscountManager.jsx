@@ -538,17 +538,49 @@ export default function ServiceDiscountManager() {
 
       {/* Launch Confirmation Modal */}
       {showLaunchConfirm && actionPromo && (
-        <div className="modal fade show d-block" tabIndex="-1" style={{ backgroundColor: "rgba(0,0,0,0.5)", zIndex: 1055 }}>
-          <div className="modal-dialog modal-dialog-centered">
-            <div className="modal-content">
-              <div className="modal-header bg-success text-white">
+        <div className="modal fade show d-block" tabIndex="-1" style={{ 
+          backgroundColor: "rgba(0,0,0,0.5)", 
+          zIndex: 1055,
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          overflowY: "auto",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "1rem"
+        }}>
+          <div className="modal-dialog modal-dialog-centered" style={{
+            margin: "0 auto",
+            maxHeight: "calc(100vh - 2rem)",
+            width: "100%"
+          }}>
+            <div className="modal-content" style={{
+              display: "flex",
+              flexDirection: "column",
+              maxHeight: "calc(100vh - 2rem)",
+              overflow: "hidden"
+            }}>
+              <div className="modal-header bg-success text-white flex-shrink-0" style={{
+                position: "sticky",
+                top: 0,
+                zIndex: 1,
+                borderBottom: "1px solid #dee2e6"
+              }}>
                 <h5 className="modal-title">
                   <i className="bi bi-play-circle me-2"></i>
                   Launch Promo
                 </h5>
                 <button type="button" className="btn-close" onClick={cancelLaunchConfirm}></button>
               </div>
-              <div className="modal-body">
+              <div className="modal-body flex-grow-1" style={{
+                overflowY: "auto",
+                overflowX: "hidden",
+                flex: "1 1 auto",
+                minHeight: 0
+              }}>
                 <div className="alert alert-warning">
                   <i className="bi bi-exclamation-triangle me-2"></i>
                   <strong>Warning:</strong> This action cannot be undone easily.
@@ -565,7 +597,13 @@ export default function ServiceDiscountManager() {
                   </div>
                 </div>
               </div>
-              <div className="modal-footer">
+              <div className="modal-footer flex-shrink-0" style={{
+                position: "sticky",
+                bottom: 0,
+                zIndex: 1,
+                backgroundColor: "#fff",
+                borderTop: "1px solid #dee2e6"
+              }}>
                 <button type="button" className="btn btn-secondary" onClick={cancelLaunchConfirm}>
                   Cancel
                 </button>
@@ -581,17 +619,49 @@ export default function ServiceDiscountManager() {
 
       {/* Cancel Confirmation Modal */}
       {showCancelConfirm && actionPromo && (
-        <div className="modal fade show d-block" tabIndex="-1" style={{ backgroundColor: "rgba(0,0,0,0.5)", zIndex: 1055 }}>
-          <div className="modal-dialog modal-dialog-centered">
-            <div className="modal-content">
-              <div className="modal-header bg-warning text-dark">
+        <div className="modal fade show d-block" tabIndex="-1" style={{ 
+          backgroundColor: "rgba(0,0,0,0.5)", 
+          zIndex: 1055,
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          overflowY: "auto",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "1rem"
+        }}>
+          <div className="modal-dialog modal-dialog-centered" style={{
+            margin: "0 auto",
+            maxHeight: "calc(100vh - 2rem)",
+            width: "100%"
+          }}>
+            <div className="modal-content" style={{
+              display: "flex",
+              flexDirection: "column",
+              maxHeight: "calc(100vh - 2rem)",
+              overflow: "hidden"
+            }}>
+              <div className="modal-header bg-warning text-dark flex-shrink-0" style={{
+                position: "sticky",
+                top: 0,
+                zIndex: 1,
+                borderBottom: "1px solid #dee2e6"
+              }}>
                 <h5 className="modal-title">
                   <i className="bi bi-x-circle me-2"></i>
                   Cancel Promo
                 </h5>
                 <button type="button" className="btn-close" onClick={cancelCancelConfirm}></button>
               </div>
-              <div className="modal-body">
+              <div className="modal-body flex-grow-1" style={{
+                overflowY: "auto",
+                overflowX: "hidden",
+                flex: "1 1 auto",
+                minHeight: 0
+              }}>
                 <div className="alert alert-danger">
                   <i className="bi bi-exclamation-triangle me-2"></i>
                   <strong>Warning:</strong> This action cannot be undone.
@@ -609,7 +679,13 @@ export default function ServiceDiscountManager() {
                   </div>
                 </div>
               </div>
-              <div className="modal-footer">
+              <div className="modal-footer flex-shrink-0" style={{
+                position: "sticky",
+                bottom: 0,
+                zIndex: 1,
+                backgroundColor: "#fff",
+                borderTop: "1px solid #dee2e6"
+              }}>
                 <button type="button" className="btn btn-secondary" onClick={cancelCancelConfirm}>
                   Cancel
                 </button>

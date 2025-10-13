@@ -325,15 +325,35 @@ export default function ReceiveStockForm({
             right: 0,
             bottom: 0,
             zIndex: 2100,
-            backgroundColor: 'rgba(0, 0, 0, 0.5)'
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            overflowY: 'auto',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '1rem'
           }}
           onMouseDown={(e) => {
             if (e.target === e.currentTarget) setShowSupplierModal(false);
           }}
         >
-          <div className="modal-dialog modal-dialog-centered">
-            <div className="modal-content">
-              <div className="modal-header">
+          <div className="modal-dialog modal-dialog-centered" style={{
+            margin: "0 auto",
+            maxHeight: "calc(100vh - 2rem)",
+            width: "100%"
+          }}>
+            <div className="modal-content" style={{
+              display: "flex",
+              flexDirection: "column",
+              maxHeight: "calc(100vh - 2rem)",
+              overflow: "hidden"
+            }}>
+              <div className="modal-header flex-shrink-0" style={{
+                position: "sticky",
+                top: 0,
+                zIndex: 1,
+                backgroundColor: "#fff",
+                borderBottom: "1px solid #dee2e6"
+              }}>
                 <h5 className="modal-title">Add Supplier</h5>
                 <button
                   type="button"
@@ -342,7 +362,12 @@ export default function ReceiveStockForm({
                   aria-label="Close"
                 ></button>
               </div>
-              <div className="modal-body">
+              <div className="modal-body flex-grow-1" style={{
+                overflowY: "auto",
+                overflowX: "hidden",
+                flex: "1 1 auto",
+                minHeight: 0
+              }}>
                 <div className="mb-3">
                   <label className="form-label">Name *</label>
                   <input
@@ -417,7 +442,13 @@ export default function ReceiveStockForm({
                   />
                 </div>
               </div>
-              <div className="modal-footer">
+              <div className="modal-footer flex-shrink-0" style={{
+                position: "sticky",
+                bottom: 0,
+                zIndex: 1,
+                backgroundColor: "#fff",
+                borderTop: "1px solid #dee2e6"
+              }}>
                 <button
                   type="button"
                   className="btn btn-secondary"
