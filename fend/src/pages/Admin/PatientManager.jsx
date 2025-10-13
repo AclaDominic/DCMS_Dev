@@ -413,50 +413,6 @@ const PatientManager = () => {
     );
   };
 
-  if (loading) {
-    return (
-      <div className="d-flex justify-content-center align-items-center" style={{ height: '400px' }}>
-        <div className="spinner-border" role="status">
-          <span className="visually-hidden">Loading...</span>
-        </div>
-      </div>
-    );
-  }
-
-  // Error boundary for rendering
-  if (error) {
-    return (
-      <div className="patient-manager">
-        <div className="alert alert-danger">
-          <h4>Error Loading Patient Manager</h4>
-          <p>{error}</p>
-          <button className="btn btn-primary" onClick={() => {
-            setError(null);
-            fetchPatients();
-            fetchStatistics();
-          }}>
-            Retry
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (loading) {
-    return (
-      <div className="patient-manager">
-        <div className="d-flex justify-content-center align-items-center" style={{ height: '400px' }}>
-          <div className="text-center">
-            <div className="spinner-border text-primary" role="status">
-              <span className="visually-hidden">Loading...</span>
-            </div>
-            <p className="mt-3">Loading Patient Manager...</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="patient-manager">
       <div className="d-flex justify-content-between align-items-center mb-4">
@@ -578,7 +534,26 @@ const PatientManager = () => {
 
       {/* Patients Table */}
       <div className="card">
-        <div className="card-body">
+        <div className="card-body position-relative">
+          {/* Loading Overlay - only shows over the table */}
+          {loading && (
+            <div 
+              className="position-absolute top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center" 
+              style={{ 
+                backgroundColor: 'rgba(255, 255, 255, 0.8)', 
+                zIndex: 10,
+                minHeight: '200px'
+              }}
+            >
+              <div className="text-center">
+                <div className="spinner-border text-primary" role="status">
+                  <span className="visually-hidden">Loading...</span>
+                </div>
+                <p className="mt-2 mb-0">Updating table...</p>
+              </div>
+            </div>
+          )}
+
           {error && (
             <div className="alert alert-danger" role="alert">
               {error}
