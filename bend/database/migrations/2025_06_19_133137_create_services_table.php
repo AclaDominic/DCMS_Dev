@@ -20,6 +20,7 @@ return new class extends Migration {
             $table->date('special_start_date')->nullable();
             $table->date('special_end_date')->nullable();
             $table->integer('estimated_minutes');
+            $table->string('category')->nullable();
             $table->boolean('per_teeth_service')->default(false);
             $table->integer('per_tooth_minutes')->nullable(); // For per-teeth services
 
