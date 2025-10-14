@@ -134,6 +134,13 @@ class PatientVisitController extends Controller
             'service_id' => 'nullable|exists:services,id',
         ]);
 
+        // Check for potential matching patients before updating
+        $potentialMatches = Patient::findPotentialMatches(
+            $validated['first_name'],
+            $validated['last_name'],
+            $patient->id
+        );
+
         $patient->update([
             'first_name' => $validated['first_name'],
             'last_name' => $validated['last_name'],
@@ -144,11 +151,24 @@ class PatientVisitController extends Controller
             'service_id' => $validated['service_id'],
         ]);
 
-        // Optional audit log (can be saved into a `visit_logs` table or something)
-        // \Log::info("Patient visit #{$visit->id} updated by staff", [
-        //     'edited_fields' => $validated,
-        //     'edited_by' => auth()->user()->id
-        // ]);
+        // If there are matching patients, return them so staff can link
+        if ($potentialMatches->isNotEmpty()) {
+            return response()->json([
+                'message' => 'Patient updated',
+                'potential_matches' => $potentialMatches->map(function ($match) {
+                    return [
+                        'id' => $match->id,
+                        'first_name' => $match->first_name,
+                        'last_name' => $match->last_name,
+                        'contact_number' => $match->contact_number,
+                        'birthdate' => $match->birthdate,
+                        'has_user_account' => $match->user_id !== null,
+                        'user_email' => $match->user?->email,
+                        'is_linked' => $match->is_linked,
+                    ];
+                })
+            ]);
+        }
 
         return response()->json(['message' => 'Patient updated']);
     }
@@ -428,6 +448,43 @@ class PatientVisitController extends Controller
             'inquiry_only' => 'Inquiry only: Patient inquired about services but did not proceed with treatment',
             default => 'Rejected: Unknown reason'
         };
+    }
+
+    /**
+     * GET /api/visits/{id}/potential-matches
+     * Get potential matching patients for a visit based on patient name
+     */
+    public function getPotentialMatches($visitId)
+    {
+        $visit = PatientVisit::with('patient')->findOrFail($visitId);
+        $patient = $visit->patient;
+
+        if (!$patient) {
+            return response()->json([
+                'potential_matches' => []
+            ]);
+        }
+
+        $potentialMatches = Patient::findPotentialMatches(
+            $patient->first_name,
+            $patient->last_name,
+            $patient->id
+        );
+
+        return response()->json([
+            'potential_matches' => $potentialMatches->map(function ($match) {
+                return [
+                    'id' => $match->id,
+                    'first_name' => $match->first_name,
+                    'last_name' => $match->last_name,
+                    'contact_number' => $match->contact_number,
+                    'birthdate' => $match->birthdate,
+                    'has_user_account' => $match->user_id !== null,
+                    'user_email' => $match->user?->email,
+                    'is_linked' => $match->is_linked,
+                ];
+            })
+        ]);
     }
 
     public function linkToExistingPatient(Request $request, $visitId)

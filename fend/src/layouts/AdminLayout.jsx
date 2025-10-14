@@ -124,6 +124,15 @@ function AdminLayout() {
           </li>
 
           <li className="nav-item">
+            <NavLink to="/admin/patient-binding" className={({ isActive }) => "nav-link" + (isActive ? " active" : "")}>
+              <svg className="icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M10.59 13.41c.41.39.41 1.03 0 1.42-.39.39-1.03.39-1.42 0a5.003 5.003 0 0 1 0-7.07l3.54-3.54a5.003 5.003 0 0 1 7.07 0 5.003 5.003 0 0 1 0 7.07l-1.49 1.49c.01-.82-.12-1.64-.4-2.42l.47-.48a2.982 2.982 0 0 0 0-4.24 2.982 2.982 0 0 0-4.24 0l-3.53 3.53a2.982 2.982 0 0 0 0 4.24zm2.82-4.24c.39-.39 1.03-.39 1.42 0a5.003 5.003 0 0 1 0 7.07l-3.54 3.54a5.003 5.003 0 0 1-7.07 0 5.003 5.003 0 0 1 0-7.07l1.49-1.49c-.01.82.12 1.64.4 2.43l-.47.47a2.982 2.982 0 0 0 0 4.24 2.982 2.982 0 0 0 4.24 0l3.53-3.53a2.982 2.982 0 0 0 0-4.24.973.973 0 0 1 0-1.42z"/>
+              </svg>
+              <span className="label">Patient-User Binding</span>
+            </NavLink>
+          </li>
+
+          <li className="nav-item">
             <NavLink to="/admin/payment-records" className={({ isActive }) => "nav-link" + (isActive ? " active" : "")}>
               <svg className="icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M19 14V6c0-1.1-.9-2-2-2H3c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zm-9-1c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm13-6v11c0 1.1-.9 2-2 2H4v-2h17V7h2z"/>

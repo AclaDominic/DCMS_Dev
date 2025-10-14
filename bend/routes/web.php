@@ -24,15 +24,4 @@ Route::get('/email/verify/{id}/{hash}', function (EmailVerificationRequest $requ
     return redirect(config('app.frontend_url') . '/verify-success'); // 🔁 redirect to frontend
 })->middleware(['auth:sanctum', 'signed'])->name('verification.verify.legacy');
 
-// Frontend email verification route that matches React router pattern
-Route::get('/verify-email/{id}/{hash}', function (EmailVerificationRequest $request) {
-    $request->fulfill(); // ✅ mark user as verified
-    return redirect(config('app.frontend_url') . '/verify-success'); // 🔁 redirect to frontend
-})->middleware(['auth:sanctum', 'signed'])->name('verification.verify.frontend');
-
-Route::post('/email/verification-notification', function (Request $request) {
-    $request->user()->sendEmailVerificationNotification();
-    return response()->json(['message' => 'Verification link sent!']);
-})->middleware(['auth:sanctum', 'throttle:6,1'])->name('verification.send');
-
 require __DIR__.'/auth.php';

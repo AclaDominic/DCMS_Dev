@@ -95,6 +95,13 @@ Route::middleware(['auth:sanctum', 'check.account.status', AdminOnly::class])->g
         Route::post('/{id}/reset-no-shows', [\App\Http\Controllers\Admin\PatientManagerController::class, 'resetNoShowCount']);
     });
 
+    // Patient-User Binding
+    Route::prefix('admin/patient-binding')->group(function () {
+        Route::get('/unlinked-patients', [PatientController::class, 'searchUnlinkedPatients']);
+        Route::get('/unlinked-users', [PatientController::class, 'searchUnlinkedUsers']);
+        Route::post('/bind', [PatientController::class, 'bindPatientToUser']);
+    });
+
     // Payment records (search and view receipts)
     Route::prefix('admin/payment-records')->group(function () {
         Route::get('/', [PaymentRecordController::class, 'index']);
@@ -313,6 +320,13 @@ Route::middleware(['auth:sanctum', 'check.account.status', EnsureDeviceIsApprove
     Route::post('/patients/{patient}/link', [PatientController::class, 'linkToUser']);
     Route::post('/patients/{id}/flag', [PatientController::class, 'flagReview']);
     Route::get('/patients/search', [PatientController::class, 'search']);
+
+    // Patient-User Binding (also accessible to staff)
+    Route::prefix('staff/patient-binding')->group(function () {
+        Route::get('/unlinked-patients', [PatientController::class, 'searchUnlinkedPatients']);
+        Route::get('/unlinked-users', [PatientController::class, 'searchUnlinkedUsers']);
+        Route::post('/bind', [PatientController::class, 'bindPatientToUser']);
+    });
 
     // Visits
     Route::prefix('visits')->group(function () {

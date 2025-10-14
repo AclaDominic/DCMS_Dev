@@ -64,6 +64,29 @@ class Patient extends Model
     }
 
     /**
+     * Find potential matching patients by name
+     * Used to detect duplicates when updating walk-in patient information
+     */
+    public static function findPotentialMatches($firstName, $lastName, $excludeId = null)
+    {
+        $query = self::where(function ($q) use ($firstName, $lastName) {
+            // Exact match on both names
+            $q->where('first_name', 'like', $firstName)
+              ->where('last_name', 'like', $lastName);
+        })->orWhere(function ($q) use ($firstName, $lastName) {
+            // Case-insensitive match
+            $q->whereRaw('LOWER(first_name) = LOWER(?)', [$firstName])
+              ->whereRaw('LOWER(last_name) = LOWER(?)', [$lastName]);
+        });
+
+        if ($excludeId) {
+            $query->where('id', '!=', $excludeId);
+        }
+
+        return $query->with(['user'])->get();
+    }
+
+    /**
      * Track IP address for this patient (only valid public IPs)
      */
     public function trackIpAddress($ipAddress)

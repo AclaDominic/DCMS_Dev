@@ -38,6 +38,7 @@ import AdminAnalyticsDashboard from "../pages/Admin/AdminAnalyticsDashboard";
 import PatientManager from "../pages/Admin/PatientManager";
 import TimeBlockUtilizationDashboard from "../pages/Admin/TimeBlockUtilizationDashboard";
 import PaymentRecords from "../pages/Admin/PaymentRecords";
+import AdminPatientUserBindingPage from "../pages/Admin/PatientUserBindingPage";
 const DentistScheduleManager = lazy(() =>
   import("../pages/Admin/DentistScheduleManager")
 ); // Lazy load dentist schedule manager
@@ -52,6 +53,7 @@ import AppointmentReminders from "../pages/Staff/AppointmentReminders";
 import AppointmentFinder from "../pages/Staff/AppointmentFinder";
 import ConsumeStockPage from "../pages/Staff/ConsumeStockPage";
 import StaffPaymentRecords from "../pages/Staff/PaymentRecords";
+import StaffPatientUserBindingPage from "../pages/Staff/PatientUserBindingPage";
 
 // Patient layout and pages
 import PatientLayout from "../layouts/PatientLayout";
@@ -139,6 +141,8 @@ export default function AppRouter() {
           <Route path="system-logs" element={<SystemLogsPage />} />
           {/* Time Block Utilization Dashboard */}
           <Route path="time-blocks" element={<TimeBlockUtilizationDashboard />} />
+          {/* Patient-User Binding */}
+          <Route path="patient-binding" element={<AdminPatientUserBindingPage />} />
           {/* Add more admin routes as needed */}
         </Route>
 
@@ -153,6 +157,8 @@ export default function AppRouter() {
             element={<AppointmentReminders />}
           />
           <Route path="payment-records" element={<StaffPaymentRecords />} />
+          {/* Patient-User Binding */}
+          <Route path="patient-binding" element={<StaffPatientUserBindingPage />} />
           <Route
             path="inventory"
             element={

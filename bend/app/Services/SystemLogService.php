@@ -69,4 +69,12 @@ class SystemLogService
     {
         return self::log('system', $action, null, $message, $context);
     }
+
+    /**
+     * Log patient-related events
+     */
+    public static function logPatient(string $action, ?int $patientId = null, string $message = '', array $context = [])
+    {
+        return self::log('patient', $action, $patientId, $message, $context);
+    }
 }

@@ -34,6 +34,8 @@ function VisitTrackerManager() {
   const [viewingNotes, setViewingNotes] = useState(null);
   const [sendingReceipt, setSendingReceipt] = useState(null);
   const [sendingVisitCode, setSendingVisitCode] = useState(null);
+  const [potentialMatches, setPotentialMatches] = useState([]);
+  const [showMatchesModal, setShowMatchesModal] = useState(false);
 
   useEffect(() => {
     fetchVisits();
@@ -220,7 +222,7 @@ function VisitTrackerManager() {
 
   const handleEditSave = async () => {
     try {
-      await api.put(`/api/visits/${editingVisit.id}/update-patient`, {
+      const response = await api.put(`/api/visits/${editingVisit.id}/update-patient`, {
         first_name: editForm.first_name,
         last_name: editForm.last_name,
         contact_number:
@@ -229,7 +231,16 @@ function VisitTrackerManager() {
             : editingVisit.patient?.contact_number,
         service_id: editForm.service_id || null,
       });
-      setEditingVisit(null);
+      
+      // Check if there are potential matching patients
+      if (response.data.potential_matches && response.data.potential_matches.length > 0) {
+        setPotentialMatches(response.data.potential_matches);
+        setShowMatchesModal(true);
+        // Keep editingVisit open so user can link if needed
+      } else {
+        setEditingVisit(null);
+      }
+      
       await fetchVisits();
     } catch (err) {
       alert("Failed to update patient.");
@@ -785,6 +796,88 @@ function VisitTrackerManager() {
                   }}
                 >
                   Confirm Link
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Potential Matches Modal */}
+      {showMatchesModal && (
+        <div className="modal show d-block" tabIndex="-1">
+          <div className="modal-dialog modal-lg">
+            <div className="modal-content">
+              <div className="modal-header bg-warning">
+                <h5 className="modal-title">⚠️ Potential Duplicate Patient Found</h5>
+                <button
+                  className="btn-close"
+                  onClick={() => {
+                    setShowMatchesModal(false);
+                    setEditingVisit(null);
+                  }}
+                ></button>
+              </div>
+              <div className="modal-body">
+                <div className="alert alert-warning">
+                  <strong>Warning:</strong> We found existing patient(s) with the same name. 
+                  This might be a duplicate entry. Please review and link if this is the same patient.
+                </div>
+                <h6>Matching Patients:</h6>
+                {potentialMatches.map((match) => (
+                  <div key={match.id} className="card mb-2 p-3">
+                    <div className="d-flex justify-content-between align-items-center">
+                      <div>
+                        <strong>{match.first_name} {match.last_name}</strong>
+                        <br />
+                        <small className="text-muted">
+                          Contact: {match.contact_number || 'N/A'}<br />
+                          Birthdate: {match.birthdate ? new Date(match.birthdate).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }) : 'N/A'}<br />
+                          {match.has_user_account && (
+                            <span className="badge bg-success">Has Online Account ({match.user_email})</span>
+                          )}
+                        </small>
+                      </div>
+                      <button
+                        className="btn btn-primary"
+                        onClick={async () => {
+                          if (window.confirm(`Link this visit to ${match.first_name} ${match.last_name}?`)) {
+                            try {
+                              await api.post(`/api/visits/${editingVisit.id}/link-existing`, {
+                                target_patient_id: match.id,
+                              });
+                              setShowMatchesModal(false);
+                              setEditingVisit(null);
+                              await fetchVisits();
+                              alert('Visit successfully linked to existing patient!');
+                            } catch (err) {
+                              alert('Failed to link visit to patient.');
+                            }
+                          }
+                        }}
+                      >
+                        Link to This Patient
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                <hr />
+                <p className="text-muted">
+                  <small>
+                    If none of these patients match, you can close this dialog and the walk-in patient 
+                    record will remain separate.
+                  </small>
+                </p>
+              </div>
+              <div className="modal-footer">
+                <button
+                  className="btn btn-secondary"
+                  onClick={() => {
+                    setShowMatchesModal(false);
+                    setEditingVisit(null);
+                  }}
+                >
+                  Keep as Separate Patient
                 </button>
               </div>
             </div>

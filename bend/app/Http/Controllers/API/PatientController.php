@@ -7,6 +7,8 @@ use App\Models\Patient;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use App\Services\SystemLogService;
 
 class PatientController extends Controller
 {
@@ -110,24 +112,176 @@ class PatientController extends Controller
             return response()->json(['message' => 'Already linked.'], 400);
         }
 
-        // 🟢 Update user table as well
-        $user->contact_number = $request->contact_number;
-        $user->save();
+        // Wrap in transaction to prevent partial data on failure
+        try {
+            $userId = $user->id;
+            
+            DB::transaction(function () use ($request, $userId) {
+                // 🟢 Update user table as well
+                $userToUpdate = User::findOrFail($userId);
+                $userToUpdate->contact_number = $request->contact_number;
+                $userToUpdate->save();
 
-        // Create new patient record
-        $patient = Patient::create([
-            'first_name' => $request->first_name,
-            'middle_name' => $request->middle_name,
-            'last_name' => $request->last_name,
-            'contact_number' => $request->contact_number,
-            'birthdate' => $request->birthdate,
-            'sex' => $request->sex,
-            'user_id' => $user->id,
-            'is_linked' => 1,
-        ]);
+                // Create new patient record
+                Patient::create([
+                    'first_name' => $request->first_name,
+                    'middle_name' => $request->middle_name,
+                    'last_name' => $request->last_name,
+                    'contact_number' => $request->contact_number,
+                    'birthdate' => $request->birthdate,
+                    'sex' => $request->sex,
+                    'user_id' => $userId,
+                    'is_linked' => 1,
+                ]);
+            });
 
-        return response()->json(['message' => 'Linked successfully.']);
+            return response()->json(['message' => 'Linked successfully.']);
+        } catch (\Exception $e) {
+            // Log the error for debugging
+            \Illuminate\Support\Facades\Log::error('Patient linking failed', [
+                'user_id' => $user->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'message' => 'Failed to link patient record. Please try again.',
+            ], 500);
+        }
     }
 
+    // 🔍 Search unlinked patients (for admin/staff binding)
+    public function searchUnlinkedPatients(Request $request)
+    {
+        $query = $request->input('q', '');
+
+        $results = Patient::whereNull('user_id')
+            ->where(function ($qbuilder) use ($query) {
+                if (!empty($query)) {
+                    $qbuilder->where('first_name', 'like', "%{$query}%")
+                        ->orWhere('last_name', 'like', "%{$query}%")
+                        ->orWhere('contact_number', 'like', "%{$query}%");
+                }
+            })
+            ->orderBy('last_name')
+            ->orderBy('first_name')
+            ->limit(50)
+            ->get();
+
+        return response()->json($results);
+    }
+
+    // 🔍 Search unlinked users (patient role without patient record)
+    public function searchUnlinkedUsers(Request $request)
+    {
+        $query = $request->input('q', '');
+
+        $results = User::where('role', 'patient')
+            ->whereDoesntHave('patient')
+            ->where(function ($qbuilder) use ($query) {
+                if (!empty($query)) {
+                    $qbuilder->where('name', 'like', "%{$query}%")
+                        ->orWhere('email', 'like', "%{$query}%")
+                        ->orWhere('contact_number', 'like', "%{$query}%");
+                }
+            })
+            ->orderBy('name')
+            ->limit(50)
+            ->get();
+
+        return response()->json($results);
+    }
+
+    // 🔗 Bind existing patient to existing user (admin/staff action)
+    public function bindPatientToUser(Request $request)
+    {
+        $validated = $request->validate([
+            'patient_id' => 'required|exists:patients,id',
+            'user_id' => 'required|exists:users,id',
+        ]);
+
+        $actorUser = Auth::user(); // The admin/staff performing the action
+
+        try {
+            $patient = null;
+            $user = null;
+
+            DB::transaction(function () use ($validated, $actorUser, &$patient, &$user) {
+                // Verify patient is not already linked
+                $patient = Patient::findOrFail($validated['patient_id']);
+                if ($patient->user_id !== null) {
+                    throw new \Exception('This patient is already linked to a user account.');
+                }
+
+                // Verify user is a patient and not already linked
+                $user = User::findOrFail($validated['user_id']);
+                if ($user->role !== 'patient') {
+                    throw new \Exception('The selected user is not a patient account.');
+                }
+
+                if ($user->patient()->exists()) {
+                    throw new \Exception('This user already has a linked patient record.');
+                }
+
+                // Update patient record with user_id
+                $patient->update([
+                    'user_id' => $user->id,
+                    'is_linked' => true,
+                    'flag_manual_review' => false,
+                ]);
+
+                // Update user contact number if patient has one and user doesn't
+                if ($patient->contact_number && !$user->contact_number) {
+                    $user->update(['contact_number' => $patient->contact_number]);
+                }
+
+                // Log the binding event with complete details
+                SystemLogService::logPatient(
+                    'bind_to_user',
+                    $patient->id,
+                    "Patient '{$patient->first_name} {$patient->last_name}' (ID: {$patient->id}) bound to user '{$user->name}' (ID: {$user->id}) by {$actorUser->role} '{$actorUser->name}'",
+                    [
+                        'patient' => [
+                            'id' => $patient->id,
+                            'name' => "{$patient->first_name} {$patient->middle_name} {$patient->last_name}",
+                            'contact_number' => $patient->contact_number,
+                            'birthdate' => $patient->birthdate ? $patient->birthdate->format('Y-m-d') : null,
+                        ],
+                        'user' => [
+                            'id' => $user->id,
+                            'name' => $user->name,
+                            'email' => $user->email,
+                            'contact_number' => $user->contact_number,
+                        ],
+                        'performed_by' => [
+                            'id' => $actorUser->id,
+                            'name' => $actorUser->name,
+                            'email' => $actorUser->email,
+                            'role' => $actorUser->role,
+                        ],
+                        'contact_updated' => $patient->contact_number && !$user->contact_number,
+                    ]
+                );
+            });
+
+            return response()->json([
+                'message' => 'Patient successfully bound to user account.',
+            ]);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Patient-User binding failed', [
+                'patient_id' => $validated['patient_id'],
+                'user_id' => $validated['user_id'],
+                'performed_by' => [
+                    'id' => $actorUser->id,
+                    'name' => $actorUser->name,
+                    'role' => $actorUser->role,
+                ],
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'message' => $e->getMessage(),
+            ], 422);
+        }
+    }
 
 }
