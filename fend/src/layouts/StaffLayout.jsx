@@ -56,7 +56,7 @@ function StaffLayout() {
 
   const handleLogout = async () => {
     await logout();
-    navigate("/app");
+    navigate("/");
   };
 
   const linkState = (isActive) =>

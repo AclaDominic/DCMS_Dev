@@ -7,28 +7,27 @@ use Illuminate\Foundation\Auth\EmailVerificationRequest;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 
 
-// Serve the built SPA for any path that is NOT /api, /sanctum, or /storage
-Route::get('/{any}', function () {
-    return File::get(public_path('app/index.html'));
-})->where('any', '^(?!api)(?!sanctum)(?!storage).*$');
-
+// Serve the built SPA at root
 Route::get('/', function () {
-    return redirect('/app');
+    return File::get(public_path('index.html'));
 });
 
-
+// Serve the built SPA for any path that is NOT /api, /sanctum, or /storage
+Route::get('/{any}', function () {
+    return File::get(public_path('index.html'));
+})->where('any', '^(?!api)(?!sanctum)(?!storage).*$');
 
 Route::post('/login', [AuthenticatedSessionController::class, 'store']);
 
 Route::get('/email/verify/{id}/{hash}', function (EmailVerificationRequest $request) {
     $request->fulfill(); // ✅ mark user as verified
-    return redirect(config('app.frontend_url') . '/app/verify-success'); // 🔁 redirect to frontend
+    return redirect(config('app.frontend_url') . '/verify-success'); // 🔁 redirect to frontend
 })->middleware(['auth:sanctum', 'signed'])->name('verification.verify.legacy');
 
 // Frontend email verification route that matches React router pattern
-Route::get('/app/verify-email/{id}/{hash}', function (EmailVerificationRequest $request) {
+Route::get('/verify-email/{id}/{hash}', function (EmailVerificationRequest $request) {
     $request->fulfill(); // ✅ mark user as verified
-    return redirect(config('app.frontend_url') . '/app/verify-success'); // 🔁 redirect to frontend
+    return redirect(config('app.frontend_url') . '/verify-success'); // 🔁 redirect to frontend
 })->middleware(['auth:sanctum', 'signed'])->name('verification.verify.frontend');
 
 Route::post('/email/verification-notification', function (Request $request) {

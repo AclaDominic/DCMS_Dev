@@ -3,10 +3,10 @@ import react from "@vitejs/plugin-react";
 
 export default defineConfig({
   plugins: [react()],
-  base: "/app", // where the app will be served under Laravel public
+  base: "/", // where the app will be served under Laravel public
   build: {
-    outDir: "../bend/public/app", // output INTO Laravel public
-    emptyOutDir: true,
+    outDir: "../bend/public", // output INTO Laravel public
+    emptyOutDir: false, // Don't empty public dir to preserve Laravel's index.php
   },
   server: {
     proxy: {

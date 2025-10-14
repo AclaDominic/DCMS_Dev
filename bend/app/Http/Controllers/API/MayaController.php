@@ -236,9 +236,9 @@ class MayaController extends Controller
 
         // Send user to SPA
         $target = match (true) {
-            $payment && $payment->status === 'paid' => env('MAYA_SUCCESS_URL') ?: (config('app.url') . '/app/pay/success'),
-            $outcome === 'cancel' => env('MAYA_CANCEL_URL') ?: (config('app.url') . '/app/pay/cancel'),
-            default => env('MAYA_FAILURE_URL') ?: (config('app.url') . '/app/pay/failure'),
+            $payment && $payment->status === 'paid' => env('MAYA_SUCCESS_URL') ?: (config('app.url') . '/pay/success'),
+            $outcome === 'cancel' => env('MAYA_CANCEL_URL') ?: (config('app.url') . '/pay/cancel'),
+            default => env('MAYA_FAILURE_URL') ?: (config('app.url') . '/pay/failure'),
         };
         return redirect()->away($target);
     }

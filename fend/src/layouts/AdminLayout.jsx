@@ -24,7 +24,7 @@ function AdminLayout() {
 
   const handleLogout = async () => {
     await logout();
-    navigate("/app");
+    navigate("/");
   };
 
   return (

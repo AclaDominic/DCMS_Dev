@@ -11,9 +11,8 @@ export default function AuthRedirector() {
   useEffect(() => {
     if (authLoading) return;
 
-    // Router uses basename "/app"; normalize path by stripping it when comparing
-    const rawPath = location.pathname || '/';
-    const normalized = rawPath.startsWith('/app') ? rawPath.slice(4) || '/' : rawPath;
+    // Router uses basename "/"; path is already normalized
+    const normalized = location.pathname || '/';
     const publicRoutes = ['/', '/login', '/register', '/forgot-password'];
     
     // If user is logged in and on a public route, redirect to their dashboard
@@ -24,7 +23,7 @@ export default function AuthRedirector() {
       else if (user.role === 'dentist') navigate('/dentist');
     }
     
-    // If no user is logged in and not on a public route, redirect to /app (landing page)
+    // If no user is logged in and not on a public route, redirect to landing page
     if (!user && !publicRoutes.includes(normalized)) {
       navigate('/');
     }
