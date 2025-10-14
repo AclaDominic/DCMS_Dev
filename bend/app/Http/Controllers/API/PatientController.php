@@ -35,6 +35,19 @@ class PatientController extends Controller
 
         $patient = Patient::create($validated);
 
+        // Log patient creation
+        SystemLogService::logPatient(
+            'created',
+            $patient->id,
+            "New walk-in patient added: {$patient->first_name} {$patient->last_name}",
+            [
+                'patient_id' => $patient->id,
+                'name' => $patient->first_name . ' ' . $patient->last_name,
+                'contact_number' => $patient->contact_number,
+                'added_by' => auth()->id()
+            ]
+        );
+
         return response()->json([
             'message' => 'Patient added successfully.',
             'patient' => $patient
@@ -63,6 +76,20 @@ class PatientController extends Controller
             'flag_manual_review' => false,
         ]);
 
+        // Log patient linking
+        SystemLogService::logPatient(
+            'linked',
+            $patient->id,
+            "Patient linked to user account: {$patient->first_name} {$patient->last_name} → {$user->email}",
+            [
+                'patient_id' => $patient->id,
+                'patient_name' => $patient->first_name . ' ' . $patient->last_name,
+                'user_id' => $user->id,
+                'user_email' => $user->email,
+                'linked_by' => auth()->id()
+            ]
+        );
+
         return response()->json(['message' => 'Patient successfully linked.']);
     }
 
@@ -71,6 +98,18 @@ class PatientController extends Controller
     {
         $patient = Patient::findOrFail($id);
         $patient->update(['flag_manual_review' => true]);
+
+        // Log patient flagged for review
+        SystemLogService::logPatient(
+            'flagged_for_review',
+            $patient->id,
+            "Patient flagged for manual review: {$patient->first_name} {$patient->last_name}",
+            [
+                'patient_id' => $patient->id,
+                'patient_name' => $patient->first_name . ' ' . $patient->last_name,
+                'flagged_by' => auth()->id()
+            ]
+        );
 
         return response()->json(['message' => 'Patient flagged for review.']);
     }
@@ -116,14 +155,14 @@ class PatientController extends Controller
         try {
             $userId = $user->id;
             
-            DB::transaction(function () use ($request, $userId) {
+            $patient = DB::transaction(function () use ($request, $userId) {
                 // 🟢 Update user table as well
                 $userToUpdate = User::findOrFail($userId);
                 $userToUpdate->contact_number = $request->contact_number;
                 $userToUpdate->save();
 
                 // Create new patient record
-                Patient::create([
+                return Patient::create([
                     'first_name' => $request->first_name,
                     'middle_name' => $request->middle_name,
                     'last_name' => $request->last_name,
@@ -134,6 +173,20 @@ class PatientController extends Controller
                     'is_linked' => 1,
                 ]);
             });
+
+            // Log self-linking
+            SystemLogService::logPatient(
+                'self_linked',
+                $patient->id,
+                "User self-linked to patient record: {$user->name} → {$patient->first_name} {$patient->last_name}",
+                [
+                    'patient_id' => $patient->id,
+                    'patient_name' => $patient->first_name . ' ' . $patient->last_name,
+                    'user_id' => $user->id,
+                    'user_name' => $user->name,
+                    'user_email' => $user->email
+                ]
+            );
 
             return response()->json(['message' => 'Linked successfully.']);
         } catch (\Exception $e) {

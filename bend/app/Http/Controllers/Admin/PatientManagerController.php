@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use App\Services\SystemLogService;
 
 class PatientManagerController extends Controller
 {
@@ -234,6 +235,20 @@ class PatientManagerController extends Controller
             );
 
             if ($success) {
+                // Log warning sent
+                SystemLogService::logPatientManager(
+                    'warning_sent',
+                    $id,
+                    "Warning sent to patient: {$patientManager->patient->first_name} {$patientManager->patient->last_name}",
+                    [
+                        'patient_id' => $patientManager->patient_id,
+                        'patient_name' => $patientManager->patient->first_name . ' ' . $patientManager->patient->last_name,
+                        'warning_message' => $request->get('message'),
+                        'warning_count' => $patientManager->warning_count,
+                        'no_show_count' => $patientManager->no_show_count
+                    ]
+                );
+
                 return response()->json([
                     'success' => true,
                     'message' => 'Warning sent successfully',
@@ -289,6 +304,21 @@ class PatientManagerController extends Controller
             );
 
             if ($success) {
+                // Log patient blocking
+                SystemLogService::logPatientManager(
+                    'blocked',
+                    $id,
+                    "Patient blocked: {$patientManager->patient->first_name} {$patientManager->patient->last_name}",
+                    [
+                        'patient_id' => $patientManager->patient_id,
+                        'patient_name' => $patientManager->patient->first_name . ' ' . $patientManager->patient->last_name,
+                        'block_reason' => $request->get('reason'),
+                        'block_type' => $request->get('block_type'),
+                        'blocked_ip' => $request->get('ip'),
+                        'no_show_count' => $patientManager->no_show_count
+                    ]
+                );
+
                 return response()->json([
                     'success' => true,
                     'message' => 'Patient blocked successfully',
@@ -346,6 +376,19 @@ class PatientManagerController extends Controller
             );
 
             if ($success) {
+                // Log patient unblocking
+                SystemLogService::logPatientManager(
+                    'unblocked',
+                    $id,
+                    "Patient unblocked: {$patientManager->patient->first_name} {$patientManager->patient->last_name}",
+                    [
+                        'patient_id' => $patientManager->patient_id,
+                        'patient_name' => $patientManager->patient->first_name . ' ' . $patientManager->patient->last_name,
+                        'unblock_reason' => $request->get('reason'),
+                        'no_show_count' => $patientManager->no_show_count
+                    ]
+                );
+
                 return response()->json([
                     'success' => true,
                     'message' => 'Patient unblocked successfully',
@@ -390,6 +433,17 @@ class PatientManagerController extends Controller
 
             $patientManager = PatientManager::findOrFail($id);
             $patientManager->addAdminNote($request->get('note'), Auth::id());
+
+            // Log admin note addition
+            SystemLogService::logPatientManager(
+                'note_added',
+                $id,
+                "Admin note added to patient manager record",
+                [
+                    'patient_manager_id' => $id,
+                    'note' => $request->get('note')
+                ]
+            );
 
             return response()->json([
                 'success' => true,
@@ -507,13 +561,20 @@ class PatientManagerController extends Controller
                 Auth::id()
             );
 
-            Log::info('Patient no-show count reset by admin', [
-                'patient_manager_id' => $id,
-                'patient_id' => $patientManager->patient_id,
-                'old_count' => $oldCount,
-                'reason' => $request->get('reason'),
-                'admin_id' => Auth::id(),
-            ]);
+            // Log no-show count reset
+            SystemLogService::logPatientManager(
+                'no_show_reset',
+                $id,
+                "No-show count reset from {$oldCount} to 0",
+                [
+                    'patient_manager_id' => $id,
+                    'patient_id' => $patientManager->patient_id,
+                    'old_count' => $oldCount,
+                    'new_count' => 0,
+                    'reason' => $request->get('reason'),
+                    'admin_id' => Auth::id()
+                ]
+            );
 
             return response()->json([
                 'success' => true,

@@ -106,12 +106,27 @@ class DeviceApprovalController extends Controller
             'device_name' => 'required|string|max:255',
         ]);
 
+        $device = DB::table('staff_device')->where('id', $request->device_id)->first();
+        $oldName = $device->device_name ?? 'Unnamed';
+
         DB::table('staff_device')
             ->where('id', $request->device_id)
             ->update([
                 'device_name' => $request->device_name,
                 'updated_at' => now(),
             ]);
+
+        // Log device rename
+        SystemLogService::logDevice(
+            'renamed',
+            $request->device_id,
+            "Device renamed from '{$oldName}' to '{$request->device_name}'",
+            [
+                'old_name' => $oldName,
+                'new_name' => $request->device_name,
+                'user_id' => $device->user_id
+            ]
+        );
 
         return response()->json(['message' => 'Device name updated successfully.']);
     }
@@ -122,6 +137,8 @@ class DeviceApprovalController extends Controller
             'device_id' => 'required|exists:staff_device,id',
         ]);
 
+        $device = DB::table('staff_device')->where('id', $request->device_id)->first();
+
         DB::table('staff_device')
             ->where('id', $request->device_id)
             ->update([
@@ -129,6 +146,18 @@ class DeviceApprovalController extends Controller
                 'temporary_code' => strtoupper(Str::random(6)), // Optional
                 'updated_at' => now(),
             ]);
+
+        // Log device revocation
+        SystemLogService::logDevice(
+            'revoked',
+            $request->device_id,
+            "Device access revoked: {$device->device_name}",
+            [
+                'device_name' => $device->device_name,
+                'user_id' => $device->user_id,
+                'device_fingerprint' => $device->device_fingerprint
+            ]
+        );
 
         return response()->json(['message' => 'Device access revoked.']);
     }

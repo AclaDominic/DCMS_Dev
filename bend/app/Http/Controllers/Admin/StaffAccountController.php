@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use App\Http\Controllers\Controller;
 use Illuminate\Validation\Rules;
+use App\Services\SystemLogService;
 
 class StaffAccountController extends Controller
 {
@@ -25,6 +26,19 @@ class StaffAccountController extends Controller
             'role' => 'staff',
             'status' => 'activated', // default status
         ]);
+
+        // Log staff account creation
+        SystemLogService::logStaff(
+            'created',
+            $staff->id,
+            "New staff account created: {$staff->name}",
+            [
+                'staff_id' => $staff->id,
+                'name' => $staff->name,
+                'email' => $staff->email,
+                'status' => $staff->status
+            ]
+        );
 
         return response()->json([
             'message' => 'Staff account created successfully.',
@@ -62,8 +76,23 @@ class StaffAccountController extends Controller
     {
         $staff = User::where('role', 'staff')->findOrFail($id);
         
+        $oldStatus = $staff->status;
         $newStatus = $staff->status === 'activated' ? 'deactivated' : 'activated';
         $staff->update(['status' => $newStatus]);
+
+        // Log status toggle
+        SystemLogService::logStaff(
+            'status_toggled',
+            $staff->id,
+            "Staff account status changed from {$oldStatus} to {$newStatus}: {$staff->name}",
+            [
+                'staff_id' => $staff->id,
+                'name' => $staff->name,
+                'email' => $staff->email,
+                'old_status' => $oldStatus,
+                'new_status' => $newStatus
+            ]
+        );
 
         return response()->json([
             'message' => "Staff account {$newStatus} successfully.",

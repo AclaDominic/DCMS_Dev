@@ -5,6 +5,7 @@ namespace App\Http\Controllers\API;
 use App\Models\Service;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
+use App\Services\SystemLogService;
 
 class ServiceController extends Controller
 {
@@ -45,6 +46,21 @@ class ServiceController extends Controller
             $service->bundledServices()->sync($request->input('bundled_service_ids'));
         }
 
+        // Log service creation
+        SystemLogService::logService(
+            'created',
+            $service->id,
+            "New service created: {$service->name}",
+            [
+                'service_id' => $service->id,
+                'name' => $service->name,
+                'price' => $service->price,
+                'estimated_minutes' => $service->estimated_minutes,
+                'category_id' => $service->service_category_id,
+                'created_by' => auth()->id()
+            ]
+        );
+
         return response()->json($service->load(['bundledServices', 'bundleItems', 'category']), 201);
     }
 
@@ -81,12 +97,36 @@ class ServiceController extends Controller
             $validated['estimated_minutes'] = ceil($validated['estimated_minutes'] / 30) * 30;
         }
 
+        $oldData = [
+            'name' => $service->name,
+            'price' => $service->price,
+            'estimated_minutes' => $service->estimated_minutes
+        ];
+
         $service->update($validated);
 
         // Sync bundled services
         if ($request->has('bundled_service_ids')) {
             $service->bundledServices()->sync($request->input('bundled_service_ids'));
         }
+
+        // Log service update
+        SystemLogService::logService(
+            'updated',
+            $service->id,
+            "Service updated: {$service->name}",
+            [
+                'service_id' => $service->id,
+                'name' => $service->name,
+                'old_values' => $oldData,
+                'new_values' => [
+                    'name' => $service->name,
+                    'price' => $service->price,
+                    'estimated_minutes' => $service->estimated_minutes
+                ],
+                'updated_by' => auth()->id()
+            ]
+        );
 
         return response()->json($service->load(['bundledServices', 'bundleItems', 'category']));
     }
@@ -97,7 +137,22 @@ class ServiceController extends Controller
     public function destroy(string $id)
     {
         $service = Service::findOrFail($id);
+        $serviceName = $service->name;
+
         $service->delete();
+
+        // Log service deletion
+        SystemLogService::logService(
+            'deleted',
+            $id,
+            "Service deleted: {$serviceName}",
+            [
+                'service_id' => $id,
+                'name' => $serviceName,
+                'deleted_by' => auth()->id()
+            ]
+        );
+
         return response()->json(null, 204);
     }
 

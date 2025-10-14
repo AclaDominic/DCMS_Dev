@@ -7,6 +7,7 @@ import './SystemLogsPage.css';
 const SystemLogsPage = () => {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [tableLoading, setTableLoading] = useState(false);
   const [filterOptions, setFilterOptions] = useState({
     categories: [],
     actions: [],
@@ -27,9 +28,10 @@ const SystemLogsPage = () => {
     per_page: 20,
     total: 0
   });
-  const [showFilters, setShowFilters] = useState(false);
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [showContextModal, setShowContextModal] = useState(false);
   const [selectedContext, setSelectedContext] = useState(null);
+  const [selectedLog, setSelectedLog] = useState(null);
   const [copySuccess, setCopySuccess] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
   const [popupPos, setPopupPos] = useState({ top: 0, left: 0 });
@@ -37,10 +39,13 @@ const SystemLogsPage = () => {
 
   useEffect(() => {
     fetchFilterOptions();
-    fetchLogs();
+    fetchLogs(true); // Initial load
   }, []);
 
   useEffect(() => {
+    // Skip if this is the initial render (handled by initial useEffect)
+    if (loading) return;
+
     // Clear existing timeout
     if (searchTimeout) {
       clearTimeout(searchTimeout);
@@ -49,12 +54,12 @@ const SystemLogsPage = () => {
     // For search, add debounce and minimum character requirement
     if (filters.search && filters.search.length >= 2) {
       const timeout = setTimeout(() => {
-        fetchLogs();
+        fetchLogs(false); // Not initial load
       }, 300); // 300ms debounce
       setSearchTimeout(timeout);
     } else if (filters.search.length === 0 || !filters.search) {
       // Immediate fetch for empty search or other filters
-      fetchLogs();
+      fetchLogs(false); // Not initial load
     }
 
     // Cleanup function
@@ -103,9 +108,15 @@ const SystemLogsPage = () => {
     }
   };
 
-  const fetchLogs = async () => {
+  const fetchLogs = async (isInitialLoad = false) => {
     try {
-      setLoading(true);
+      // Use different loading states for initial load vs filter changes
+      if (isInitialLoad) {
+        setLoading(true);
+      } else {
+        setTableLoading(true);
+      }
+      
       const params = new URLSearchParams();
       
       // Add filters
@@ -128,7 +139,11 @@ const SystemLogsPage = () => {
     } catch (error) {
       console.error('Failed to fetch system logs:', error);
     } finally {
-      setLoading(false);
+      if (isInitialLoad) {
+        setLoading(false);
+      } else {
+        setTableLoading(false);
+      }
     }
   };
 
@@ -148,6 +163,47 @@ const SystemLogsPage = () => {
       search: ''
     });
     setPagination(prev => ({ ...prev, current_page: 1 }));
+  };
+
+  const removeFilter = (filterKey) => {
+    setFilters(prev => ({ ...prev, [filterKey]: '' }));
+    setPagination(prev => ({ ...prev, current_page: 1 }));
+  };
+
+  const getActiveFiltersCount = () => {
+    return Object.values(filters).filter(value => value !== '').length;
+  };
+
+  const getActiveFilters = () => {
+    return Object.entries(filters)
+      .filter(([_, value]) => value !== '')
+      .map(([key, value]) => {
+        let displayValue = value;
+        let displayLabel = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+
+        // Get user name if filtering by user
+        if (key === 'user_id') {
+          const user = filterOptions.users.find(u => u.id.toString() === value.toString());
+          displayValue = user ? user.name : value;
+        }
+        // Get category label
+        else if (key === 'category') {
+          const categoryInfo = getCategoryInfo(value);
+          displayValue = categoryInfo.label;
+        }
+        // Get action label
+        else if (key === 'action') {
+          const actionInfo = getActionInfo(value);
+          displayValue = actionInfo.label;
+        }
+        // Format dates
+        else if (key === 'date_from' || key === 'date_to') {
+          displayValue = new Date(value).toLocaleDateString();
+          displayLabel = key === 'date_from' ? 'From' : 'To';
+        }
+
+        return { key, label: displayLabel, value: displayValue };
+      });
   };
 
   const formatDate = (dateString) => {
@@ -343,8 +399,9 @@ const SystemLogsPage = () => {
     setPopupPos({ top, left });
   };
 
-  const handleViewContext = (context, anchorElement) => {
-    setSelectedContext(context);
+  const handleViewContext = (log, anchorElement) => {
+    setSelectedLog(log);
+    setSelectedContext(log.context);
     setAnchorEl(anchorElement);
     computePopupPosition(anchorElement);
     setShowContextModal(true);
@@ -366,13 +423,24 @@ const SystemLogsPage = () => {
     
     setShowContextModal(false);
     setSelectedContext(null);
+    setSelectedLog(null);
     setCopySuccess(false);
     setAnchorEl(null);
   };
 
   const handleCopyToClipboard = async () => {
     try {
-      await navigator.clipboard.writeText(JSON.stringify(selectedContext, null, 2));
+      const fullData = {
+        id: selectedLog?.id,
+        user: selectedLog?.user,
+        category: selectedLog?.category,
+        action: selectedLog?.action,
+        subject_id: selectedLog?.subject_id,
+        message: selectedLog?.message,
+        context: selectedContext,
+        created_at: selectedLog?.created_at
+      };
+      await navigator.clipboard.writeText(JSON.stringify(fullData, null, 2));
       setCopySuccess(true);
       setTimeout(() => setCopySuccess(false), 2000); // Hide success message after 2 seconds
     } catch (err) {
@@ -380,145 +448,160 @@ const SystemLogsPage = () => {
     }
   };
 
-  // Format context data for better readability
-  const formatContextData = (context) => {
-    if (!context) return null;
+  // Format context data for better readability with sections
+  const formatContextData = (log, context) => {
+    if (!context || Object.keys(context).length === 0) {
+      return (
+        <div className="context-popup-section">
+          <div className="text-center text-muted py-3">
+            <i className="bi bi-info-circle me-2" style={{ fontSize: '2rem' }}></i>
+            <p className="mt-2 mb-0">No additional context data available for this log entry.</p>
+          </div>
+        </div>
+      );
+    }
     
     const formatValue = (key, value) => {
-      if (value === null || value === undefined) return 'Not specified';
-      if (typeof value === 'boolean') return value ? 'Yes' : 'No';
-      if (typeof value === 'object') return JSON.stringify(value, null, 2);
-      if (typeof value === 'string' && value.length > 100) return `${value.substring(0, 100)}...`;
+      if (value === null || value === undefined) return <span className="text-muted fst-italic">Not specified</span>;
+      if (typeof value === 'boolean') return <span className={value ? 'text-success fw-bold' : 'text-danger fw-bold'}>{value ? 'Yes' : 'No'}</span>;
+      if (typeof value === 'object') {
+        return (
+          <div className="context-json-viewer">
+            {JSON.stringify(value, null, 2)}
+          </div>
+        );
+      }
       return value.toString();
     };
 
     const getFieldLabel = (key) => {
       const labels = {
-        'id': 'ID',
-        'name': 'Name',
-        'email': 'Email Address',
-        'phone': 'Phone Number',
-        'status': 'Status',
-        'type': 'Type',
-        'amount': 'Amount',
-        'date': 'Date',
-        'time': 'Time',
-        'description': 'Description',
-        'notes': 'Notes',
-        'user_id': 'User ID',
-        'patient_id': 'Patient ID',
-        'appointment_id': 'Appointment ID',
-        'service_id': 'Service ID',
-        'dentist_id': 'Dentist ID',
-        'device_id': 'Device ID',
-        'payment_id': 'Payment ID',
-        'inventory_id': 'Inventory Item ID',
-        'created_at': 'Created At',
-        'updated_at': 'Updated At',
-        'deleted_at': 'Deleted At',
-        'ip_address': 'IP Address',
-        'user_agent': 'Browser Information',
-        'request_data': 'Request Data',
-        'response_data': 'Response Data',
-        'error_message': 'Error Message',
-        'stack_trace': 'Error Details',
-        'device_name': 'Device Name',
-        'device_type': 'Device Type',
-        'device_status': 'Device Status',
-        'appointment_date': 'Appointment Date',
-        'appointment_time': 'Appointment Time',
-        'patient_name': 'Patient Name',
-        'dentist_name': 'Dentist Name',
-        'service_name': 'Service Name',
-        'payment_amount': 'Payment Amount',
-        'payment_method': 'Payment Method',
-        'payment_status': 'Payment Status',
-        'inventory_item': 'Inventory Item',
-        'quantity': 'Quantity',
-        'unit_price': 'Unit Price',
-        'total_amount': 'Total Amount',
-        'reason': 'Reason',
-        'comment': 'Comment',
-        'old_values': 'Previous Values',
-        'new_values': 'New Values',
-        'changes': 'Changes Made'
+        'id': 'ID', 'name': 'Name', 'email': 'Email Address', 'phone': 'Phone Number',
+        'status': 'Status', 'type': 'Type', 'amount': 'Amount', 'date': 'Date', 'time': 'Time',
+        'description': 'Description', 'notes': 'Notes', 'user_id': 'User ID', 'patient_id': 'Patient ID',
+        'appointment_id': 'Appointment ID', 'service_id': 'Service ID', 'dentist_id': 'Dentist ID',
+        'device_id': 'Device ID', 'payment_id': 'Payment ID', 'inventory_id': 'Inventory Item ID',
+        'created_at': 'Created At', 'updated_at': 'Updated At', 'deleted_at': 'Deleted At',
+        'ip_address': 'IP Address', 'user_agent': 'Browser Information', 'device_name': 'Device Name',
+        'device_type': 'Device Type', 'device_status': 'Device Status', 'appointment_date': 'Appointment Date',
+        'appointment_time': 'Appointment Time', 'patient_name': 'Patient Name', 'dentist_name': 'Dentist Name',
+        'service_name': 'Service Name', 'payment_amount': 'Payment Amount', 'payment_method': 'Payment Method',
+        'payment_status': 'Payment Status', 'quantity': 'Quantity', 'unit_price': 'Unit Price',
+        'total_amount': 'Total Amount', 'reason': 'Reason', 'comment': 'Comment',
+        'old_values': 'Previous Values', 'new_values': 'New Values', 'changes': 'Changes Made',
+        'reference_code': 'Reference Code', 'time_slot': 'Time Slot', 'rejection_note': 'Rejection Note',
+        'warning_message': 'Warning Message', 'warning_count': 'Warning Count', 'no_show_count': 'No-Show Count',
+        'block_reason': 'Block Reason', 'block_type': 'Block Type', 'blocked_ip': 'Blocked IP',
+        'unblock_reason': 'Unblock Reason', 'old_count': 'Old Count', 'new_count': 'New Count',
+        'admin_id': 'Admin ID', 'custom_message': 'Custom Message', 'added_by': 'Added By',
+        'linked_by': 'Linked By', 'flagged_by': 'Flagged By', 'created_by': 'Created By',
+        'updated_by': 'Updated By', 'deleted_by': 'Deleted By', 'performed_by': 'Performed By',
+        'old_name': 'Old Name', 'new_name': 'New Name', 'old_status': 'Old Status', 'new_status': 'New Status',
+        'old_date': 'Old Date', 'new_date': 'New Date', 'old_time_slot': 'Old Time Slot', 'new_time_slot': 'New Time Slot',
+        'contact_number': 'Contact Number', 'category_id': 'Category ID', 'estimated_minutes': 'Estimated Minutes',
+        'price': 'Price', 'role': 'Role', 'action_required': 'Action Required'
       };
       return labels[key] || key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
     };
 
     const getFieldIcon = (key) => {
       const icons = {
-        'id': 'bi-hash',
-        'name': 'bi-person',
-        'email': 'bi-envelope',
-        'phone': 'bi-telephone',
-        'status': 'bi-circle-fill',
-        'type': 'bi-tag',
-        'amount': 'bi-currency-dollar',
-        'date': 'bi-calendar',
-        'time': 'bi-clock',
-        'description': 'bi-text-paragraph',
-        'notes': 'bi-sticky',
-        'user_id': 'bi-person-badge',
-        'patient_id': 'bi-person-heart',
-        'appointment_id': 'bi-calendar-check',
-        'service_id': 'bi-gear',
-        'dentist_id': 'bi-person-badge',
-        'device_id': 'bi-laptop',
-        'payment_id': 'bi-credit-card',
-        'inventory_id': 'bi-box-seam',
-        'created_at': 'bi-calendar-plus',
-        'updated_at': 'bi-calendar-check',
-        'deleted_at': 'bi-calendar-x',
-        'ip_address': 'bi-globe',
-        'user_agent': 'bi-browser-chrome',
-        'request_data': 'bi-arrow-down-circle',
-        'response_data': 'bi-arrow-up-circle',
-        'error_message': 'bi-exclamation-triangle',
-        'stack_trace': 'bi-bug',
-        'device_name': 'bi-laptop',
-        'device_type': 'bi-tag',
-        'device_status': 'bi-circle-fill',
-        'appointment_date': 'bi-calendar',
-        'appointment_time': 'bi-clock',
-        'patient_name': 'bi-person-heart',
-        'dentist_name': 'bi-person-badge',
-        'service_name': 'bi-gear',
-        'payment_amount': 'bi-currency-dollar',
-        'payment_method': 'bi-credit-card',
-        'payment_status': 'bi-circle-fill',
-        'inventory_item': 'bi-box-seam',
-        'quantity': 'bi-123',
-        'unit_price': 'bi-currency-dollar',
-        'total_amount': 'bi-calculator',
-        'reason': 'bi-chat-quote',
-        'comment': 'bi-chat-text',
-        'old_values': 'bi-arrow-left',
-        'new_values': 'bi-arrow-right',
-        'changes': 'bi-arrow-left-right'
+        'id': 'bi-hash', 'name': 'bi-person', 'email': 'bi-envelope', 'phone': 'bi-telephone',
+        'status': 'bi-circle-fill', 'type': 'bi-tag', 'amount': 'bi-currency-dollar',
+        'date': 'bi-calendar', 'time': 'bi-clock', 'description': 'bi-text-paragraph',
+        'notes': 'bi-sticky', 'user_id': 'bi-person-badge', 'patient_id': 'bi-person-heart',
+        'appointment_id': 'bi-calendar-check', 'service_id': 'bi-gear', 'device_id': 'bi-laptop',
+        'payment_id': 'bi-credit-card', 'ip_address': 'bi-globe', 'user_agent': 'bi-browser-chrome',
+        'reason': 'bi-chat-quote', 'comment': 'bi-chat-text', 'old_values': 'bi-arrow-left',
+        'new_values': 'bi-arrow-right', 'reference_code': 'bi-code-square', 'time_slot': 'bi-clock-history',
+        'warning_message': 'bi-exclamation-triangle', 'no_show_count': 'bi-x-octagon',
+        'block_reason': 'bi-shield-x', 'contact_number': 'bi-telephone', 'price': 'bi-currency-dollar'
       };
       return icons[key] || 'bi-info-circle';
     };
 
-    return Object.entries(context).map(([key, value]) => (
-      <div key={key} className="mb-4">
-        <div className="row">
-          <div className="col-md-4">
-            <label className="form-label fw-bold text-primary d-flex align-items-center">
-              <i className={`bi ${getFieldIcon(key)} me-2`}></i>
-              {getFieldLabel(key)}:
-            </label>
+    const isHighlightField = (key) => {
+      return ['reason', 'block_reason', 'rejection_note', 'warning_message', 'unblock_reason', 'action_required'].includes(key);
+    };
+
+    const isCodeField = (key) => {
+      return ['reference_code', 'device_fingerprint', 'ip_address', 'blocked_ip'].includes(key);
+    };
+
+    return (
+      <>
+        {/* Log Summary Section */}
+        <div className="context-popup-section">
+          <div className="context-popup-section-title">
+            <i className="bi bi-info-circle-fill"></i>
+            <span>Log Summary</span>
           </div>
-          <div className="col-md-8">
-            <div className="bg-white p-3 rounded border shadow-sm">
-              <span className="text-dark fs-6">
-                {formatValue(key, value)}
-              </span>
+          
+          <div className="context-field">
+            <div className="context-field-label">
+              <i className="bi bi-hash"></i>
+              Log ID
+            </div>
+            <div className="context-field-value code">#{log.id}</div>
+          </div>
+
+          {log.user && (
+            <div className="context-field">
+              <div className="context-field-label">
+                <i className="bi bi-person-badge"></i>
+                Performed By
+              </div>
+              <div className="context-field-value">
+                <strong>{log.user.name}</strong> ({log.user.email})
+              </div>
+            </div>
+          )}
+
+          <div className="context-field">
+            <div className="context-field-label">
+              <i className="bi bi-chat-text"></i>
+              Message
+            </div>
+            <div className="context-field-value">
+              {log.message}
+            </div>
+          </div>
+
+          <div className="context-field">
+            <div className="context-field-label">
+              <i className="bi bi-calendar"></i>
+              Timestamp
+            </div>
+            <div className="context-field-value">
+              {new Date(log.created_at).toLocaleString('en-US', {
+                dateStyle: 'full',
+                timeStyle: 'medium'
+              })}
             </div>
           </div>
         </div>
-      </div>
-    ));
+
+        {/* Context Details Section */}
+        <div className="context-popup-section">
+          <div className="context-popup-section-title">
+            <i className="bi bi-list-ul"></i>
+            <span>Context Details ({Object.keys(context).length} field{Object.keys(context).length !== 1 ? 's' : ''})</span>
+          </div>
+          
+          {Object.entries(context).map(([key, value]) => (
+            <div key={key} className="context-field">
+              <div className="context-field-label">
+                <i className={`bi ${getFieldIcon(key)}`}></i>
+                {getFieldLabel(key)}
+              </div>
+              <div className={`context-field-value ${isHighlightField(key) ? 'highlight' : ''} ${isCodeField(key) ? 'code' : ''}`}>
+                {formatValue(key, value)}
+              </div>
+            </div>
+          ))}
+        </div>
+      </>
+    );
   };
 
   return (
@@ -543,86 +626,58 @@ const SystemLogsPage = () => {
           </h2>
           <p className="text-muted mb-0 mt-1">Monitor system activity and user actions</p>
         </div>
-        <button 
-          className="btn border-0 shadow-sm"
-          onClick={() => setShowFilters(!showFilters)}
-          style={{
-            background: 'linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%)',
-            color: 'white',
-            borderRadius: '12px',
-            padding: '12px 24px',
-            fontWeight: '600',
-            transition: 'all 0.3s ease'
-          }}
-        >
-          <i className={`bi bi-${showFilters ? 'eye-slash' : 'eye'} me-2`}></i>
-          {showFilters ? 'Hide Filters' : 'Show Filters'}
-        </button>
+        <div className="d-flex gap-2 align-items-center">
+          {getActiveFiltersCount() > 0 && (
+            <button 
+              className="btn btn-outline-danger border-0 shadow-sm"
+              onClick={clearFilters}
+              style={{
+                borderRadius: '12px',
+                padding: '12px 20px',
+                fontWeight: '600'
+              }}
+            >
+              <i className="bi bi-x-circle me-2"></i>
+              Clear All ({getActiveFiltersCount()})
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="card border-0 shadow-sm" style={{ borderRadius: '16px' }}>
         <div className="card-body p-4">
 
-      {/* Filters */}
-      {showFilters && (
-        <div className="card border-0 shadow-sm mb-4" style={{ borderRadius: '16px' }}>
-          <div className="card-header bg-info text-white border-0" style={{ borderRadius: '16px 16px 0 0' }}>
-            <h5 className="mb-0 fw-semibold">
-              <i className="bi bi-funnel me-2"></i>
-              Filters
-            </h5>
-          </div>
-          <div className="card-body p-4">
-            <div className="row g-3">
-              <div className="col-12 col-md-6 col-lg-3">
-                <label className="form-label fw-semibold">
-                  <i className="bi bi-search me-1"></i>
-                  Search
-                </label>
-                <input
-                  type="text"
-                  className="form-control border-0 shadow-sm"
-                  style={{ borderRadius: '12px', padding: '12px 16px' }}
-                  placeholder="Search in message, category, action... (min 2 characters)"
-                  value={filters.search}
-                  onChange={(e) => handleFilterChange('search', e.target.value)}
-                />
+      {/* Quick Filters Bar */}
+      <div className="mb-4">
+        <div className="card border-0 shadow-sm" style={{ borderRadius: '16px', background: 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)' }}>
+          <div className="card-body p-3">
+            <div className="row g-3 align-items-center">
+              {/* Search - Always Visible */}
+              <div className="col-12 col-lg-4">
+                <div className="position-relative">
+                  <i className="bi bi-search position-absolute" style={{ left: '16px', top: '50%', transform: 'translateY(-50%)', color: '#6c757d' }}></i>
+                  <input
+                    type="text"
+                    className="form-control border-0 shadow-sm"
+                    style={{ borderRadius: '12px', padding: '12px 16px 12px 42px', background: 'white' }}
+                    placeholder="Search logs... (min 2 characters)"
+                    value={filters.search}
+                    onChange={(e) => handleFilterChange('search', e.target.value)}
+                  />
+                </div>
                 {filters.search && filters.search.length > 0 && filters.search.length < 2 && (
-                  <div className="form-text text-warning mt-1">
+                  <small className="text-warning mt-1 d-block">
                     <i className="bi bi-info-circle me-1"></i>
-                    Please enter at least 2 characters to search
-                  </div>
+                    Please enter at least 2 characters
+                  </small>
                 )}
               </div>
-              
-              <div className="col-12 col-md-6 col-lg-3">
-                <label className="form-label fw-semibold">
-                  <i className="bi bi-person me-1"></i>
-                  User
-                </label>
-                <select
-                  className="form-select border-0 shadow-sm"
-                  style={{ borderRadius: '12px', padding: '12px 16px' }}
-                  value={filters.user_id}
-                  onChange={(e) => handleFilterChange('user_id', e.target.value)}
-                >
-                  <option value="">All Users</option>
-                  {filterOptions.users.map(user => (
-                    <option key={user.id} value={user.id}>
-                      {user.name} ({user.email})
-                    </option>
-                  ))}
-                </select>
-              </div>
 
+              {/* Category - Always Visible */}
               <div className="col-12 col-md-6 col-lg-3">
-                <label className="form-label fw-semibold">
-                  <i className="bi bi-tags me-1"></i>
-                  Category
-                </label>
                 <select
                   className="form-select border-0 shadow-sm"
-                  style={{ borderRadius: '12px', padding: '12px 16px' }}
+                  style={{ borderRadius: '12px', padding: '12px 16px', background: 'white' }}
                   value={filters.category}
                   onChange={(e) => handleFilterChange('category', e.target.value)}
                 >
@@ -630,7 +685,7 @@ const SystemLogsPage = () => {
                   {filterOptions.categories.map(category => {
                     const categoryInfo = getCategoryInfo(category);
                     return (
-                      <option key={category} value={category} title={categoryInfo.description}>
+                      <option key={category} value={category}>
                         {categoryInfo.label}
                       </option>
                     );
@@ -638,14 +693,11 @@ const SystemLogsPage = () => {
                 </select>
               </div>
 
+              {/* Action - Always Visible */}
               <div className="col-12 col-md-6 col-lg-3">
-                <label className="form-label fw-semibold">
-                  <i className="bi bi-lightning me-1"></i>
-                  Action
-                </label>
                 <select
                   className="form-select border-0 shadow-sm"
-                  style={{ borderRadius: '12px', padding: '12px 16px' }}
+                  style={{ borderRadius: '12px', padding: '12px 16px', background: 'white' }}
                   value={filters.action}
                   onChange={(e) => handleFilterChange('action', e.target.value)}
                 >
@@ -653,7 +705,7 @@ const SystemLogsPage = () => {
                   {filterOptions.actions.map(action => {
                     const actionInfo = getActionInfo(action);
                     return (
-                      <option key={action} value={action} title={actionInfo.description}>
+                      <option key={action} value={action}>
                         {actionInfo.label}
                       </option>
                     );
@@ -661,96 +713,176 @@ const SystemLogsPage = () => {
                 </select>
               </div>
 
-              <div className="col-12 col-md-6 col-lg-3">
-                <label className="form-label fw-semibold">
-                  <i className="bi bi-link-45deg me-1"></i>
-                  Subject ID
-                </label>
-                <input
-                  type="number"
-                  className="form-control border-0 shadow-sm"
-                  style={{ borderRadius: '12px', padding: '12px 16px' }}
-                  placeholder="Enter subject ID"
-                  value={filters.subject_id}
-                  onChange={(e) => handleFilterChange('subject_id', e.target.value)}
-                />
-              </div>
-
-              <div className="col-12 col-md-6 col-lg-3">
-                <label className="form-label fw-semibold">
-                  <i className="bi bi-calendar-date me-1"></i>
-                  Date From
-                </label>
-                <input
-                  type="date"
-                  className="form-control border-0 shadow-sm"
-                  style={{ borderRadius: '12px', padding: '12px 16px' }}
-                  value={filters.date_from}
-                  onChange={(e) => handleFilterChange('date_from', e.target.value)}
-                />
-              </div>
-
-              <div className="col-12 col-md-6 col-lg-3">
-                <label className="form-label fw-semibold">
-                  <i className="bi bi-calendar-date me-1"></i>
-                  Date To
-                </label>
-                <input
-                  type="date"
-                  className="form-control border-0 shadow-sm"
-                  style={{ borderRadius: '12px', padding: '12px 16px' }}
-                  value={filters.date_to}
-                  onChange={(e) => handleFilterChange('date_to', e.target.value)}
-                />
-              </div>
-
-              <div className="col-12 col-md-6 col-lg-3 d-flex align-items-end gap-2">
+              {/* Advanced Filters Toggle */}
+              <div className="col-12 col-lg-2">
                 <button 
-                  className="btn border-0 shadow-sm flex-grow-1"
+                  className={`btn w-100 border-0 shadow-sm ${showAdvancedFilters ? 'btn-primary' : 'btn-outline-primary'}`}
+                  onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
                   style={{
-                    background: 'linear-gradient(135deg, #6c757d 0%, #495057 100%)',
-                    color: 'white',
                     borderRadius: '12px',
                     padding: '12px 16px',
                     fontWeight: '600',
-                    transition: 'all 0.3s ease'
+                    background: showAdvancedFilters ? 'linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%)' : 'white',
+                    color: showAdvancedFilters ? 'white' : '#0d6efd',
+                    border: showAdvancedFilters ? 'none' : '2px solid #0d6efd'
                   }}
-                  onClick={clearFilters}
                 >
-                  <i className="bi bi-x-circle me-1"></i>
-                  Clear
-                </button>
-                <button 
-                  className="btn border-0 shadow-sm flex-grow-1"
-                  style={{
-                    background: 'linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%)',
-                    color: 'white',
-                    borderRadius: '12px',
-                    padding: '12px 16px',
-                    fontWeight: '600',
-                    transition: 'all 0.3s ease'
-                  }}
-                  onClick={fetchLogs}
-                >
-                  <i className="bi bi-funnel me-1"></i>
-                  Apply
+                  <i className={`bi bi-sliders me-2`}></i>
+                  Advanced
                 </button>
               </div>
             </div>
+
+            {/* Advanced Filters - Collapsible */}
+            {showAdvancedFilters && (
+              <div className="mt-3 pt-3 border-top">
+                <div className="row g-3">
+                  <div className="col-12 col-md-6 col-lg-3">
+                    <label className="form-label fw-semibold text-muted small">
+                      <i className="bi bi-person me-1"></i>
+                      User
+                    </label>
+                    <select
+                      className="form-select border-0 shadow-sm"
+                      style={{ borderRadius: '12px', padding: '12px 16px', background: 'white' }}
+                      value={filters.user_id}
+                      onChange={(e) => handleFilterChange('user_id', e.target.value)}
+                    >
+                      <option value="">All Users</option>
+                      {filterOptions.users.map(user => (
+                        <option key={user.id} value={user.id}>
+                          {user.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="col-12 col-md-6 col-lg-3">
+                    <label className="form-label fw-semibold text-muted small">
+                      <i className="bi bi-hash me-1"></i>
+                      Subject ID
+                    </label>
+                    <input
+                      type="number"
+                      className="form-control border-0 shadow-sm"
+                      style={{ borderRadius: '12px', padding: '12px 16px', background: 'white' }}
+                      placeholder="Enter ID"
+                      value={filters.subject_id}
+                      onChange={(e) => handleFilterChange('subject_id', e.target.value)}
+                    />
+                  </div>
+
+                  <div className="col-12 col-md-6 col-lg-3">
+                    <label className="form-label fw-semibold text-muted small">
+                      <i className="bi bi-calendar-event me-1"></i>
+                      Date From
+                    </label>
+                    <input
+                      type="date"
+                      className="form-control border-0 shadow-sm"
+                      style={{ borderRadius: '12px', padding: '12px 16px', background: 'white' }}
+                      value={filters.date_from}
+                      onChange={(e) => handleFilterChange('date_from', e.target.value)}
+                    />
+                  </div>
+
+                  <div className="col-12 col-md-6 col-lg-3">
+                    <label className="form-label fw-semibold text-muted small">
+                      <i className="bi bi-calendar-event me-1"></i>
+                      Date To
+                    </label>
+                    <input
+                      type="date"
+                      className="form-control border-0 shadow-sm"
+                      style={{ borderRadius: '12px', padding: '12px 16px', background: 'white' }}
+                      value={filters.date_to}
+                      onChange={(e) => handleFilterChange('date_to', e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Active Filters Display */}
+      {getActiveFilters().length > 0 && (
+        <div className="mb-3">
+          <div className="d-flex flex-wrap gap-2 align-items-center">
+            <span className="text-muted small fw-semibold">
+              <i className="bi bi-funnel-fill me-1"></i>
+              Active Filters:
+            </span>
+            {getActiveFilters().map(filter => (
+              <span 
+                key={filter.key}
+                className="badge d-inline-flex align-items-center gap-2"
+                style={{
+                  background: 'linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%)',
+                  padding: '8px 12px',
+                  borderRadius: '8px',
+                  fontSize: '0.875rem',
+                  fontWeight: '500'
+                }}
+              >
+                <span>{filter.label}: <strong>{filter.value}</strong></span>
+                <button
+                  onClick={() => removeFilter(filter.key)}
+                  className="btn-close btn-close-white"
+                  style={{ fontSize: '0.65rem', opacity: 0.8 }}
+                  aria-label={`Remove ${filter.label} filter`}
+                ></button>
+              </span>
+            ))}
+            <button
+              onClick={clearFilters}
+              className="btn btn-sm btn-outline-danger"
+              style={{ borderRadius: '8px', padding: '6px 12px' }}
+            >
+              <i className="bi bi-x-circle me-1"></i>
+              Clear All
+            </button>
           </div>
         </div>
       )}
 
       {/* Results Summary */}
       <div className="mb-4">
-        <div className="d-flex align-items-center p-3 bg-light rounded" style={{ borderRadius: '12px' }}>
-          <i className="bi bi-info-circle me-2 text-primary"></i>
-          <p className="text-muted mb-0">
-            Showing <strong>{logs.length}</strong> of <strong>{pagination.total}</strong> system logs
-            {pagination.total > 0 && (
-              <span> (Page <strong>{pagination.current_page}</strong> of <strong>{pagination.last_page}</strong>)</span>
-            )}
-          </p>
+        <div className="card border-0 shadow-sm" style={{ borderRadius: '12px' }}>
+          <div className="card-body p-3">
+            <div className="row g-3 align-items-center">
+              <div className="col-12 col-md-6">
+                <div className="d-flex align-items-center">
+                  <div className="bg-primary bg-opacity-10 rounded-circle p-3 me-3">
+                    <i className="bi bi-list-ul text-primary" style={{ fontSize: '1.5rem' }}></i>
+                  </div>
+                  <div>
+                    <h6 className="mb-0 text-muted small">Total Logs</h6>
+                    <h4 className="mb-0 fw-bold">{pagination.total.toLocaleString()}</h4>
+                  </div>
+                </div>
+              </div>
+              <div className="col-12 col-md-6">
+                <div className="d-flex align-items-center justify-content-md-end">
+                  <div className="bg-info bg-opacity-10 rounded-circle p-3 me-3">
+                    <i className="bi bi-eye text-info" style={{ fontSize: '1.5rem' }}></i>
+                  </div>
+                  <div>
+                    <h6 className="mb-0 text-muted small">Showing</h6>
+                    <h4 className="mb-0 fw-bold">
+                      {logs.length} 
+                      {pagination.total > 0 && (
+                        <span className="text-muted small ms-2">
+                          (Page {pagination.current_page}/{pagination.last_page})
+                        </span>
+                      )}
+                    </h4>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -758,10 +890,10 @@ const SystemLogsPage = () => {
       {loading ? (
         <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '400px' }}>
           <div className="text-center">
-            <div className="spinner-border text-primary mb-3" role="status">
+            <div className="spinner-border text-primary mb-3" role="status" style={{ width: '3rem', height: '3rem' }}>
               <span className="visually-hidden">Loading...</span>
             </div>
-            <p className="text-muted">Loading system logs...</p>
+            <p className="text-muted fs-5">Loading system logs...</p>
           </div>
         </div>
       ) : logs.length === 0 ? (
@@ -776,9 +908,28 @@ const SystemLogsPage = () => {
           </div>
         </div>
       ) : (
-        <div className="table-responsive" style={{ width: '100%' }}>
+        <div className="table-responsive position-relative" style={{ width: '100%', minHeight: '400px' }}>
+          {/* Table Loading Overlay */}
+          {tableLoading && (
+            <div 
+              className="position-absolute top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center"
+              style={{
+                background: 'rgba(255, 255, 255, 0.9)',
+                zIndex: 10,
+                backdropFilter: 'blur(2px)'
+              }}
+            >
+              <div className="text-center">
+                <div className="spinner-border text-primary mb-2" role="status">
+                  <span className="visually-hidden">Loading...</span>
+                </div>
+                <p className="text-muted small mb-0">Updating results...</p>
+              </div>
+            </div>
+          )}
+          
           <table className="table table-hover mb-0" style={{ width: '100%' }}>
-            <thead className="table-primary">
+            <thead className="table-primary sticky-top">
               <tr>
                 <th className="fw-semibold px-4 py-3 border-0" style={{ fontSize: '1.1rem', width: '5%' }}>
                   <i className="bi bi-hash me-2"></i>ID
@@ -806,7 +957,7 @@ const SystemLogsPage = () => {
                 </th>
               </tr>
             </thead>
-            <tbody>
+            <tbody style={{ opacity: tableLoading ? 0.5 : 1, transition: 'opacity 0.2s ease' }}>
               {logs.map((log) => (
                 <tr key={log.id} className="align-middle" style={{ height: '60px' }}>
                   <td className="px-4 py-3 border-0 text-center" style={{ fontSize: '1rem' }}>
@@ -874,22 +1025,15 @@ const SystemLogsPage = () => {
                     </div>
                   </td>
                   <td className="px-4 py-3 border-0 text-center" style={{ fontSize: '1rem' }}>
-                    {log.context ? (
-                      <button
-                        className="btn btn-sm btn-outline-info"
-                        onClick={(e) => handleViewContext(log.context, e.currentTarget)}
-                        title="View detailed information"
-                        style={{ borderRadius: '8px' }}
-                      >
-                        <i className="bi bi-eye me-1"></i>
-                        Details
-                      </button>
-                    ) : (
-                      <span className="text-muted">
-                        <i className="bi bi-dash-circle me-1"></i>
-                        No details
-                      </span>
-                    )}
+                    <button
+                      className="btn btn-sm btn-outline-info"
+                      onClick={(e) => handleViewContext(log, e.currentTarget)}
+                      title="View detailed information"
+                      style={{ borderRadius: '8px' }}
+                    >
+                      <i className="bi bi-eye me-1"></i>
+                      Details
+                    </button>
                   </td>
                   <td className="px-4 py-3 border-0" style={{ fontSize: '1rem' }}>
                     <small className="text-truncate d-block" style={{ maxWidth: '120px' }} title={formatDate(log.created_at)}>
@@ -988,68 +1132,61 @@ const SystemLogsPage = () => {
         >
           <div className="context-popup-header">
             <div className="context-popup-title">
-              <i className="bi bi-info-circle me-1"></i>
-              <span>Details</span>
+              <i className="bi bi-file-text-fill me-2"></i>
+              <span>System Log Details</span>
             </div>
             <div className="context-popup-controls">
-              <button
-                type="button"
-                className="context-popup-minimize"
-                onClick={() => setShowContextModal(false)}
-                title="Minimize"
-              >
-                <i className="bi bi-dash"></i>
-              </button>
               <button
                 type="button"
                 className="context-popup-close"
                 onClick={closeContextModal}
                 title="Close"
               >
-                <i className="bi bi-x"></i>
+                <i className="bi bi-x-lg"></i>
               </button>
             </div>
           </div>
           
           <div className="context-popup-body">
             {copySuccess && (
-              <div className="context-popup-alert">
-                <i className="bi bi-check-circle me-1"></i>
-                <span>Copied!</span>
+              <div className="alert alert-success d-flex align-items-center mb-3" role="alert">
+                <i className="bi bi-check-circle-fill me-2"></i>
+                <div>Full log data copied to clipboard successfully!</div>
               </div>
             )}
             
             <div className="context-popup-content">
-              <div className="context-popup-info">
-                <small className="text-muted">
-                  <i className="bi bi-list-ul me-1"></i>
-                  {Object.keys(selectedContext || {}).length} field(s)
-                </small>
-              </div>
-              
               <div className="context-popup-data">
-                {formatContextData(selectedContext)}
+                {selectedLog && formatContextData(selectedLog, selectedContext)}
               </div>
             </div>
           </div>
           
           <div className="context-popup-footer">
-            <button
-              type="button"
-              className="context-popup-btn context-popup-btn-secondary"
-              onClick={closeContextModal}
-            >
-              <i className="bi bi-x-circle me-1"></i>
-              Close
-            </button>
-            <button
-              type="button"
-              className="context-popup-btn context-popup-btn-primary"
-              onClick={handleCopyToClipboard}
-            >
-              <i className="bi bi-clipboard me-1"></i>
-              Copy
-            </button>
+            <div className="d-flex align-items-center gap-2">
+              <i className="bi bi-clock-history text-muted"></i>
+              <small className="text-muted">
+                ID #{selectedLog?.id} • {selectedLog?.category}/{selectedLog?.action}
+              </small>
+            </div>
+            <div className="d-flex gap-2">
+              <button
+                type="button"
+                className="context-popup-btn context-popup-btn-secondary"
+                onClick={closeContextModal}
+              >
+                <i className="bi bi-x-circle me-1"></i>
+                Close
+              </button>
+              <button
+                type="button"
+                className="context-popup-btn context-popup-btn-primary"
+                onClick={handleCopyToClipboard}
+              >
+                <i className="bi bi-clipboard me-1"></i>
+                Copy All Data
+              </button>
+            </div>
           </div>
         </div>,
         document.body

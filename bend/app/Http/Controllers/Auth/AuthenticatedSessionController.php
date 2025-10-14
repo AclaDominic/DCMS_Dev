@@ -125,6 +125,21 @@ class AuthenticatedSessionController extends Controller
 
     $request->session()->regenerate();
 
+    // Log successful login
+    SystemLogService::logAuth(
+        'logged_in',
+        $user->id,
+        "User logged in: {$user->name} ({$user->role})",
+        [
+            'user_id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email,
+            'role' => $user->role,
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent()
+        ]
+    );
+
     return response()->json([
         'status' => 'success',
         'message' => 'Login successful.',
@@ -139,6 +154,24 @@ class AuthenticatedSessionController extends Controller
      */
     public function destroy(Request $request): Response
     {
+        $user = Auth::user();
+
+        // Log logout before ending session
+        if ($user) {
+            SystemLogService::logAuth(
+                'logged_out',
+                $user->id,
+                "User logged out: {$user->name} ({$user->role})",
+                [
+                    'user_id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'role' => $user->role,
+                    'ip_address' => $request->ip()
+                ]
+            );
+        }
+
         Auth::guard('web')->logout();
 
         $request->session()->invalidate();

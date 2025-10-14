@@ -7,6 +7,73 @@
   min-height: 100vh;
 }
 
+/* Filter Badge Animations - Scoped to prevent conflicts */
+.system-logs-page .badge {
+  transition: all 0.3s ease;
+  will-change: transform;
+}
+
+.system-logs-page .badge:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(13, 110, 253, 0.3) !important;
+}
+
+.system-logs-page .badge .btn-close:hover {
+  transform: scale(1.2);
+  transition: transform 0.2s ease;
+}
+
+/* Advanced Filters Collapse Animation */
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.system-logs-page .border-top.animate-slide {
+  animation: slideDown 0.3s ease-out;
+}
+
+/* Filter Input Focus Effects */
+.system-logs-page .form-control,
+.system-logs-page .form-select {
+  transition: all 0.3s ease;
+  will-change: transform, box-shadow;
+}
+
+.system-logs-page .form-control:focus,
+.system-logs-page .form-select:focus {
+  border-color: #0d6efd !important;
+  box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.15) !important;
+  transform: translateY(-2px);
+}
+
+/* Search Input Glow */
+.system-logs-page .position-relative input:focus {
+  box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.15), 0 4px 12px rgba(13, 110, 253, 0.2) !important;
+}
+
+/* Active Filter Badge Pulse - Disabled to prevent flickering */
+/* Uncomment if you want subtle pulse animation on badges
+@keyframes badgePulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(13, 110, 253, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 6px rgba(13, 110, 253, 0);
+  }
+}
+
+.system-logs-page .badge {
+  animation: badgePulse 2s infinite;
+}
+*/
+
 .system-logs-page .container-fluid {
   width: 100% !important;
   max-width: none !important;
@@ -31,12 +98,15 @@
 .system-logs-page .table-responsive {
   width: 100% !important;
   max-width: none !important;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .system-logs-page .table {
   width: 100% !important;
   max-width: none !important;
   table-layout: fixed;
+  border-collapse: collapse;
 }
 
 .system-logs-page .table th,
@@ -44,6 +114,28 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* Sticky table header */
+.system-logs-page .table thead {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background-color: var(--bs-table-bg, #fff);
+}
+
+/* Prevent layout shift during loading */
+.system-logs-page .table tbody {
+  min-height: 200px;
+}
+
+/* Loading overlay should not affect layout */
+.system-logs-page .table-responsive .position-absolute {
+  pointer-events: none;
+}
+
+.system-logs-page .table-responsive .position-absolute > div {
+  pointer-events: auto;
 }
 
 /* Responsive adjustments */
@@ -62,37 +154,45 @@
 /* Context Popup Card - Anchor-aware Popup */
 .context-popup-card {
   position: fixed;
-  width: 400px;
-  max-height: 80vh;
+  width: 600px;
+  max-height: 85vh;
   background: white;
-  border-radius: 12px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
   z-index: 9999;
   display: flex;
   flex-direction: column;
   animation: slideInFromRight 0.3s ease-out;
-  border: 1px solid #e9ecef;
+  border: 2px solid #0d6efd;
   overflow: hidden;
   outline: none;
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+  transform: translateZ(0);
 }
 
 .context-popup-header {
-  background: linear-gradient(135deg, #007bff, #0056b3);
+  background: linear-gradient(135deg, #0d6efd, #0b5ed7);
   color: white;
-  padding: 0.75rem 1rem;
+  padding: 1rem 1.25rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 2px solid rgba(255, 255, 255, 0.2);
   cursor: move;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .context-popup-title {
   display: flex;
   align-items: center;
-  font-size: 0.9rem;
-  font-weight: 600;
+  font-size: 1.1rem;
+  font-weight: 700;
   margin: 0;
+  letter-spacing: 0.5px;
 }
 
 .context-popup-controls {
@@ -123,10 +223,11 @@
 }
 
 .context-popup-body {
-  padding: 1rem;
+  padding: 1.5rem;
   overflow-y: auto;
   flex: 1;
-  max-height: calc(80vh - 120px);
+  max-height: calc(85vh - 160px);
+  background: #f8f9fa;
 }
 
 .context-popup-alert {
@@ -152,8 +253,87 @@
 }
 
 .context-popup-data {
-  max-height: 300px;
-  overflow-y: auto;
+  /* Remove max-height to allow full scrolling in body */
+}
+
+.context-popup-section {
+  background: white;
+  border-radius: 12px;
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e9ecef;
+}
+
+.context-popup-section-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #0d6efd;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid #e9ecef;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.context-field {
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #f1f3f5;
+}
+
+.context-field:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.context-field-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #6c757d;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.context-field-value {
+  font-size: 0.95rem;
+  color: #212529;
+  background: #f8f9fa;
+  padding: 0.75rem;
+  border-radius: 6px;
+  border-left: 3px solid #0d6efd;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.context-field-value.highlight {
+  background: #fff3cd;
+  border-left-color: #ffc107;
+  font-weight: 600;
+}
+
+.context-field-value.code {
+  font-family: 'Courier New', monospace;
+  background: #f1f3f5;
+  font-size: 0.85rem;
+}
+
+.context-json-viewer {
+  background: #1e1e1e;
+  color: #d4d4d4;
+  padding: 1rem;
+  border-radius: 6px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.85rem;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-wrap: break-word;
 }
 
 .context-popup-data .row {
@@ -181,12 +361,17 @@
 }
 
 .context-popup-footer {
-  padding: 0.75rem 1rem;
-  background-color: #f8f9fa;
-  border-top: 1px solid #e9ecef;
+  padding: 1rem 1.25rem;
+  background: linear-gradient(to top, #ffffff, #f8f9fa);
+  border-top: 2px solid #e9ecef;
   display: flex;
-  justify-content: flex-end;
-  gap: 0.5rem;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .context-popup-btn {
@@ -218,7 +403,7 @@
   background-color: #0056b3;
 }
 
-/* Animations */
+/* Animations - Optimized for performance */
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -231,12 +416,26 @@
 @keyframes slideInFromRight {
   from {
     opacity: 0;
-    transform: translateX(100%) scale(0.9);
+    transform: translate3d(100%, 0, 0) scale(0.9);
   }
   to {
     opacity: 1;
-    transform: translateX(0) scale(1);
+    transform: translate3d(0, 0, 0) scale(1);
   }
+}
+
+/* Prevent flickering during animations */
+.system-logs-page * {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Hardware acceleration for smooth animations */
+.system-logs-page .card,
+.system-logs-page .badge,
+.system-logs-page .btn {
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
 
 /* Responsive Popup Card */

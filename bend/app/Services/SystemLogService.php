@@ -77,4 +77,52 @@ class SystemLogService
     {
         return self::log('patient', $action, $patientId, $message, $context);
     }
+
+    /**
+     * Log service-related events
+     */
+    public static function logService(string $action, ?int $serviceId = null, string $message = '', array $context = [])
+    {
+        return self::log('service', $action, $serviceId, $message, $context);
+    }
+
+    /**
+     * Log staff-related events
+     */
+    public static function logStaff(string $action, ?int $staffId = null, string $message = '', array $context = [])
+    {
+        return self::log('staff', $action, $staffId, $message, $context);
+    }
+
+    /**
+     * Log patient manager events (blocking, warnings, etc.)
+     */
+    public static function logPatientManager(string $action, ?int $patientManagerId = null, string $message = '', array $context = [])
+    {
+        return self::log('patient_manager', $action, $patientManagerId, $message, $context);
+    }
+
+    /**
+     * Log authentication events
+     */
+    public static function logAuth(string $action, ?int $userId = null, string $message = '', array $context = [])
+    {
+        return self::log('auth', $action, $userId, $message, $context);
+    }
+
+    /**
+     * Log visit-related events
+     */
+    public static function logVisit(string $action, ?int $visitId = null, string $message = '', array $context = [])
+    {
+        return self::log('visit', $action, $visitId, $message, $context);
+    }
+
+    /**
+     * Log dentist-related events
+     */
+    public static function logDentist(string $action, ?int $dentistId = null, string $message = '', array $context = [])
+    {
+        return self::log('dentist', $action, $dentistId, $message, $context);
+    }
 }

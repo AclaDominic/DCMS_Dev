@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules;
+use App\Services\SystemLogService;
 
 class RegisteredUserController extends Controller
 {
@@ -54,23 +55,37 @@ class RegisteredUserController extends Controller
 
                 // If IP is blocked, flag the user account for monitoring
                 if ($blockedIps) {
-                    // Create a system log entry for monitoring
-                    \App\Models\SystemLog::create([
-                        'user_id' => $user->id,
-                        'category' => 'registration',
-                        'action' => 'blocked_ip_registration',
-                        'message' => "User registered from blocked IP address: {$userIp}",
-                        'context' => [
+                    // Log blocked IP registration
+                    SystemLogService::logAuth(
+                        'blocked_ip_registration',
+                        $user->id,
+                        "User registered from blocked IP address: {$userIp}",
+                        [
                             'user_id' => $user->id,
+                            'name' => $user->name,
                             'email' => $user->email,
                             'blocked_ip' => $userIp,
                             'action_required' => 'monitor_account_activity'
                         ]
-                    ]);
+                    );
 
                     // Add a note to track this registration
                     $user->notes = "Birthdate: {$request->birthdate}. Account created from blocked IP address: {$userIp}. Monitor for appointment no-shows.";
                     $user->save();
+                } else {
+                    // Log successful registration
+                    SystemLogService::logAuth(
+                        'registered',
+                        $user->id,
+                        "New user registered: {$user->name}",
+                        [
+                            'user_id' => $user->id,
+                            'name' => $user->name,
+                            'email' => $user->email,
+                            'role' => 'patient',
+                            'ip_address' => $userIp
+                        ]
+                    );
                 }
 
                 // Fire the Registered event (which sends verification email)

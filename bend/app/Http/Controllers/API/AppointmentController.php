@@ -16,6 +16,7 @@ use App\Http\Controllers\Controller;
 use App\Services\ClinicDateResolverService;
 use App\Services\NotificationService as SystemNotificationService;
 use App\Services\PatientManagerService;
+use App\Services\SystemLogService;
 use App\Helpers\IpHelper;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
@@ -150,8 +151,24 @@ class AppointmentController extends Controller
     // Notify staff about the new appointment
     SystemNotificationService::notifyNewAppointment($appointment);
 
-    // (Optional) appointment log for audit
-    // DB::table('appointment_logs')->insert([...]);
+    // Log appointment creation
+    SystemLogService::logAppointment(
+        'created',
+        $appointment->id,
+        "New appointment booked: {$patient->first_name} {$patient->last_name} for {$service->name}",
+        [
+            'appointment_id' => $appointment->id,
+            'reference_code' => $appointment->reference_code,
+            'patient_id' => $patient->id,
+            'patient_name' => $patient->first_name . ' ' . $patient->last_name,
+            'service_id' => $service->id,
+            'service_name' => $service->name,
+            'date' => $dateStr,
+            'time_slot' => $timeSlot,
+            'payment_method' => $validated['payment_method'],
+            'status' => 'pending'
+        ]
+    );
 
     return response()->json([
         'message'        => 'Appointment booked.',
@@ -181,17 +198,16 @@ class AppointmentController extends Controller
         if ($start) {
             $capCheck = $this->checkCapacity($appointment->service, $appointment->date, $start, $appointment->id);
             if (!$capCheck['ok']) {
-                SystemLog::create([
-                    'user_id' => auth()->id(),
-                    'category' => 'appointment',
-                    'action' => 'approve_failed_capacity',
-                    'message' => 'Staff ' . auth()->user()->name . ' attempted to approve appointment #' . $appointment->id . ' but slot is full',
-                    'context' => [
+                SystemLogService::logAppointment(
+                    'approve_failed_capacity',
+                    $appointment->id,
+                    'Staff ' . auth()->user()->name . ' attempted to approve appointment #' . $appointment->id . ' but slot is full',
+                    [
                         'appointment_id' => $appointment->id,
                         'date' => $appointment->date,
                         'time_slot' => $appointment->time_slot,
-                    ],
-                ]);
+                    ]
+                );
                 return response()->json(['message' => 'Cannot approve: slot is fully booked.'], 422);
             }
         }
@@ -203,13 +219,19 @@ class AppointmentController extends Controller
         // Notify patient about appointment approval
         SystemNotificationService::notifyAppointmentStatusChange($appointment, 'approved');
 
-        SystemLog::create([
-            'user_id' => auth()->id(),
-            'category' => 'appointment',
-            'action' => 'approved',
-            'message' => 'Staff ' . auth()->user()->name . ' approved appointment #' . $appointment->id,
-            'context' => ['appointment_id' => $appointment->id],
-        ]);
+        // Log appointment approval
+        SystemLogService::logAppointment(
+            'approved',
+            $appointment->id,
+            'Staff ' . auth()->user()->name . ' approved appointment #' . $appointment->id,
+            [
+                'appointment_id' => $appointment->id,
+                'patient_id' => $appointment->patient_id,
+                'service_id' => $appointment->service_id,
+                'date' => $appointment->date,
+                'time_slot' => $appointment->time_slot
+            ]
+        );
 
         return response()->json(['message' => 'Appointment approved.']);
     }
@@ -252,16 +274,20 @@ class AppointmentController extends Controller
         // Notify patient about appointment rejection
         SystemNotificationService::notifyAppointmentStatusChange($appointment, 'rejected');
 
-        SystemLog::create([
-            'user_id' => auth()->id(),
-            'category' => 'appointment',
-            'action' => 'rejected',
-            'message' => 'Staff ' . auth()->user()->name . ' rejected appointment #' . $appointment->id,
-            'context' => [
+        // Log appointment rejection
+        SystemLogService::logAppointment(
+            'rejected',
+            $appointment->id,
+            'Staff ' . auth()->user()->name . ' rejected appointment #' . $appointment->id . ' - Reason: ' . $request->note,
+            [
                 'appointment_id' => $appointment->id,
-                'note' => $request->note,
-            ],
-        ]);
+                'patient_id' => $appointment->patient_id,
+                'service_id' => $appointment->service_id,
+                'date' => $appointment->date,
+                'time_slot' => $appointment->time_slot,
+                'rejection_note' => $request->note
+            ]
+        );
 
         return response()->json(['message' => 'Appointment rejected.']);
     }
@@ -457,16 +483,19 @@ class AppointmentController extends Controller
         // Notify staff about appointment cancellation
         SystemNotificationService::notifyAppointmentStatusChange($appointment, 'cancelled');
 
-        SystemLog::create([
-            'user_id' => $user->id,
-            'category' => 'appointment',
-            'action' => 'canceled_by_patient',
-            'message' => 'Patient canceled their appointment #' . $appointment->id,
-            'context' => [
+        // Log patient cancellation
+        SystemLogService::logAppointment(
+            'canceled_by_patient',
+            $appointment->id,
+            'Patient canceled their appointment #' . $appointment->id,
+            [
                 'appointment_id' => $appointment->id,
                 'patient_id' => $user->patient->id,
+                'service_id' => $appointment->service_id,
+                'date' => $appointment->date,
+                'time_slot' => $appointment->time_slot
             ]
-        ]);
+        );
 
         return response()->json(['message' => 'Appointment canceled.']);
     }
@@ -521,16 +550,17 @@ class AppointmentController extends Controller
         $appointment->save();
 
         if ($edited) {
-            SystemLog::create([
-                'user_id' => auth()->id(),
-                'category' => 'appointment',
-                'action' => 'reminder_sent_custom',
-                'message' => 'Staff ' . auth()->user()->name . ' sent a custom reminder for appointment #' . $appointment->id,
-                'context' => [
+            // Log custom reminder
+            SystemLogService::logAppointment(
+                'reminder_sent_custom',
+                $appointment->id,
+                'Staff ' . auth()->user()->name . ' sent a custom reminder for appointment #' . $appointment->id,
+                [
                     'appointment_id' => $appointment->id,
-                    'message' => $message,
-                ],
-            ]);
+                    'patient_id' => $appointment->patient_id,
+                    'custom_message' => $message
+                ]
+            );
         }
 
         return response()->json(['message' => 'Reminder sent.']);
@@ -617,17 +647,17 @@ class AppointmentController extends Controller
         //     return response()->json(['message' => 'Appointment not actionable'], 422);
         // }
 
-        // Audit trail (recommended)
-        SystemLog::create([
-            'user_id' => auth()->id(),
-            'category' => 'appointment',
-            'action' => 'resolve_by_code',
-            'message' => 'Staff ' . auth()->user()->name . ' looked up appointment by reference code',
-            'context' => [
+        // Log reference code lookup
+        SystemLogService::logAppointment(
+            'resolve_by_code',
+            $appointment->id,
+            'Staff ' . auth()->user()->name . ' looked up appointment by reference code: ' . $code,
+            [
                 'reference_code' => $code,
                 'appointment_id' => $appointment->id,
-            ],
-        ]);
+                'patient_id' => $appointment->patient_id
+            ]
+        );
 
         return response()->json($appointment);
     }
@@ -931,20 +961,20 @@ class AppointmentController extends Controller
         $appointment->save();
 
         // Log the reschedule action
-        SystemLog::create([
-            'user_id' => $user->id,
-            'category' => 'appointment',
-            'action' => 'rescheduled',
-            'message' => 'Patient rescheduled appointment #' . $appointment->id . ' from ' . $oldDate . ' ' . $oldTimeSlot . ' to ' . $dateStr . ' ' . $timeSlot,
-            'context' => [
+        SystemLogService::logAppointment(
+            'rescheduled',
+            $appointment->id,
+            'Patient rescheduled appointment #' . $appointment->id . ' from ' . $oldDate . ' ' . $oldTimeSlot . ' to ' . $dateStr . ' ' . $timeSlot,
+            [
                 'appointment_id' => $appointment->id,
+                'patient_id' => $user->patient->id,
+                'service_id' => $appointment->service_id,
                 'old_date' => $oldDate,
                 'old_time_slot' => $oldTimeSlot,
                 'new_date' => $dateStr,
-                'new_time_slot' => $timeSlot,
-                'patient_id' => $user->patient->id,
+                'new_time_slot' => $timeSlot
             ]
-        ]);
+        );
 
         // Notify staff about the rescheduled appointment
         SystemNotificationService::notifyNewAppointment($appointment);
