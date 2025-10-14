@@ -322,6 +322,7 @@ Route::middleware(['auth:sanctum', 'check.account.status', EnsureDeviceIsApprove
         Route::post('/{id}/complete-with-details', [PatientVisitController::class, 'completeWithDetails']);
         Route::post('/{id}/reject', [PatientVisitController::class, 'reject']);
         Route::put('/{id}/update-patient', [PatientVisitController::class, 'updatePatient']);
+        Route::get('/{visit}/potential-matches', [PatientVisitController::class, 'getPotentialMatches']);
         Route::post('/{visit}/link-existing', [PatientVisitController::class, 'linkToExistingPatient']);
         Route::post('/{id}/view-notes', [PatientVisitController::class, 'viewNotes']);
         Route::post('/send-visit-code', [PatientVisitController::class, 'sendVisitCode']);
