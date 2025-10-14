@@ -63,7 +63,7 @@ class SystemLogController extends Controller
             $query->whereDate('created_at', '<=', $request->date_to);
         }
 
-        if ($request->filled('search')) {
+        if ($request->filled('search') && strlen($request->search) >= 2) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('message', 'like', "%{$search}%")

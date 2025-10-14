@@ -57,10 +57,11 @@ const SystemLogsPage = () => {
         fetchLogs(false); // Not initial load
       }, 300); // 300ms debounce
       setSearchTimeout(timeout);
-    } else if (filters.search.length === 0 || !filters.search) {
+    } else if (!filters.search || filters.search.length === 0) {
       // Immediate fetch for empty search or other filters
       fetchLogs(false); // Not initial load
     }
+    // If search has 1 character, don't fetch - just wait for more input
 
     // Cleanup function
     return () => {
@@ -119,9 +120,15 @@ const SystemLogsPage = () => {
       
       const params = new URLSearchParams();
       
-      // Add filters
+      // Add filters (skip search if less than 2 characters)
       Object.entries(filters).forEach(([key, value]) => {
-        if (value) params.append(key, value);
+        if (value) {
+          // Skip search if less than 2 characters
+          if (key === 'search' && value.length < 2) {
+            return;
+          }
+          params.append(key, value);
+        }
       });
       
       // Add pagination
@@ -609,46 +616,51 @@ const SystemLogsPage = () => {
       className="system-logs-page"
       style={{
         background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
-        minHeight: '100vh',
-        width: '100vw',
-        position: 'relative',
-        left: 0,
-        right: 0,
-        padding: '1.5rem 2rem',
+        padding: '1rem 1.5rem',
         boxSizing: 'border-box'
       }}
     >
-      {/* Header Section */}
-      <div className="d-flex flex-column flex-lg-row justify-content-between align-items-start align-items-lg-center mb-4 gap-3">
-        <div>
-          <h2 className="m-0 fw-bold" style={{ color: '#1e293b' }}>
-            📋 System Logs
-          </h2>
-          <p className="text-muted mb-0 mt-1">Monitor system activity and user actions</p>
-        </div>
-        <div className="d-flex gap-2 align-items-center">
-          {getActiveFiltersCount() > 0 && (
-            <button 
-              className="btn btn-outline-danger border-0 shadow-sm"
-              onClick={clearFilters}
-              style={{
-                borderRadius: '12px',
-                padding: '12px 20px',
-                fontWeight: '600'
-              }}
-            >
-              <i className="bi bi-x-circle me-2"></i>
-              Clear All ({getActiveFiltersCount()})
-            </button>
-          )}
+      {/* Header - Stats Summary */}
+      <div className="mb-3">
+        <div className="card border-0 shadow-sm" style={{ borderRadius: '12px' }}>
+          <div className="card-body p-3">
+            <div className="row g-3 align-items-center">
+              <div className="col-12 col-md-6">
+                <div className="d-flex align-items-center">
+                  <div className="bg-primary bg-opacity-10 rounded-circle p-3 me-3">
+                    <i className="bi bi-list-ul text-primary" style={{ fontSize: '1.5rem' }}></i>
+                  </div>
+                  <div>
+                    <h6 className="mb-0 text-muted small">Total Logs</h6>
+                    <h4 className="mb-0 fw-bold">{pagination.total.toLocaleString()}</h4>
+                  </div>
+                </div>
+              </div>
+              <div className="col-12 col-md-6">
+                <div className="d-flex align-items-center justify-content-md-end">
+                  <div className="bg-info bg-opacity-10 rounded-circle p-3 me-3">
+                    <i className="bi bi-eye text-info" style={{ fontSize: '1.5rem' }}></i>
+                  </div>
+                  <div>
+                    <h6 className="mb-0 text-muted small">Showing</h6>
+                    <h4 className="mb-0 fw-bold">
+                      {logs.length} 
+                      {pagination.total > 0 && (
+                        <span className="text-muted small ms-2">
+                          (Page {pagination.current_page}/{pagination.last_page})
+                        </span>
+                      )}
+                    </h4>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="card border-0 shadow-sm" style={{ borderRadius: '16px' }}>
-        <div className="card-body p-4">
-
       {/* Quick Filters Bar */}
-      <div className="mb-4">
+      <div className="mb-3">
         <div className="card border-0 shadow-sm" style={{ borderRadius: '16px', background: 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)' }}>
           <div className="card-body p-3">
             <div className="row g-3 align-items-center">
@@ -659,16 +671,21 @@ const SystemLogsPage = () => {
                   <input
                     type="text"
                     className="form-control border-0 shadow-sm"
-                    style={{ borderRadius: '12px', padding: '12px 16px 12px 42px', background: 'white' }}
+                    style={{ 
+                      borderRadius: '12px', 
+                      padding: '12px 16px 12px 42px', 
+                      background: 'white',
+                      borderColor: filters.search && filters.search.length === 1 ? '#ffc107' : ''
+                    }}
                     placeholder="Search logs... (min 2 characters)"
                     value={filters.search}
                     onChange={(e) => handleFilterChange('search', e.target.value)}
                   />
                 </div>
                 {filters.search && filters.search.length > 0 && filters.search.length < 2 && (
-                  <small className="text-warning mt-1 d-block">
-                    <i className="bi bi-info-circle me-1"></i>
-                    Please enter at least 2 characters
+                  <small className="text-warning mt-1 d-block fw-semibold">
+                    <i className="bi bi-info-circle-fill me-1"></i>
+                    Enter at least 2 characters to search
                   </small>
                 )}
               </div>
@@ -713,23 +730,38 @@ const SystemLogsPage = () => {
                 </select>
               </div>
 
-              {/* Advanced Filters Toggle */}
+              {/* Advanced Filters Toggle & Clear Button */}
               <div className="col-12 col-lg-2">
-                <button 
-                  className={`btn w-100 border-0 shadow-sm ${showAdvancedFilters ? 'btn-primary' : 'btn-outline-primary'}`}
-                  onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-                  style={{
-                    borderRadius: '12px',
-                    padding: '12px 16px',
-                    fontWeight: '600',
-                    background: showAdvancedFilters ? 'linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%)' : 'white',
-                    color: showAdvancedFilters ? 'white' : '#0d6efd',
-                    border: showAdvancedFilters ? 'none' : '2px solid #0d6efd'
-                  }}
-                >
-                  <i className={`bi bi-sliders me-2`}></i>
-                  Advanced
-                </button>
+                <div className="d-flex gap-2">
+                  <button 
+                    className={`btn flex-grow-1 border-0 shadow-sm ${showAdvancedFilters ? 'btn-primary' : 'btn-outline-primary'}`}
+                    onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                    style={{
+                      borderRadius: '12px',
+                      padding: '12px 16px',
+                      fontWeight: '600',
+                      background: showAdvancedFilters ? 'linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%)' : 'white',
+                      color: showAdvancedFilters ? 'white' : '#0d6efd',
+                      border: showAdvancedFilters ? 'none' : '2px solid #0d6efd'
+                    }}
+                  >
+                    <i className={`bi bi-sliders`}></i>
+                  </button>
+                  {getActiveFiltersCount() > 0 && (
+                    <button 
+                      className="btn btn-outline-danger border-0 shadow-sm"
+                      onClick={clearFilters}
+                      style={{
+                        borderRadius: '12px',
+                        padding: '12px 16px',
+                        fontWeight: '600'
+                      }}
+                      title="Clear all filters"
+                    >
+                      <i className="bi bi-x-circle"></i>
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -847,48 +879,9 @@ const SystemLogsPage = () => {
         </div>
       )}
 
-      {/* Results Summary */}
-      <div className="mb-4">
-        <div className="card border-0 shadow-sm" style={{ borderRadius: '12px' }}>
-          <div className="card-body p-3">
-            <div className="row g-3 align-items-center">
-              <div className="col-12 col-md-6">
-                <div className="d-flex align-items-center">
-                  <div className="bg-primary bg-opacity-10 rounded-circle p-3 me-3">
-                    <i className="bi bi-list-ul text-primary" style={{ fontSize: '1.5rem' }}></i>
-                  </div>
-                  <div>
-                    <h6 className="mb-0 text-muted small">Total Logs</h6>
-                    <h4 className="mb-0 fw-bold">{pagination.total.toLocaleString()}</h4>
-                  </div>
-                </div>
-              </div>
-              <div className="col-12 col-md-6">
-                <div className="d-flex align-items-center justify-content-md-end">
-                  <div className="bg-info bg-opacity-10 rounded-circle p-3 me-3">
-                    <i className="bi bi-eye text-info" style={{ fontSize: '1.5rem' }}></i>
-                  </div>
-                  <div>
-                    <h6 className="mb-0 text-muted small">Showing</h6>
-                    <h4 className="mb-0 fw-bold">
-                      {logs.length} 
-                      {pagination.total > 0 && (
-                        <span className="text-muted small ms-2">
-                          (Page {pagination.current_page}/{pagination.last_page})
-                        </span>
-                      )}
-                    </h4>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* Logs Table */}
       {loading ? (
-        <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '400px' }}>
+        <div className="d-flex justify-content-center align-items-center py-5">
           <div className="text-center">
             <div className="spinner-border text-primary mb-3" role="status" style={{ width: '3rem', height: '3rem' }}>
               <span className="visually-hidden">Loading...</span>
@@ -897,18 +890,18 @@ const SystemLogsPage = () => {
           </div>
         </div>
       ) : logs.length === 0 ? (
-        <div className="text-center text-muted" style={{ height: '400px' }}>
-          <div className="d-flex flex-column align-items-center justify-content-center py-5">
+        <div className="text-center text-muted py-5">
+          <div className="d-flex flex-column align-items-center justify-content-center">
             <div className="bg-light rounded-circle mb-4 d-flex align-items-center justify-content-center" 
-                 style={{ width: '120px', height: '120px', fontSize: '3rem' }}>
+                 style={{ width: '100px', height: '100px', fontSize: '2.5rem' }}>
               📋
             </div>
             <h3 className="text-muted mb-3">No system logs found</h3>
-            <p className="text-muted mb-4 fs-5">Try adjusting your filters or check back later for new activity.</p>
+            <p className="text-muted mb-0">Try adjusting your filters or check back later for new activity.</p>
           </div>
         </div>
       ) : (
-        <div className="table-responsive position-relative" style={{ width: '100%', minHeight: '400px' }}>
+        <div className="table-responsive position-relative" style={{ width: '100%' }}>
           {/* Table Loading Overlay */}
           {tableLoading && (
             <div 
@@ -1049,9 +1042,9 @@ const SystemLogsPage = () => {
 
       {/* Pagination */}
       {pagination.last_page > 1 && (
-        <div className="d-flex justify-content-center mt-4">
+        <div className="d-flex justify-content-center mt-3">
           <nav aria-label="System logs pagination">
-            <ul className="pagination">
+            <ul className="pagination mb-0">
               <li className={`page-item ${pagination.current_page === 1 ? 'disabled' : ''}`}>
                 <button
                   className="page-link border-0 shadow-sm"
@@ -1092,29 +1085,6 @@ const SystemLogsPage = () => {
           </nav>
         </div>
       )}
-
-      {/* Per Page Selector */}
-      <div className="d-flex justify-content-center align-items-center mt-4">
-        <div className="d-flex align-items-center p-3 bg-light rounded" style={{ borderRadius: '12px' }}>
-          <i className="bi bi-list-ul me-2 text-muted"></i>
-          <label className="form-label me-2 mb-0 fw-semibold">Logs per page:</label>
-          <select
-            className="form-select border-0 shadow-sm d-inline-block w-auto"
-            style={{ borderRadius: '8px', padding: '8px 12px' }}
-            value={pagination.per_page}
-            onChange={(e) => setPagination(prev => ({ 
-              ...prev, 
-              per_page: parseInt(e.target.value),
-              current_page: 1 
-            }))}
-          >
-            <option value={10}>10</option>
-            <option value={20}>20</option>
-            <option value={50}>50</option>
-            <option value={100}>100</option>
-          </select>
-        </div>
-      </div>
 
       {/* Context Popup Card - Anchor-aware Popup */}
       {showContextModal && createPortal(
@@ -1191,6 +1161,33 @@ const SystemLogsPage = () => {
         </div>,
         document.body
       )}
+
+      {/* Footer - Logs Per Page Selector */}
+      <div className="mt-4 pt-3 border-top">
+        <div className="d-flex justify-content-center align-items-center">
+          <div className="card border-0 shadow-sm">
+            <div className="card-body p-3">
+              <div className="d-flex align-items-center gap-2">
+                <i className="bi bi-list-ul text-muted"></i>
+                <label className="form-label mb-0 fw-semibold text-muted">Logs per page:</label>
+                <select
+                  className="form-select border-0 shadow-sm"
+                  style={{ borderRadius: '8px', padding: '8px 16px', width: 'auto' }}
+                  value={pagination.per_page}
+                  onChange={(e) => setPagination(prev => ({ 
+                    ...prev, 
+                    per_page: parseInt(e.target.value),
+                    current_page: 1 
+                  }))}
+                >
+                  <option value={10}>10</option>
+                  <option value={20}>20</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                </select>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
