@@ -9,8 +9,19 @@ import NotificationsBell from "../components/NotificationBell";
 function AdminLayout() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(() => window.innerWidth >= 992);
+
+  // Role protection - only allow admin users
+  useEffect(() => {
+    if (user && user.role !== 'admin') {
+      // Redirect non-admin users to their appropriate dashboard
+      const redirectPath = user.role === 'staff' ? '/staff' : 
+                          user.role === 'patient' ? '/patient' : 
+                          user.role === 'dentist' ? '/dentist' : '/';
+      navigate(redirectPath, { replace: true });
+    }
+  }, [user, navigate]);
 
   // Keep sidebar open by default on lg+, closed on md-
   useEffect(() => {

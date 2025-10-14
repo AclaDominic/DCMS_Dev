@@ -8,11 +8,22 @@ import "./StaffLayout.css";
 
 function StaffLayout() {
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
   const [allowInventory, setAllowInventory] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [deviceStatus, setDeviceStatus] = useState(null);
   const [deviceLoaded, setDeviceLoaded] = useState(false);
+
+  // Role protection - only allow staff users
+  useEffect(() => {
+    if (user && user.role !== 'staff') {
+      // Redirect non-staff users to their appropriate dashboard
+      const redirectPath = user.role === 'admin' ? '/admin' : 
+                          user.role === 'patient' ? '/patient' : 
+                          user.role === 'dentist' ? '/dentist' : '/';
+      navigate(redirectPath, { replace: true });
+    }
+  }, [user, navigate]);
 
   // Sidebar is always open for staff
   const sidebarOpen = true;
@@ -153,22 +164,6 @@ function StaffLayout() {
                 <path d="M19 14V6c0-1.1-.9-2-2-2H3c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zm-9-1c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm13-6v11c0 1.1-.9 2-2 2H4v-2h17V7h2z"/>
               </svg>
               <span className="label">Payment Records</span>
-            </NavLink>
-          </li>
-
-          <li className="nav-item">
-            <NavLink
-              to="/admin/payment-records"
-              className={({ isActive }) =>
-                linkState(isActive) + (maybeDisable() ? " disabled text-muted" : "")
-              }
-              onClick={(e) => { if (maybeDisable()) e.preventDefault(); }}
-              style={{ cursor: maybeDisable() ? "not-allowed" : "pointer", opacity: maybeDisable() ? 0.5 : 1 }}
-            >
-              <svg className="icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/>
-              </svg>
-              <span className="label">Admin Payment Records</span>
             </NavLink>
           </li>
 
