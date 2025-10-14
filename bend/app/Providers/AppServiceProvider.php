@@ -27,7 +27,7 @@ class AppServiceProvider extends ServiceProvider
             URL::forceScheme('https');
         }
         ResetPassword::createUrlUsing(function (object $notifiable, string $token) {
-            return config('app.frontend_url')."/app/password-reset/$token?email={$notifiable->getEmailForPasswordReset()}";
+            return config('app.frontend_url')."/password-reset/$token?email={$notifiable->getEmailForPasswordReset()}";
         });
         
         VerifyEmail::createUrlUsing(function (object $notifiable) {
