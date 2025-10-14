@@ -304,15 +304,30 @@ class AppointmentController extends Controller
             ]);
         }
 
-        $appointments = Appointment::with(['service', 'payments'])
-            ->where('patient_id', $user->patient->id)
-            ->latest('date')
-            ->paginate(10);
+        $query = Appointment::with(['service', 'payments'])
+            ->where('patient_id', $user->patient->id);
+
+        // Date filtering
+        if ($request->has('start_date')) {
+            if ($request->has('end_date')) {
+                // Filter between start_date and end_date (inclusive)
+                $query->whereBetween('date', [$request->start_date, $request->end_date]);
+            } else {
+                // Filter only for start_date (exact match)
+                $query->where('date', $request->start_date);
+            }
+        }
+
+        $appointments = $query->latest('date')->paginate(10);
 
         // Log the appointments data for debugging
         Log::info('Patient Appointments API Response', [
             'patient_id' => $user->patient->id,
             'appointments_count' => $appointments->count(),
+            'filters' => [
+                'start_date' => $request->start_date,
+                'end_date' => $request->end_date,
+            ],
             'appointments' => $appointments->getCollection()->map(function ($appointment) {
                 return [
                     'id' => $appointment->id,
@@ -345,11 +360,22 @@ class AppointmentController extends Controller
         }
 
         // Get completed patient visits with visit notes
-        $visits = \App\Models\PatientVisit::with(['service', 'visitNotes'])
+        $query = \App\Models\PatientVisit::with(['service', 'visitNotes'])
             ->where('patient_id', $user->patient->id)
-            ->where('status', 'completed')
-            ->latest('visit_date')
-            ->paginate(10);
+            ->where('status', 'completed');
+
+        // Date filtering
+        if ($request->has('start_date')) {
+            if ($request->has('end_date')) {
+                // Filter between start_date and end_date (inclusive)
+                $query->whereBetween('visit_date', [$request->start_date, $request->end_date]);
+            } else {
+                // Filter only for start_date (exact match)
+                $query->where('visit_date', $request->start_date);
+            }
+        }
+
+        $visits = $query->latest('visit_date')->paginate(10);
 
         // Transform the data to include service name and teeth treated
         $transformedVisits = $visits->getCollection()->map(function ($visit) {
@@ -393,14 +419,43 @@ class AppointmentController extends Controller
             return response()->json(['message' => 'Appointment not found.'], 404);
         }
 
-        if ($appointment->status !== 'pending') {
-            return response()->json(['message' => 'Only pending appointments can be canceled.'], 422);
+        // Allow cancellation if:
+        // 1. Status is pending OR
+        // 2. Status is approved AND payment status is unpaid/awaiting_payment
+        $canCancel = $appointment->status === 'pending' || 
+                     ($appointment->status === 'approved' && 
+                      in_array($appointment->payment_status, ['unpaid', 'awaiting_payment']));
+
+        if (!$canCancel) {
+            return response()->json(['message' => 'This appointment cannot be canceled. Only pending appointments or approved unpaid appointments can be canceled.'], 422);
         }
 
         $appointment->status = 'cancelled';
         $appointment->notes = 'Cancelled by patient.';
         $appointment->canceled_at = now();
+        
+        // Update payment status to unpaid for cancelled appointments
+        $appointment->payment_status = 'unpaid';
+        
         $appointment->save();
+
+        // Cancel any existing Maya payments for this appointment
+        if ($appointment->payment_method === 'maya') {
+            $mayaPayments = \App\Models\Payment::where('appointment_id', $appointment->id)
+                ->where('method', 'maya')
+                ->whereIn('status', ['unpaid', 'awaiting_payment'])
+                ->get();
+            
+            foreach ($mayaPayments as $payment) {
+                $payment->update([
+                    'status' => 'cancelled',
+                    'cancelled_at' => now(),
+                ]);
+            }
+        }
+
+        // Notify staff about appointment cancellation
+        SystemNotificationService::notifyAppointmentStatusChange($appointment, 'cancelled');
 
         SystemLog::create([
             'user_id' => $user->id,

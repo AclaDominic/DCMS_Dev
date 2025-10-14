@@ -9,6 +9,7 @@ function PatientHomepage() {
   const [loading, setLoading] = useState(true);
   const [appointmentsLoading, setAppointmentsLoading] = useState(true);
   const [paying, setPaying] = useState(null); // appointment_id being processed
+  const [canceling, setCanceling] = useState(null); // appointment_id being cancelled
 
   useEffect(() => {
     fetchUserData();
@@ -97,9 +98,30 @@ function PatientHomepage() {
     }
   };
 
-  if (loading) {
-    return <LoadingSpinner message="Loading your dashboard..." />;
-  }
+  const handleCancelAppointment = async (appointmentId) => {
+    if (!confirm("Are you sure you want to cancel this appointment?")) {
+      return;
+    }
+
+    try {
+      setCanceling(appointmentId);
+      await api.get("/sanctum/csrf-cookie");
+      await api.post(`/api/appointment/${appointmentId}/cancel`);
+      
+      alert("Appointment cancelled successfully!");
+      
+      // Refresh appointments list
+      fetchRecentAppointments();
+    } catch (err) {
+      console.error("Cancel appointment failed", err);
+      const serverMsg =
+        err.response?.data?.message ||
+        "Unable to cancel appointment. Please try again.";
+      alert(serverMsg);
+    } finally {
+      setCanceling(null);
+    }
+  };
 
   return (
     <div className="container-fluid py-4">
@@ -266,24 +288,49 @@ function PatientHomepage() {
                             </span>
                           </td>
                           <td>
-                            {appointment.payment_method === "maya" && 
-                             appointment.payment_status === "awaiting_payment" &&
-                             appointment.status === "approved" && (
-                              <button 
-                                className="btn btn-sm btn-primary"
-                                onClick={() => handlePayNow(appointment.id)}
-                                disabled={paying === appointment.id}
-                              >
-                                {paying === appointment.id ? (
-                                  <>
-                                    <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
-                                    Redirecting...
-                                  </>
-                                ) : (
-                                  "Pay Now"
-                                )}
-                              </button>
-                            )}
+                            <div className="d-flex gap-2">
+                              {appointment.payment_method === "maya" && 
+                               appointment.payment_status === "awaiting_payment" &&
+                               appointment.status === "approved" && (
+                                <button 
+                                  className="btn btn-sm btn-primary"
+                                  onClick={() => handlePayNow(appointment.id)}
+                                  disabled={paying === appointment.id || canceling === appointment.id}
+                                >
+                                  {paying === appointment.id ? (
+                                    <>
+                                      <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                                      Redirecting...
+                                    </>
+                                  ) : (
+                                    "Pay Now"
+                                  )}
+                                </button>
+                              )}
+                              
+                              {/* Show cancel button for pending or (approved + unpaid) appointments */}
+                              {(appointment.status === "pending" || 
+                                (appointment.status === "approved" && 
+                                 (appointment.payment_status === "unpaid" || appointment.payment_status === "awaiting_payment"))) && (
+                                <button 
+                                  className="btn btn-sm btn-danger"
+                                  onClick={() => handleCancelAppointment(appointment.id)}
+                                  disabled={canceling === appointment.id || paying === appointment.id}
+                                >
+                                  {canceling === appointment.id ? (
+                                    <>
+                                      <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                                      Canceling...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <i className="bi bi-x-circle me-1"></i>
+                                      Cancel
+                                    </>
+                                  )}
+                                </button>
+                              )}
+                            </div>
                           </td>
                         </tr>
                       ))}

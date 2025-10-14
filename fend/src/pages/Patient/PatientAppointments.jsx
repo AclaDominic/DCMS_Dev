@@ -1,15 +1,15 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import api from "../../api/api";
-import LoadingSpinner from "../../components/LoadingSpinner";
 import PatientServiceHistory from "../../components/Patient/PatientServiceHistory";
 
 function PatientAppointments() {
   const [appointments, setAppointments] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [meta, setMeta] = useState({});
   const [paying, setPaying] = useState(null); // appointment_id being processed
   const [generatingReceipt, setGeneratingReceipt] = useState(null); // appointment_id being processed
+  const [canceling, setCanceling] = useState(null); // appointment_id being cancelled
   const [rescheduleModal, setRescheduleModal] = useState(null); // appointment being rescheduled
   const [rescheduleDate, setRescheduleDate] = useState("");
   const [rescheduleSlots, setRescheduleSlots] = useState([]);
@@ -18,31 +18,57 @@ function PatientAppointments() {
   
   // Tab state for switching between appointments and service history
   const [activeTab, setActiveTab] = useState("appointments");
+  
+  // Date filter states
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  
+  // Track which tabs have been loaded (for lazy loading)
+  const tabsLoaded = useRef({
+    appointments: false,
+    history: false
+  });
+  
+  // CSRF initialized flag
+  const csrfInitialized = useRef(false);
 
+  // Initialize CSRF and load default tab on mount
   useEffect(() => {
-    (async () => {
+    const initializeAndLoad = async () => {
       try {
-        // ✅ prime CSRF once before any authenticated API calls
         await api.get("/sanctum/csrf-cookie");
+        csrfInitialized.current = true;
+        // Load appointments tab immediately since it's the default
+        fetchAppointments(currentPage);
       } catch (e) {
-        // don't block; fetch may still work if cookie already present
         console.warn("CSRF prime failed (will retry later)", e);
-      } finally {
+        // Still try to load appointments even if CSRF prime fails
         fetchAppointments(currentPage);
       }
-    })();
+    };
+    initializeAndLoad();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPage]);
+  }, []);
+
+  // Load appointments tab when active or page changes (skip initial load)
+  useEffect(() => {
+    if (activeTab === "appointments" && csrfInitialized.current && tabsLoaded.current.appointments) {
+      fetchAppointments(currentPage);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPage, activeTab]);
 
   // Refresh appointments when user returns to the page (e.g., after payment)
   useEffect(() => {
     const handleFocus = () => {
-      console.log('Page focused, refreshing appointments...');
-      fetchAppointments(currentPage);
+      if (activeTab === "appointments") {
+        console.log('Page focused, refreshing appointments...');
+        fetchAppointments(currentPage);
+      }
     };
 
     const handleVisibilityChange = () => {
-      if (!document.hidden) {
+      if (!document.hidden && activeTab === "appointments") {
         console.log('Page visible, refreshing appointments...');
         fetchAppointments(currentPage);
       }
@@ -55,11 +81,24 @@ function PatientAppointments() {
       window.removeEventListener('focus', handleFocus);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [currentPage]);
+  }, [currentPage, activeTab]);
 
   const fetchAppointments = async (page = 1) => {
     try {
-      const res = await api.get(`/api/user-appointments?page=${page}`, {
+      setLoading(true);
+      
+      // Build query parameters
+      const params = new URLSearchParams({ page: page.toString() });
+      
+      // Add date filters if present
+      if (startDate) {
+        params.append('start_date', startDate);
+      }
+      if (endDate) {
+        params.append('end_date', endDate);
+      }
+      
+      const res = await api.get(`/api/user-appointments?${params.toString()}`, {
         // this route often probes auth; ignore 401 auto-redirects
         skip401Handler: true,
       });
@@ -74,6 +113,9 @@ function PatientAppointments() {
         per_page: res.data.per_page,
         total: res.data.total,
       });
+      
+      // Mark appointments tab as loaded
+      tabsLoaded.current.appointments = true;
     } catch (err) {
       console.error("Failed to fetch appointments", err);
     } finally {
@@ -84,12 +126,19 @@ function PatientAppointments() {
   const handleCancel = async (id) => {
     if (!window.confirm("Are you sure you want to cancel this appointment?")) return;
     try {
+      setCanceling(id);
+      await api.get("/sanctum/csrf-cookie");
       await api.post(`/api/appointment/${id}/cancel`);
-      alert("Appointment canceled.");
+      alert("Appointment cancelled successfully!");
       fetchAppointments(currentPage);
     } catch (err) {
       console.error("Cancel failed", err);
-      alert("Failed to cancel appointment.");
+      const serverMsg =
+        err.response?.data?.message ||
+        "Failed to cancel appointment. Please try again.";
+      alert(serverMsg);
+    } finally {
+      setCanceling(null);
     }
   };
 
@@ -224,6 +273,46 @@ function PatientAppointments() {
     setSelectedRescheduleSlot("");
   };
 
+  // Handle date filter changes
+  const handleApplyDateFilter = () => {
+    // Reset to page 1 when applying filters
+    setCurrentPage(1);
+    fetchAppointments(1);
+  };
+
+  const handleClearDateFilter = () => {
+    setStartDate("");
+    setEndDate("");
+    setCurrentPage(1);
+    // Fetch without filters
+    fetchAppointmentsWithoutFilters(1);
+  };
+
+  const fetchAppointmentsWithoutFilters = async (page = 1) => {
+    try {
+      setLoading(true);
+      const res = await api.get(`/api/user-appointments?page=${page}`, {
+        skip401Handler: true,
+      });
+      
+      console.log('Appointments API Response:', res.data.data);
+      
+      setAppointments(res.data.data);
+      setMeta({
+        current_page: res.data.current_page,
+        last_page: res.data.last_page,
+        per_page: res.data.per_page,
+        total: res.data.total,
+      });
+      
+      tabsLoaded.current.appointments = true;
+    } catch (err) {
+      console.error("Failed to fetch appointments", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Helper functions for date formatting
   const todayStr = () => {
     const d = new Date();
@@ -332,45 +421,137 @@ function PatientAppointments() {
             </button>
           </div>
 
+          {/* Date Filter - Only show for appointments tab */}
+          {activeTab === "appointments" && (
+            <div className="card border-0 shadow-sm mb-4">
+              <div className="card-body">
+                <div className="row g-3 align-items-end">
+                  <div className="col-md-4">
+                    <label htmlFor="startDate" className="form-label fw-semibold">
+                      <i className="bi bi-calendar-check me-2 text-primary"></i>
+                      Start Date
+                    </label>
+                    <input
+                      id="startDate"
+                      type="date"
+                      className="form-control"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                      placeholder="Select start date"
+                    />
+                    <small className="text-muted">
+                      Filter from this date
+                    </small>
+                  </div>
+                  <div className="col-md-4">
+                    <label htmlFor="endDate" className="form-label fw-semibold">
+                      <i className="bi bi-calendar-x me-2 text-primary"></i>
+                      End Date
+                    </label>
+                    <input
+                      id="endDate"
+                      type="date"
+                      className="form-control"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      min={startDate || undefined}
+                      placeholder="Select end date"
+                      disabled={!startDate}
+                    />
+                    <small className="text-muted">
+                      {startDate ? "Filter up to this date" : "Select start date first"}
+                    </small>
+                  </div>
+                  <div className="col-md-4">
+                    <div className="d-flex gap-2">
+                      <button
+                        className="btn btn-primary flex-fill"
+                        onClick={handleApplyDateFilter}
+                        disabled={!startDate || loading}
+                      >
+                        {loading ? (
+                          <>
+                            <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                            Loading...
+                          </>
+                        ) : (
+                          <>
+                            <i className="bi bi-funnel me-1"></i>
+                            Apply Filter
+                          </>
+                        )}
+                      </button>
+                      <button
+                        className="btn btn-outline-secondary"
+                        onClick={handleClearDateFilter}
+                        disabled={!startDate && !endDate || loading}
+                        title="Clear filters"
+                      >
+                        <i className="bi bi-x-circle"></i>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                {(startDate || endDate) && (
+                  <div className="mt-3">
+                    <div className="alert alert-info mb-0 d-flex align-items-center">
+                      <i className="bi bi-info-circle me-2"></i>
+                      <span>
+                        {startDate && !endDate && `Showing appointments on ${startDate}`}
+                        {startDate && endDate && `Showing appointments from ${startDate} to ${endDate}`}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Tab Content */}
           <div className="tab-content">
             {activeTab === "appointments" && (
               <div className="tab-pane fade show active">
-                {loading && <LoadingSpinner message="Loading appointments..." />}
-
-                {!loading && appointments.length === 0 && (
-                  <div className="text-center py-5">
-                    <i className="bi bi-calendar-x display-1 text-muted"></i>
-                    <h3 className="h5 mt-3 text-muted">No appointments yet</h3>
-                    <p className="text-muted">You haven't booked any appointments yet.</p>
-                    <a href="/patient/appointment" className="btn btn-primary">
-                      <i className="bi bi-calendar-plus me-2"></i>
-                      Book Your First Appointment
-                    </a>
-                  </div>
-                )}
-
-                {!loading && appointments.length > 0 && (
-            <>
-              {/* Desktop Table View */}
-              <div className="d-none d-lg-block">
-                <div className="card border-0 shadow-sm">
-                  <div className="card-body p-0">
-                    <div className="table-responsive">
-                      <table className="table table-hover mb-0">
-                        <thead className="table-light">
-                          <tr>
-                            <th>Date & Time</th>
-                            <th>Service</th>
-                            <th>Payment Method</th>
-                            <th>Payment Status</th>
-                            <th>Appointment Status</th>
-                            <th>Notes</th>
-                            <th style={{ width: 160 }}>Actions</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {appointments.map((a) => {
+                {/* Desktop Table View */}
+                <div className="d-none d-lg-block">
+                  <div className="card border-0 shadow-sm">
+                    <div className="card-body p-0">
+                      <div className="table-responsive">
+                        <table className="table table-hover mb-0">
+                          <thead className="table-light">
+                            <tr>
+                              <th>Date & Time</th>
+                              <th>Service</th>
+                              <th>Payment Method</th>
+                              <th>Payment Status</th>
+                              <th>Appointment Status</th>
+                              <th>Notes</th>
+                              <th style={{ width: 160 }}>Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {loading ? (
+                              <tr>
+                                <td colSpan="7" className="text-center py-5">
+                                  <div className="spinner-border text-primary" role="status">
+                                    <span className="visually-hidden">Loading...</span>
+                                  </div>
+                                  <p className="text-muted mt-2 mb-0">Loading appointments...</p>
+                                </td>
+                              </tr>
+                            ) : appointments.length === 0 ? (
+                              <tr>
+                                <td colSpan="7" className="text-center py-5">
+                                  <i className="bi bi-calendar-x display-4 text-muted"></i>
+                                  <h6 className="mt-3 text-muted">No appointments yet</h6>
+                                  <p className="text-muted mb-3">You haven't booked any appointments yet.</p>
+                                  <a href="/patient/appointment" className="btn btn-primary">
+                                    <i className="bi bi-calendar-plus me-2"></i>
+                                    Book Your First Appointment
+                                  </a>
+                                </td>
+                              </tr>
+                            ) : (
+                              appointments.map((a) => {
                             const showPayNow =
                               a.payment_method === "maya" &&
                               a.payment_status === "awaiting_payment" &&
@@ -459,38 +640,75 @@ function PatientAppointments() {
                                       </button>
                                     )}
 
-                                    {a.status !== "cancelled" && a.status !== "rejected" && a.status !== "completed" && (
+                                    {/* Show cancel button for pending or (approved + unpaid) appointments */}
+                                    {(a.status === "pending" || 
+                                      (a.status === "approved" && 
+                                       (a.payment_status === "unpaid" || a.payment_status === "awaiting_payment"))) && (
                                       <button
                                         className="btn btn-outline-danger btn-sm"
                                         onClick={() => handleCancel(a.id)}
+                                        disabled={canceling === a.id || paying === a.id || generatingReceipt === a.id}
                                       >
-                                        Cancel
+                                        {canceling === a.id ? (
+                                          <>
+                                            <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                                            Canceling...
+                                          </>
+                                        ) : (
+                                          <>
+                                            <i className="bi bi-x-circle me-1"></i>
+                                            Cancel
+                                          </>
+                                        )}
                                       </button>
                                     )}
                                   </div>
                                 </td>
                               </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
+                              );
+                            })
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Mobile Card View */}
-              <div className="d-lg-none">
-                {appointments.map((a) => {
-                  const showPayNow =
-                    a.payment_method === "maya" &&
-                    a.payment_status === "awaiting_payment" &&
-                    a.status === "approved";
+                {/* Mobile Card View */}
+                <div className="d-lg-none">
+                  {loading ? (
+                    <div className="card border-0 shadow-sm">
+                      <div className="card-body text-center py-5">
+                        <div className="spinner-border text-primary" role="status">
+                          <span className="visually-hidden">Loading...</span>
+                        </div>
+                        <p className="text-muted mt-2 mb-0">Loading appointments...</p>
+                      </div>
+                    </div>
+                  ) : appointments.length === 0 ? (
+                    <div className="card border-0 shadow-sm">
+                      <div className="card-body text-center py-5">
+                        <i className="bi bi-calendar-x display-4 text-muted"></i>
+                        <h6 className="mt-3 text-muted">No appointments yet</h6>
+                        <p className="text-muted mb-3">You haven't booked any appointments yet.</p>
+                        <a href="/patient/appointment" className="btn btn-primary">
+                          <i className="bi bi-calendar-plus me-2"></i>
+                          Book Your First Appointment
+                        </a>
+                      </div>
+                    </div>
+                  ) : (
+                    appointments.map((a) => {
+                      const showPayNow =
+                        a.payment_method === "maya" &&
+                        a.payment_status === "awaiting_payment" &&
+                        a.status === "approved";
 
-                  const showReceipt = a.status === "completed" && a.payment_status === "paid";
-                  const showReschedule = a.payment_method === "maya" && a.payment_status === "paid" && (a.status === "approved" || a.status === "pending");
+                      const showReceipt = a.status === "completed" && a.payment_status === "paid";
+                      const showReschedule = a.payment_method === "maya" && a.payment_status === "paid" && (a.status === "approved" || a.status === "pending");
 
-                  return (
+                      return (
                     <div key={a.id} className="card mb-3 border-0 shadow-sm">
                       <div className="card-body">
                         <div className="row">
@@ -586,23 +804,38 @@ function PatientAppointments() {
                             </button>
                           )}
 
-                          {a.status !== "cancelled" && a.status !== "rejected" && a.status !== "completed" && (
+                          {/* Show cancel button for pending or (approved + unpaid) appointments */}
+                          {(a.status === "pending" || 
+                            (a.status === "approved" && 
+                             (a.payment_status === "unpaid" || a.payment_status === "awaiting_payment"))) && (
                             <button
                               className="btn btn-outline-danger btn-sm flex-fill"
                               onClick={() => handleCancel(a.id)}
+                              disabled={canceling === a.id || paying === a.id || generatingReceipt === a.id}
                             >
-                              Cancel
+                              {canceling === a.id ? (
+                                <>
+                                  <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                                  Canceling...
+                                </>
+                              ) : (
+                                <>
+                                  <i className="bi bi-x-circle me-1"></i>
+                                  Cancel
+                                </>
+                              )}
                             </button>
                           )}
                         </div>
                       </div>
                     </div>
-                  );
-                })}
-              </div>
+                      );
+                    })
+                  )}
+                </div>
 
-              {/* Pagination */}
-              {meta.last_page > 1 && (
+                {/* Pagination */}
+                {!loading && meta.last_page > 1 && (
                 <div className="d-flex justify-content-between align-items-center mt-4">
                   <button
                     className="btn btn-outline-secondary btn-sm"
@@ -626,8 +859,6 @@ function PatientAppointments() {
                     <i className="bi bi-chevron-right ms-1"></i>
                   </button>
                 </div>
-              )}
-            </>
                 )}
               </div>
             )}
