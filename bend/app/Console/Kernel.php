@@ -18,6 +18,9 @@ class Kernel extends ConsoleKernel
         
         // Retry queued emails every 5 minutes
         $schedule->command('emails:retry-queued --limit=20')->everyFiveMinutes();
+        
+        // Send appointment reminder emails daily at 6am Manila time
+        $schedule->job(new \App\Jobs\EmailAppointmentReminderJob)->dailyAt('06:00');
     }
 
     /**
