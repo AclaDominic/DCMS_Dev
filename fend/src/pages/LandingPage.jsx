@@ -56,6 +56,7 @@ function LandingPage() {
     <nav>
       <ul className="nav-list d-flex gap-3 mb-0">
         <li><a href="#home" className="nav-link">Home</a></li>
+        <li><a href="#services" className="nav-link">Services</a></li>
         <li><a href="#about" className="nav-link">About</a></li>
         <li><a href="#contact" className="nav-link">Contact</a></li>
       </ul>
@@ -86,7 +87,9 @@ function LandingPage() {
       </section>
 
       {/* Services and Promos Section */}
-      <ServicesAndPromos />
+      <section id="services">
+        <ServicesAndPromos />
+      </section>
 
       {/* Features Section */}
       <section className="features-section py-5">

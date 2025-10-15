@@ -84,7 +84,14 @@ function Register() {
         setTimeout(() => navigate('/verify-email'), 3000);
       } else {
         localStorage.setItem('token', res.data.token);
-        setMessage('Registration successful!');
+        
+        // Handle email status
+        if (res.data.email_queued) {
+          setMessage(`✅ ${res.data.message} 📧 ${res.data.email_message}`);
+        } else {
+          setMessage(`✅ ${res.data.message} 📧 ${res.data.email_message}`);
+        }
+        
         setTimeout(() => navigate('/verify-email'), 2000);
       }
 

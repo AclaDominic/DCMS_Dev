@@ -34,6 +34,7 @@ use App\Http\Controllers\API\ClinicWeeklyScheduleController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Admin\SystemLogController;
 use App\Http\Controllers\Admin\PaymentRecordController;
+use App\Http\Controllers\Admin\QueuedEmailsController;
 use App\Http\Controllers\API\ReportController;
 use App\Http\Controllers\API\GoalController;
 use App\Http\Controllers\API\DentistUserController;
@@ -193,6 +194,13 @@ Route::middleware(['auth:sanctum', 'check.account.status', AdminOnly::class])->g
 
     // Time block utilization dashboard
     Route::get('/admin/time-block-utilization', [\App\Http\Controllers\API\TimeBlockUtilizationController::class, 'getUtilizationData']);
+
+    // Queued emails management
+    Route::prefix('admin/queued-emails')->group(function () {
+        Route::get('/', [QueuedEmailsController::class, 'index']);
+        Route::get('/stats', [QueuedEmailsController::class, 'stats']);
+        Route::post('/retry-all', [QueuedEmailsController::class, 'retryAll']);
+    });
 
     // Dentist account management
     Route::prefix('dentist')->group(function () {
