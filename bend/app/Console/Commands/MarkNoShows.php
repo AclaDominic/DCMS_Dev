@@ -117,6 +117,9 @@ class MarkNoShows extends Command
                 // Handle no-show tracking in PatientManager
                 PatientManagerService::handleNoShow($appointment);
 
+                // Send no-show email notification
+                \App\Jobs\NoShowEmailJob::dispatch($appointment);
+
                 $updated += 1;
             }
         }
