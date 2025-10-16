@@ -239,7 +239,7 @@ function PatientAppointments() {
 
     try {
       setRescheduleLoading(true);
-      await api.post(`/api/appointments/${rescheduleModal.id}/reschedule`, {
+      await api.post(`/api/appointments/${rescheduleModal.id}/reschedule`,{
         date: rescheduleDate,
         start_time: selectedRescheduleSlot,
       });
