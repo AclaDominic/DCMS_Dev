@@ -75,6 +75,28 @@ class DentistScheduleController extends Controller
         return response()->json($dentistSchedule);
     }
 
+    /**
+     * Get available dentists for a specific date
+     */
+    public function availableForDate(Request $request)
+    {
+        $request->validate([
+            'date' => 'required|date_format:Y-m-d'
+        ]);
+
+        $date = $request->date;
+        $dentists = DentistSchedule::activeOnDate($date)
+            ->select('dentist_code', 'dentist_name')
+            ->orderBy('dentist_code')
+            ->get();
+
+        return response()->json([
+            'date' => $date,
+            'dentists' => $dentists,
+            'count' => $dentists->count()
+        ]);
+    }
+
     private function validatedData(Request $request, bool $isUpdate, ?int $currentId = null): array
     {
         $days = ['sun','mon','tue','wed','thu','fri','sat'];

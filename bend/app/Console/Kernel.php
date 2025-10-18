@@ -21,6 +21,9 @@ class Kernel extends ConsoleKernel
         
         // Send appointment reminder emails daily at 6am Manila time
         $schedule->job(new \App\Jobs\EmailAppointmentReminderJob)->dailyAt('06:00');
+
+        // Add the inventory scan near expiry command
+        $schedule->command('inventory:scan-near-expiry')->dailyAt('08:00');
     }
 
     /**

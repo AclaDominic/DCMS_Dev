@@ -154,9 +154,11 @@ Route::middleware(['auth:sanctum', 'check.account.status', AdminOnly::class])->g
 
     // Dentist schedules (capacity source) — keep simple paths
     Route::post('/dentists', [DentistScheduleController::class, 'store']);
+    Route::get('/dentists/available-for-date', [DentistScheduleController::class, 'availableForDate']);
     Route::get('/dentists/{id}', [DentistScheduleController::class, 'show']);
     Route::put('/dentists/{id}', [DentistScheduleController::class, 'update']);
     Route::delete('/dentists/{id}', [DentistScheduleController::class, 'destroy']);
+    
 
     //inventory
     Route::post('/inventory/adjust', [InventoryController::class, 'adjust']);
@@ -266,6 +268,8 @@ Route::middleware(['auth:sanctum', 'check.account.status'])->group(function () {
     Route::get('/user-appointments', [AppointmentController::class, 'userAppointments']);
     Route::get('/user-visit-history', [AppointmentController::class, 'userVisitHistory']);
 
+
+
     // Receipt generation
     Route::prefix('receipts')->group(function () {
         Route::get('/appointment/{appointmentId}', [ReceiptController::class, 'generateAppointmentReceipt']);
@@ -357,6 +361,7 @@ Route::middleware(['auth:sanctum', 'check.account.status', EnsureDeviceIsApprove
 
     // Dentist schedules (read-only access for staff to send visit codes)
     Route::get('/dentists', [DentistScheduleController::class, 'index']);
+    Route::get('/dentists/available-for-date', [DentistScheduleController::class, 'availableForDate']);
 
     // Appointments (staff side)
     Route::post('/appointments/{id}/approve', [AppointmentController::class, 'approve']);
@@ -365,6 +370,7 @@ Route::middleware(['auth:sanctum', 'check.account.status', EnsureDeviceIsApprove
     Route::get('/appointments/remindable', [AppointmentController::class, 'remindable']);
     Route::post('/appointments/{id}/send-reminder', [AppointmentController::class, 'sendReminder']);
     Route::get('/appointments/resolve-exact', [AppointmentController::class, 'resolveExact']);
+    Route::post('/appointments/staff-create', [AppointmentController::class, 'storeForStaff']);
 });
 
 // ------------------------

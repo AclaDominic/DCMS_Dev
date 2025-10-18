@@ -36,6 +36,28 @@ function VisitTrackerManager() {
   const [sendingVisitCode, setSendingVisitCode] = useState(null);
   const [potentialMatches, setPotentialMatches] = useState([]);
   const [showMatchesModal, setShowMatchesModal] = useState(false);
+  const [showMakeAppointmentModal, setShowMakeAppointmentModal] = useState(false);
+  const [appointmentForm, setAppointmentForm] = useState({
+    patient_id: '',
+    first_name: '',
+    last_name: '',
+    contact_number: '',
+    email: '',
+    birthdate: '',
+    service_id: '',
+    date: '',
+    start_time: '',
+    payment_method: 'cash',
+    patient_hmo_id: '',
+    teeth_count: '',
+    linkToExisting: false,
+  });
+  const [availableSlots, setAvailableSlots] = useState([]);
+  const [loadingSlots, setLoadingSlots] = useState(false);
+  const [creatingAppointment, setCreatingAppointment] = useState(false);
+  const [selectedServiceDetails, setSelectedServiceDetails] = useState(null);
+  const [availableDentists, setAvailableDentists] = useState([]);
+  const [loadingDentists, setLoadingDentists] = useState(false);
 
   useEffect(() => {
     fetchVisits();
@@ -247,6 +269,168 @@ function VisitTrackerManager() {
     }
   };
 
+  const handleMakeAppointmentClick = async () => {
+    // Start with empty date - user must select a date first
+    setAppointmentForm({
+      patient_id: '',
+      first_name: '',
+      last_name: '',
+      contact_number: '',
+      email: '',
+      birthdate: '',
+      service_id: '',
+      date: '',
+      start_time: '',
+      payment_method: 'cash',
+      patient_hmo_id: '',
+      teeth_count: '',
+      linkToExisting: false,
+    });
+    setSelectedServiceDetails(null);
+    setAvailableSlots([]);
+    setAvailableDentists([]);
+    
+    // Don't load services initially - wait for date selection
+    setAvailableServices([]);
+    
+    setShowMakeAppointmentModal(true);
+  };
+
+  const handleDateChange = async (date) => {
+    setAppointmentForm(prev => ({ ...prev, date, start_time: '', service_id: '' }));
+    setAvailableSlots([]);
+    setSelectedServiceDetails(null);
+    
+    // Fetch available dentists for the selected date (optional feature)
+    if (date) {
+      setLoadingDentists(true);
+      try {
+        const res = await api.get(`/api/dentists/available-for-date?date=${date}`);
+        setAvailableDentists(res.data.dentists || []);
+      } catch (err) {
+        console.error("Failed to load dentists for date:", err);
+        setAvailableDentists([]);
+      } finally {
+        setLoadingDentists(false);
+      }
+      
+      // Reload services for the new date
+      try {
+        const res = await api.get(
+          `/api/appointment/available-services?date=${date}`
+        );
+        setAvailableServices(
+          Array.isArray(res.data) ? res.data : res.data.data || []
+        );
+      } catch (err) {
+        console.error("Failed to load services for new date:", err);
+        setAvailableServices([]);
+      }
+    } else {
+      setAvailableDentists([]);
+      setAvailableServices([]);
+    }
+  };
+
+  const handleServiceChange = async (serviceId) => {
+    const service = availableServices.find(s => s.id == serviceId);
+    setSelectedServiceDetails(service);
+    setAppointmentForm(prev => ({ ...prev, service_id: serviceId, start_time: '', teeth_count: '' }));
+    setAvailableSlots([]);
+    
+    // For per-teeth services, don't fetch slots until teeth count is provided
+    if (serviceId && appointmentForm.date && service && !service.per_teeth_service) {
+      await fetchAvailableSlots(appointmentForm.date, serviceId, appointmentForm.teeth_count);
+    }
+  };
+
+  const handleTeethCountChange = async (teethCount) => {
+    setAppointmentForm(prev => ({ ...prev, teeth_count: teethCount, start_time: '' }));
+    setAvailableSlots([]);
+    
+    if (appointmentForm.date && appointmentForm.service_id && teethCount && teethCount > 0) {
+      await fetchAvailableSlots(appointmentForm.date, appointmentForm.service_id, teethCount);
+    }
+  };
+
+  const fetchAvailableSlots = async (date, serviceId, teethCount = null) => {
+    setLoadingSlots(true);
+    try {
+      const params = { date, service_id: serviceId };
+      if (teethCount) {
+        params.teeth_count = teethCount;
+      }
+      
+      const response = await api.get('/api/appointment/available-slots', { params });
+      setAvailableSlots(response.data.slots || response.data);
+    } catch (err) {
+      console.error('Failed to fetch available slots:', err);
+      setAvailableSlots([]);
+    } finally {
+      setLoadingSlots(false);
+    }
+  };
+
+  const handleCreateAppointment = async () => {
+    if (!appointmentForm.service_id || !appointmentForm.date || !appointmentForm.start_time) {
+      alert('Please select service, date, and time.');
+      return;
+    }
+
+    // Check if per-teeth service requires teeth count
+    if (selectedServiceDetails && selectedServiceDetails.per_teeth_service && !appointmentForm.teeth_count) {
+      alert('Please enter the number of teeth for this per-teeth service.');
+      return;
+    }
+
+    if (!appointmentForm.linkToExisting && (!appointmentForm.first_name || !appointmentForm.last_name || !appointmentForm.contact_number)) {
+      alert('Please fill in patient details including contact number (required for SMS reminders) or link to existing patient.');
+      return;
+    }
+
+    if (appointmentForm.linkToExisting && !appointmentForm.patient_id) {
+      alert('Please select an existing patient.');
+      return;
+    }
+
+    setCreatingAppointment(true);
+    try {
+      const payload = {
+        service_id: appointmentForm.service_id,
+        date: appointmentForm.date,
+        start_time: appointmentForm.start_time,
+        payment_method: appointmentForm.payment_method,
+      };
+
+      if (appointmentForm.linkToExisting) {
+        payload.patient_id = appointmentForm.patient_id;
+      } else {
+        payload.first_name = appointmentForm.first_name;
+        payload.last_name = appointmentForm.last_name;
+        payload.contact_number = appointmentForm.contact_number;
+        if (appointmentForm.email) payload.email = appointmentForm.email;
+        if (appointmentForm.birthdate) payload.birthdate = appointmentForm.birthdate;
+      }
+
+      if (appointmentForm.payment_method === 'hmo' && appointmentForm.patient_hmo_id) {
+        payload.patient_hmo_id = appointmentForm.patient_hmo_id;
+      }
+
+      if (appointmentForm.teeth_count) {
+        payload.teeth_count = parseInt(appointmentForm.teeth_count);
+      }
+
+      const response = await api.post('/api/appointments/staff-create', payload);
+      alert(`Appointment created successfully!\nReference Code: ${response.data.appointment.reference_code}`);
+      setShowMakeAppointmentModal(false);
+    } catch (err) {
+      const errorMessage = err.response?.data?.message || 'Failed to create appointment.';
+      alert(errorMessage);
+    } finally {
+      setCreatingAppointment(false);
+    }
+  };
+
   return (
     <div className="h-100 d-flex flex-column">
       <h3>📝 Patient Visit Tracker</h3>
@@ -319,13 +503,21 @@ function VisitTrackerManager() {
           </>
         )}
 
-        <button
-          className="btn btn-primary mt-2"
-          onClick={handleStartVisit}
-          disabled={submitting}
-        >
-          {submitting ? "Saving..." : "Start Visit"}
-        </button>
+        <div className="d-flex gap-2 mt-2">
+          <button
+            className="btn btn-primary"
+            onClick={handleStartVisit}
+            disabled={submitting}
+          >
+            {submitting ? "Saving..." : "Start Visit"}
+          </button>
+          <button
+            className="btn btn-success"
+            onClick={handleMakeAppointmentClick}
+          >
+            📅 Make Appointment
+          </button>
+        </div>
       </div>
 
       <div className="flex-grow-1 d-flex flex-column">
@@ -911,6 +1103,543 @@ function VisitTrackerManager() {
             console.log(`Visit code sent to Dr. ${dentist.dentist_name || dentist.dentist_code}`);
           }}
         />
+      )}
+
+      {/* Make Appointment Modal */}
+      {showMakeAppointmentModal && (
+        <div className="modal show d-block" tabIndex="-1">
+          <div className="modal-dialog modal-lg">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">📅 Create Appointment for Walk-in Patient</h5>
+                <button
+                  className="btn-close"
+                  onClick={() => setShowMakeAppointmentModal(false)}
+                ></button>
+              </div>
+              <div className="modal-body">
+                <div className="row">
+                  <div className="col-md-6">
+                    <h6>Patient Information</h6>
+                    
+                    {/* Toggle between existing and new patient */}
+                    <div className="form-check mb-3">
+                      <input
+                        className="form-check-input"
+                        type="checkbox"
+                        id="linkToExisting"
+                        checked={appointmentForm.linkToExisting}
+                        onChange={(e) => setAppointmentForm(prev => ({ 
+                          ...prev, 
+                          linkToExisting: e.target.checked,
+                          patient_id: e.target.checked ? prev.patient_id : '',
+                          first_name: e.target.checked ? '' : prev.first_name,
+                          last_name: e.target.checked ? '' : prev.last_name,
+                          contact_number: e.target.checked ? '' : prev.contact_number,
+                          email: e.target.checked ? '' : prev.email,
+                          birthdate: e.target.checked ? '' : prev.birthdate,
+                        }))}
+                      />
+                      <label className="form-check-label" htmlFor="linkToExisting">
+                        Link to existing patient
+                      </label>
+                    </div>
+
+                    {appointmentForm.linkToExisting ? (
+                      <div className="mb-3">
+                        <label className="form-label">Search Existing Patient</label>
+                        <input
+                          className="form-control"
+                          placeholder="Search by name or contact (min 2 characters)"
+                          value={searchQuery}
+                          onChange={async (e) => {
+                            const val = e.target.value;
+                            setSearchQuery(val);
+                            setMatchingPatients([]);
+                            setSelectedPatient(null);
+
+                            if (val.length >= 2) {
+                              try {
+                                const res = await api.get("/api/patients/search", {
+                                  params: { q: val.trim() },
+                                });
+                                setMatchingPatients(res.data);
+                              } catch {
+                                alert("Search failed.");
+                              }
+                            }
+                          }}
+                        />
+                        
+                        {matchingPatients.length > 0 && (
+                          <div className="mt-2">
+                            <small className="text-muted">Select a patient:</small>
+                            {matchingPatients.map((patient) => (
+                              <div key={patient.id} className="card p-2 mb-1 cursor-pointer" 
+                                   onClick={() => {
+                                     setAppointmentForm(prev => ({ ...prev, patient_id: patient.id }));
+                                     setSelectedPatient(patient);
+                                   }}
+                                   style={{ cursor: 'pointer', backgroundColor: appointmentForm.patient_id === patient.id ? '#e3f2fd' : 'white' }}>
+                                <div className="d-flex justify-content-between">
+                                  <div>
+                                    <strong>{patient.first_name} {patient.last_name}</strong>
+                                    <br />
+                                    <small className="text-muted">
+                                      Contact: {patient.contact_number || 'N/A'} | 
+                                      Birthdate: {patient.birthdate ? new Date(patient.birthdate).toLocaleDateString() : 'N/A'}
+                                    </small>
+                                  </div>
+                                  {appointmentForm.patient_id === patient.id && (
+                                    <span className="badge bg-primary">Selected</span>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <>
+                        <div className="mb-3">
+                          <label className="form-label">First Name *</label>
+                          <input
+                            className="form-control"
+                            value={appointmentForm.first_name}
+                            onChange={(e) => setAppointmentForm(prev => ({ ...prev, first_name: e.target.value }))}
+                          />
+                        </div>
+                        <div className="mb-3">
+                          <label className="form-label">Last Name *</label>
+                          <input
+                            className="form-control"
+                            value={appointmentForm.last_name}
+                            onChange={(e) => setAppointmentForm(prev => ({ ...prev, last_name: e.target.value }))}
+                          />
+                        </div>
+                        <div className="mb-3">
+                          <label className="form-label">Contact Number *</label>
+                          <input
+                            className="form-control"
+                            value={appointmentForm.contact_number}
+                            onChange={(e) => setAppointmentForm(prev => ({ ...prev, contact_number: e.target.value }))}
+                            placeholder="Required for SMS reminders"
+                          />
+                          <div className="form-text">
+                            <i className="bi bi-phone me-1"></i>
+                            Required for SMS appointment reminders
+                          </div>
+                        </div>
+                        <div className="mb-3">
+                          <label className="form-label">Email (Optional)</label>
+                          <input
+                            type="email"
+                            className="form-control"
+                            value={appointmentForm.email}
+                            onChange={(e) => setAppointmentForm(prev => ({ ...prev, email: e.target.value }))}
+                          />
+                        </div>
+                        <div className="mb-3">
+                          <label className="form-label">Birthdate (Optional)</label>
+                          <input
+                            type="date"
+                            className="form-control"
+                            value={appointmentForm.birthdate}
+                            onChange={(e) => setAppointmentForm(prev => ({ ...prev, birthdate: e.target.value }))}
+                          />
+                        </div>
+                      </>
+                    )}
+                  </div>
+                  
+                  <div className="col-md-6">
+                    <h6>Appointment Details</h6>
+                    
+                    <div className="mb-3">
+                      <label className="form-label">Date *</label>
+                      <input
+                        type="date"
+                        className="form-control"
+                        value={appointmentForm.date}
+                        onChange={(e) => handleDateChange(e.target.value)}
+                        min={new Date().toISOString().slice(0, 10)}
+                        max={new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)}
+                        placeholder="Select a date"
+                      />
+                      <div className="form-text">
+                        <i className="bi bi-info-circle me-1"></i>
+                        {appointmentForm.date ? 
+                          "You can only select dates up to 7 days from today" : 
+                          "Please select a date first to see available dentists and services"
+                        }
+                      </div>
+                    </div>
+
+                    {/* Available Dentists Display - Optional Feature */}
+                    {appointmentForm.date && (
+                      <div className="mb-3">
+                        <label className="form-label">Available Dentists</label>
+                        {loadingDentists ? (
+                          <div className="text-muted">
+                            <i className="bi bi-hourglass-split me-1"></i>
+                            Loading available dentists...
+                          </div>
+                        ) : availableDentists.length > 0 ? (
+                          <div className="alert alert-info border-0 shadow-sm">
+                            <div className="d-flex align-items-center justify-content-between">
+                              <div>
+                                <i className="bi bi-person-check me-2"></i>
+                                <strong>{availableDentists.length} dentist{availableDentists.length !== 1 ? 's' : ''} available</strong>
+                              </div>
+                              <span className="badge bg-primary">{availableDentists.length}</span>
+                            </div>
+                            <div className="mt-2">
+                              <small className="text-muted">Available dentists:</small>
+                              <div className="mt-1">
+                                {availableDentists.map((dentist, index) => (
+                                  <span key={index} className="badge bg-light text-dark me-1 mb-1">
+                                    {dentist.dentist_name} ({dentist.dentist_code})
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="alert alert-warning border-0 shadow-sm">
+                            <i className="bi bi-exclamation-triangle me-2"></i>
+                            No dentists available on this date
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    <div className="mb-3">
+                      <label className="form-label">Service *</label>
+                      <select
+                        className="form-select"
+                        value={appointmentForm.service_id}
+                        onChange={(e) => handleServiceChange(e.target.value)}
+                        disabled={!appointmentForm.date}
+                      >
+                        <option value="">{appointmentForm.date ? "Select a service" : "Please select a date first"}</option>
+                        {availableServices.map((service) => (
+                          <option key={service.id} value={service.id}>
+                            {service.name} –{" "}
+                            {service.type === "promo"
+                              ? `₱${Number(service.promo_price).toLocaleString()} (${service.discount_percent}% off)`
+                              : service.type === "special"
+                              ? `₱${Number(service.price).toLocaleString()} Special Service`
+                              : `₱${Number(service.price).toLocaleString()}`}
+                            {service.per_teeth_service ? ' per tooth' : ''}
+                          </option>
+                        ))}
+                      </select>
+                      {!appointmentForm.date && (
+                        <div className="form-text text-muted">
+                          <i className="bi bi-lock me-1"></i>
+                          Please select a date first to enable service selection
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Service Selection Info Alert */}
+                    {selectedServiceDetails && (
+                      <div className="alert alert-info border-0 shadow-sm mb-4" role="alert">
+                        <div className="d-flex align-items-center justify-content-between flex-wrap">
+                          <div className="d-flex align-items-center">
+                            <i className="bi bi-check-circle me-3 fs-4"></i>
+                            <div>
+                              <strong>Service Selected:</strong><br/>
+                              <span className="fs-5">{selectedServiceDetails.name}</span><br/>
+                              <span className="text-info fw-semibold">
+                                ₱{Number(selectedServiceDetails.price || selectedServiceDetails.promo_price).toLocaleString()}
+                                {selectedServiceDetails.per_teeth_service ? ' per tooth' : ''}
+                              </span>
+                              {selectedServiceDetails.per_teeth_service && (
+                                <div className="mt-2">
+                                  <small className="text-info">
+                                    <i className="bi bi-info-circle me-1"></i>
+                                    Total cost depends on number of teeth treated
+                                  </small>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Per-Teeth Service Recommendation */}
+                    {selectedServiceDetails && selectedServiceDetails.per_teeth_service && (
+                      <div className="alert alert-warning border-0 shadow-sm mb-4" role="alert">
+                        <div className="d-flex align-items-start">
+                          <i className="bi bi-lightbulb me-3 fs-4 text-warning"></i>
+                          <div>
+                            <h6 className="alert-heading text-warning mb-2">
+                              <i className="bi bi-tooth me-2"></i>
+                              Per-Teeth Service Information
+                            </h6>
+                            <p className="mb-2">
+                              For per-teeth services, please enter the number of teeth that need treatment. This will determine:
+                            </p>
+                            <ul className="mb-2 ps-3">
+                              <li>Appointment duration</li>
+                              <li>Available time slots</li>
+                              <li>Accurate cost calculation</li>
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Teeth Count Selector for Per-Teeth Services - Show before time selection */}
+                    {selectedServiceDetails && selectedServiceDetails.per_teeth_service && (
+                      <div className="mb-3">
+                        <label className="form-label">
+                          Number of Teeth to be Treated *
+                          <span className="text-muted ms-1">(Required for per-teeth services)</span>
+                        </label>
+                        
+                        {/* Custom Teeth Count Selector */}
+                        <div className="position-relative">
+                          <input
+                            type="number"
+                            min="1"
+                            max="32"
+                            className="form-control"
+                            value={appointmentForm.teeth_count}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              if (value === '' || (parseInt(value) >= 1 && parseInt(value) <= 32)) {
+                                handleTeethCountChange(value);
+                              }
+                            }}
+                            placeholder="Select or enter number of teeth"
+                            style={{ paddingRight: '60px' }}
+                          />
+                          <button
+                            type="button"
+                            className="btn btn-outline-secondary position-absolute top-50 end-0 translate-middle-y me-2"
+                            onClick={() => {
+                              const modal = document.getElementById('teethCountModal');
+                              if (modal) {
+                                const bsModal = new bootstrap.Modal(modal);
+                                bsModal.show();
+                                
+                                // Auto-scroll to selected teeth count after modal opens
+                                setTimeout(() => {
+                                  const roulette = modal.querySelector('.teeth-roulette');
+                                  const selectedOption = modal.querySelector(`[data-teeth="${appointmentForm.teeth_count}"]`);
+                                  if (roulette && selectedOption && appointmentForm.teeth_count) {
+                                    const optionTop = selectedOption.offsetTop;
+                                    const rouletteHeight = roulette.clientHeight;
+                                    const optionHeight = selectedOption.clientHeight;
+                                    roulette.scrollTop = optionTop - (rouletteHeight / 2) + (optionHeight / 2);
+                                  }
+                                }, 300);
+                              }
+                            }}
+                            style={{ height: '32px', width: '40px', padding: '0' }}
+                          >
+                            <i className="bi bi-chevron-down"></i>
+                          </button>
+                        </div>
+
+                        {/* Teeth Count Roulette Modal */}
+                        <div className="modal fade" id="teethCountModal" tabIndex="-1" aria-hidden="true">
+                          <div className="modal-dialog modal-dialog-centered">
+                            <div className="modal-content">
+                              <div className="modal-header">
+                                <h5 className="modal-title">
+                                  <i className="bi bi-tooth me-2"></i>
+                                  Select Number of Teeth
+                                </h5>
+                                <button type="button" className="btn-close" data-bs-dismiss="modal"></button>
+                              </div>
+                              <div className="modal-body p-0">
+                                <div 
+                                  className="teeth-roulette"
+                                  style={{
+                                    height: '200px',
+                                    overflowY: 'auto',
+                                    padding: '10px',
+                                    scrollBehavior: 'smooth',
+                                    touchAction: 'pan-y',
+                                    WebkitOverflowScrolling: 'touch'
+                                  }}
+                                  onScroll={(e) => {
+                                    // Optional: Add scroll snapping effect
+                                    e.target.scrollTop = Math.round(e.target.scrollTop / 50) * 50;
+                                  }}
+                                  onTouchStart={(e) => {
+                                    // Add touch feedback
+                                    e.target.style.backgroundColor = '#f8f9fa';
+                                  }}
+                                  onTouchEnd={(e) => {
+                                    setTimeout(() => {
+                                      e.target.style.backgroundColor = 'transparent';
+                                    }, 150);
+                                  }}
+                                >
+                                  {Array.from({ length: 32 }, (_, i) => i + 1).map((num) => (
+                                    <div
+                                      key={num}
+                                      data-teeth={num}
+                                      className={`teeth-option d-flex align-items-center justify-content-center p-3 border-bottom cursor-pointer ${
+                                        appointmentForm.teeth_count == num ? 'bg-primary text-white' : 'bg-light'
+                                      }`}
+                                      onClick={() => {
+                                        handleTeethCountChange(num.toString());
+                                        const modal = document.getElementById('teethCountModal');
+                                        if (modal) {
+                                          const bsModal = bootstrap.Modal.getInstance(modal);
+                                          bsModal.hide();
+                                        }
+                                      }}
+                                      style={{
+                                        minHeight: '50px',
+                                        cursor: 'pointer',
+                                        transition: 'all 0.2s ease',
+                                        userSelect: 'none'
+                                      }}
+                                      onMouseEnter={(e) => {
+                                        if (appointmentForm.teeth_count != num) {
+                                          e.target.style.backgroundColor = '#e9ecef';
+                                        }
+                                      }}
+                                      onMouseLeave={(e) => {
+                                        if (appointmentForm.teeth_count != num) {
+                                          e.target.style.backgroundColor = '#f8f9fa';
+                                        }
+                                      }}
+                                    >
+                                      <div className="text-center">
+                                        <div className="fs-4 fw-bold">{num}</div>
+                                        <div className="small">
+                                          {num === 1 ? 'tooth' : 'teeth'}
+                                        </div>
+                                        {appointmentForm.teeth_count == num && (
+                                          <div className="small">
+                                            <i className="bi bi-check-circle-fill"></i>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                              <div className="modal-footer">
+                                <div className="w-100 text-center">
+                                  <small className="text-muted">
+                                    <i className="bi bi-info-circle me-1"></i>
+                                    Swipe to scroll • Tap to select • Max 32 teeth
+                                  </small>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="form-text">
+                          <i className="bi bi-info-circle me-1"></i>
+                          Enter the number of teeth that need treatment. Time slots will be calculated based on this.
+                          {appointmentForm.teeth_count && (
+                            <div className="mt-1">
+                              <strong>Estimated cost:</strong> ₱{Number(selectedServiceDetails.price || selectedServiceDetails.promo_price) * parseInt(appointmentForm.teeth_count || 0).toLocaleString()}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="mb-3">
+                      <label className="form-label">Time Slot *</label>
+                      {loadingSlots ? (
+                        <div className="text-muted">Loading available slots...</div>
+                      ) : availableSlots.length > 0 ? (
+                        <select
+                          className="form-select"
+                          value={appointmentForm.start_time}
+                          onChange={(e) => setAppointmentForm(prev => ({ ...prev, start_time: e.target.value }))}
+                        >
+                          <option value="">Select time slot</option>
+                          {availableSlots.map((slot) => (
+                            <option key={slot} value={slot}>
+                              {slot}
+                            </option>
+                          ))}
+                        </select>
+                      ) : appointmentForm.service_id && appointmentForm.date ? (
+                        <div className="text-muted">
+                          {selectedServiceDetails && selectedServiceDetails.per_teeth_service && !appointmentForm.teeth_count ? 
+                            "Please enter number of teeth first to see available time slots." :
+                            "No available slots for this service on this date."
+                          }
+                        </div>
+                      ) : (
+                        <div className="text-muted">
+                          {!appointmentForm.date ? "Please select a date first." : 
+                           !appointmentForm.service_id ? "Please select a service first." : 
+                           "Please select service and date first."}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="mb-3">
+                      <label className="form-label">Payment Method *</label>
+                      <select
+                        className="form-select"
+                        value={appointmentForm.payment_method}
+                        onChange={(e) => setAppointmentForm(prev => ({ ...prev, payment_method: e.target.value }))}
+                        disabled={!appointmentForm.date || !appointmentForm.service_id}
+                      >
+                        <option value="cash">Cash</option>
+                        <option value="maya">Maya Payment</option>
+                        <option value="hmo">HMO</option>
+                      </select>
+                      {(!appointmentForm.date || !appointmentForm.service_id) && (
+                        <div className="form-text text-muted">
+                          <i className="bi bi-lock me-1"></i>
+                          Please select date and service first to enable payment method selection
+                        </div>
+                      )}
+                    </div>
+
+                    {appointmentForm.payment_method === 'hmo' && (
+                      <div className="mb-3">
+                        <label className="form-label">HMO (Optional)</label>
+                        <select
+                          className="form-select"
+                          value={appointmentForm.patient_hmo_id}
+                          onChange={(e) => setAppointmentForm(prev => ({ ...prev, patient_hmo_id: e.target.value }))}
+                        >
+                          <option value="">No HMO selected</option>
+                          {/* HMO options would be loaded here if patient has HMOs */}
+                        </select>
+                      </div>
+                    )}
+
+                  </div>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button
+                  className="btn btn-secondary"
+                  onClick={() => setShowMakeAppointmentModal(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="btn btn-primary"
+                  onClick={handleCreateAppointment}
+                  disabled={creatingAppointment}
+                >
+                  {creatingAppointment ? "Creating..." : "Create Appointment"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

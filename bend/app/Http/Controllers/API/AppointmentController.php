@@ -1136,4 +1136,165 @@ class AppointmentController extends Controller
             ]);
         }
     }
+
+    /**
+     * Staff endpoint to create appointments for walk-in patients
+     */
+    public function storeForStaff(Request $request, ClinicDateResolverService $resolver)
+    {
+        $validated = $request->validate([
+            // Patient options - either link to existing or create new
+            'patient_id'      => ['nullable', 'exists:patients,id'],
+            'first_name'      => ['nullable', 'string', 'max:255'],
+            'last_name'       => ['nullable', 'string', 'max:255'],
+            'contact_number'  => ['nullable', 'string', 'max:20'],
+            'email'           => ['nullable', 'email', 'max:255'],
+            'birthdate'       => ['nullable', 'date_format:Y-m-d'],
+            
+            // Appointment details
+            'service_id'      => ['required', 'exists:services,id'],
+            'date'            => ['required', 'date_format:Y-m-d', 'after_or_equal:today'],
+            'start_time'      => ['required', 'regex:/^\d{2}:\d{2}(:\d{2})?$/'],
+            'payment_method'  => ['required', Rule::in(['cash', 'maya', 'hmo'])],
+            'patient_hmo_id'  => ['nullable', 'integer', 'exists:patient_hmos,id'],
+            'teeth_count'     => ['nullable', 'integer', 'min:1', 'max:32'],
+        ]);
+
+        // Determine if we're linking to existing patient or creating new one
+        $patient = null;
+        if ($validated['patient_id']) {
+            // Link to existing patient
+            $patient = Patient::findOrFail($validated['patient_id']);
+        } else {
+            // Create new patient - validate required fields
+            $request->validate([
+                'first_name' => ['required', 'string', 'max:255'],
+                'last_name' => ['required', 'string', 'max:255'],
+                'contact_number' => ['required', 'string', 'max:20'],
+            ]);
+            
+            $patient = Patient::create([
+                'first_name' => $validated['first_name'],
+                'last_name' => $validated['last_name'],
+                'contact_number' => $validated['contact_number'],
+                'email' => $validated['email'],
+                'birthdate' => $validated['birthdate'],
+                'user_id' => null, // No user account linked
+            ]);
+        }
+        $service = Service::findOrFail($validated['service_id']);
+        
+        // Calculate estimated minutes based on teeth count for per-teeth services
+        $estimatedMinutes = $service->calculateEstimatedMinutes($validated['teeth_count'] ?? null);
+        $blocksNeeded = (int) max(1, ceil($estimatedMinutes / 30));
+        $dateStr = $validated['date'];
+        $date = Carbon::createFromFormat('Y-m-d', $dateStr)->startOfDay();
+
+        $startRaw = $validated['start_time'];
+        $startTime = Carbon::createFromFormat('H:i', $this->normalizeTime($startRaw));
+
+        // For staff, allow booking up to 7 days in advance
+        $today = now()->startOfDay();
+        if ($date->lt($today) || $date->gt($today->copy()->addDays(7))) {
+            return response()->json(['message' => 'Date is outside the booking window (today to 7 days).'], 422);
+        }
+
+        // resolve day snapshot
+        $snap = $resolver->resolve($date);
+        if (!$snap['is_open']) {
+            return response()->json(['message' => 'Clinic is closed on this date.'], 422);
+        }
+
+        $open = Carbon::parse($snap['open_time']);
+        $close = Carbon::parse($snap['close_time']);
+
+        // ensure start is in the 30-min grid and inside hours
+        $grid = ClinicDateResolverService::buildBlocks($snap['open_time'], $snap['close_time']);
+        if (!in_array($startTime->format('H:i'), $grid, true)) {
+            return response()->json(['message' => 'Invalid start time (not on grid or outside hours).'], 422);
+        }
+
+        // Calculate end time using 30-minute blocks
+        $endTime = $startTime->copy()->addMinutes($blocksNeeded * 30);
+        if ($startTime->lt($open) || $endTime->gt($close)) {
+            return response()->json(['message' => 'Selected time is outside clinic hours.'], 422);
+        }
+
+        // capacity check (pending + approved)
+        $capCheck = $this->checkCapacity($service, $dateStr, $startTime->format('H:i'));
+        if (!$capCheck['ok']) {
+            $fullAt = $capCheck['full_at'] ?? $startTime->format('H:i');
+            return response()->json(['message' => "Time slot starting at {$fullAt} is already full."], 422);
+        }
+
+        // Check for overlapping appointments for the same patient
+        $timeSlot = $this->normalizeTime($startTime) . '-' . $this->normalizeTime($endTime);
+        if (Appointment::hasOverlappingAppointment($patient->id, $dateStr, $timeSlot)) {
+            return response()->json([
+                'message' => 'Patient already has an appointment at this time. Please choose a different time slot.',
+            ], 422);
+        }
+
+        // HMO consistency checks
+        $patientHmoId = $request->input('patient_hmo_id');
+
+        if ($validated['payment_method'] === 'hmo') {
+            if (!$patientHmoId) {
+                return response()->json(['message' => 'Please select an HMO for this appointment.'], 422);
+            }
+            // must belong to this patient
+            $hmo = DB::table('patient_hmos')->where('id', $patientHmoId)->first();
+            if (!$hmo || (int)$hmo->patient_id !== (int)$patient->id) {
+                return response()->json(['message' => 'Selected HMO does not belong to this patient.'], 422);
+            }
+        } else {
+            $patientHmoId = null;
+        }
+
+        // create appointment
+        $timeSlot = $this->normalizeTime($startTime) . '-' . $this->normalizeTime($endTime);
+        $referenceCode = strtoupper(Str::random(8));
+
+        $appointment = Appointment::create([
+            'patient_id'      => $patient->id,
+            'service_id'      => $service->id,
+            'patient_hmo_id'  => $patientHmoId,
+            'date'            => $dateStr,
+            'time_slot'       => $timeSlot,
+            'reference_code'  => $referenceCode,
+            'status'          => 'approved', // Staff-created appointments are auto-approved
+            'payment_method'  => $validated['payment_method'],
+            'payment_status'  => $validated['payment_method'] === 'maya' ? 'awaiting_payment' : 'unpaid',
+            'teeth_count'     => $validated['teeth_count'] ?? null,
+        ]);
+
+        // Load relationships for response
+        $appointment->load(['patient', 'service']);
+
+        // Log appointment creation by staff
+        $staffName = auth()->user() ? auth()->user()->name : 'Staff';
+        SystemLogService::logAppointment(
+            'created',
+            $appointment->id,
+            "Staff " . $staffName . " created appointment for {$patient->first_name} {$patient->last_name} for {$service->name}",
+            [
+                'appointment_id' => $appointment->id,
+                'reference_code' => $appointment->reference_code,
+                'patient_id' => $patient->id,
+                'patient_name' => $patient->first_name . ' ' . $patient->last_name,
+                'service_id' => $service->id,
+                'service_name' => $service->name,
+                'date' => $dateStr,
+                'time_slot' => $timeSlot,
+                'payment_method' => $validated['payment_method'],
+                'created_by_staff' => true,
+                'staff_name' => $staffName,
+            ]
+        );
+
+        return response()->json([
+            'message' => 'Appointment created successfully.',
+            'appointment' => $appointment,
+        ], 201);
+    }
 }
