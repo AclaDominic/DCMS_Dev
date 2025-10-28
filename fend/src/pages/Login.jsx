@@ -5,6 +5,7 @@ import LoadingSpinner from "../components/LoadingSpinner";
 import AuthLayout from "../layouts/AuthLayout";
 import { getFingerprint } from "../utils/getFingerprint";
 import { useAuth } from "../hooks/useAuth";
+import toast, { Toaster } from "react-hot-toast";
 // EmailVerificationModal removed - using Laravel's built-in email verification
 import "./Logs.css"; // ✅ Your custom CSS
 import logo from "./logo.png";
@@ -80,7 +81,23 @@ function Login() {
       
       // Email verification no longer required for dentists
       
-      setMessage(err.response?.data?.message || "Login failed");
+      // Get error message from different possible locations in Laravel response
+      const errorMessage = 
+        err.response?.data?.errors?.email?.[0] || 
+        err.response?.data?.message || 
+        "Login failed";
+      
+      // Show error in red toast notification
+      toast.error(errorMessage, {
+        style: {
+          background: '#dc3545',
+          color: '#fff',
+        },
+        iconTheme: {
+          primary: '#fff',
+          secondary: '#dc3545',
+        },
+      });
     } finally {
       setLoading(false);
     }
@@ -115,6 +132,7 @@ function Login() {
 
   return (
     <AuthLayout>
+      <Toaster position="top-center" />
        <div className="auth-layout">
       {loading && <LoadingSpinner message="Logging in..." />}
 
@@ -218,7 +236,9 @@ function Login() {
               </button>
             </div>
 
-            {message && <p className="login-message">{message}</p>}
+            {message && !message.toLowerCase().includes("credentials") && !message.toLowerCase().includes("failed") && (
+              <p className="login-message">{message}</p>
+            )}
           </form>
         </div>
       </div>

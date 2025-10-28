@@ -29,6 +29,7 @@ export default function NotificationsPage() {
   };
 
   const formatTimeAgo = (dateString) => {
+    if (!dateString) return "";
     const now = new Date();
     const date = new Date(dateString);
     const diffInSeconds = Math.floor((now - date) / 1000);
@@ -38,7 +39,9 @@ export default function NotificationsPage() {
     if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
     if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)}d ago`;
     
-    return date.toLocaleDateString();
+    // For dates older than a week, show relative days
+    const diffInDays = Math.floor(diffInSeconds / 86400);
+    return `${diffInDays}d ago`;
   };
 
   return (

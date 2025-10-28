@@ -61,18 +61,6 @@ function PatientNavbar() {
           <i className="bi bi-house me-1"></i>
           <span  >Home</span>
         </Link>
-        <Link to="/patient/appointment" className="nav-link" style={{color: 'white'}}>
-          <i className="bi bi-calendar-plus me-1"></i>
-          <span  >Book</span>
-        </Link>
-        <Link to="/patient/appointments" className="nav-link" style={{color: 'white'}}>
-          <i className="bi bi-calendar3 me-1"></i>
-          <span  >Appointments</span>
-        </Link>
-        <Link to="/patient/profile" className="nav-link" style={{color: 'white'}}>
-          <i className="bi bi-person me-1"></i>
-          <span  >Profile</span>
-        </Link>
         {user && <NotificationBell />}
         {user && (
           <button

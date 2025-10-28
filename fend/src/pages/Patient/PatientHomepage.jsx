@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../../api/api";
 import LoadingSpinner from "../../components/LoadingSpinner";
+import ConfirmationModal from "../../components/ConfirmationModal";
+import toast, { Toaster } from "react-hot-toast";
 
 function PatientHomepage() {
   const [user, setUser] = useState(null);
@@ -10,6 +12,8 @@ function PatientHomepage() {
   const [appointmentsLoading, setAppointmentsLoading] = useState(true);
   const [paying, setPaying] = useState(null); // appointment_id being processed
   const [canceling, setCanceling] = useState(null); // appointment_id being cancelled
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [selectedAppointmentId, setSelectedAppointmentId] = useState(null);
 
   useEffect(() => {
     fetchUserData();
@@ -83,7 +87,14 @@ function PatientHomepage() {
         // ✅ 3) go to Maya sandbox hosted page
         window.location.href = data.redirect_url;
       } else {
-        alert("Payment link not available. Please try again.");
+        toast.error("Payment link not available. Please try again.", {
+          style: {
+            background: '#dc3545',
+            color: '#fff',
+            borderRadius: '8px',
+            padding: '16px',
+          },
+        });
       }
     } catch (err) {
       console.error("Create Maya payment failed", err);
@@ -92,32 +103,60 @@ function PatientHomepage() {
         err.response?.data?.message ||
         err.response?.data?.maya?.message ||
         "Unable to start payment. Please try again.";
-      alert(serverMsg);
+      toast.error(serverMsg, {
+        style: {
+          background: '#dc3545',
+          color: '#fff',
+          borderRadius: '8px',
+          padding: '16px',
+        },
+      });
     } finally {
       setPaying(null);
     }
   };
 
-  const handleCancelAppointment = async (appointmentId) => {
-    if (!confirm("Are you sure you want to cancel this appointment?")) {
-      return;
-    }
+  const handleCancelClick = (appointmentId) => {
+    setSelectedAppointmentId(appointmentId);
+    setShowCancelModal(true);
+  };
+
+  const handleCancelAppointment = async () => {
+    if (!selectedAppointmentId) return;
 
     try {
-      setCanceling(appointmentId);
+      setCanceling(selectedAppointmentId);
+      setShowCancelModal(false);
       await api.get("/sanctum/csrf-cookie");
-      await api.post(`/api/appointment/${appointmentId}/cancel`);
+      await api.post(`/api/appointment/${selectedAppointmentId}/cancel`);
       
-      alert("Appointment cancelled successfully!");
+      toast.success("Appointment cancelled successfully!", {
+        style: {
+          background: '#28a745',
+          color: '#fff',
+          borderRadius: '8px',
+          padding: '16px',
+          fontSize: '16px',
+        },
+        duration: 4000,
+      });
       
       // Refresh appointments list
       fetchRecentAppointments();
+      setSelectedAppointmentId(null);
     } catch (err) {
       console.error("Cancel appointment failed", err);
       const serverMsg =
         err.response?.data?.message ||
         "Unable to cancel appointment. Please try again.";
-      alert(serverMsg);
+      toast.error(serverMsg, {
+        style: {
+          background: '#dc3545',
+          color: '#fff',
+          borderRadius: '8px',
+          padding: '16px',
+        },
+      });
     } finally {
       setCanceling(null);
     }
@@ -125,6 +164,20 @@ function PatientHomepage() {
 
   return (
     <div className="container-fluid py-4">
+      <Toaster position="top-center" />
+      <ConfirmationModal
+        show={showCancelModal}
+        onConfirm={handleCancelAppointment}
+        onCancel={() => {
+          setShowCancelModal(false);
+          setSelectedAppointmentId(null);
+        }}
+        title="Cancel Appointment"
+        message="Are you sure you want to cancel this appointment?"
+        confirmText="Yes, Cancel"
+        cancelText="No, Keep It"
+        variant="danger"
+      />
       {/* Welcome Section */}
       <div className="row mb-4">
         <div className="col-12">
@@ -314,7 +367,7 @@ function PatientHomepage() {
                                  (appointment.payment_status === "unpaid" || appointment.payment_status === "awaiting_payment"))) && (
                                 <button 
                                   className="btn btn-sm btn-danger"
-                                  onClick={() => handleCancelAppointment(appointment.id)}
+                                  onClick={() => handleCancelClick(appointment.id)}
                                   disabled={canceling === appointment.id || paying === appointment.id}
                                 >
                                   {canceling === appointment.id ? (

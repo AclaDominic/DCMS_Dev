@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import api from '../api/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 import AuthLayout from '../layouts/AuthLayout';
+import toast, { Toaster } from 'react-hot-toast';
 import logo from "../pages/logo.png"; // ✅ Use the same logo as login
 import "./register.css"; 
 function Register() {
@@ -76,25 +77,23 @@ function Register() {
         password_confirmation: form.confirmPassword
       });
 
-      // Check if IP is blocked
-      if (res.data.ip_blocked) {
-        setMessage(`⚠️ ${res.data.message}`);
-        // Still proceed with registration but show warning
-        localStorage.setItem('token', res.data.token);
-        setTimeout(() => navigate('/verify-email'), 3000);
-      } else {
-        localStorage.setItem('token', res.data.token);
-        
-        // Handle email status
-        if (res.data.email_queued) {
-          setMessage(`✅ ${res.data.message} 📧 ${res.data.email_message}`);
-        } else {
-          setMessage(`✅ ${res.data.message} 📧 ${res.data.email_message}`);
-        }
-        
-        setTimeout(() => navigate('/verify-email'), 2000);
-      }
+      // Successfully registered
+      localStorage.setItem('token', res.data.token);
+      
+      // Show green success toast notification
+      toast.success('Successful registration', {
+        style: {
+          background: '#28a745',
+          color: '#fff',
+          borderRadius: '8px',
+          padding: '16px',
+          fontSize: '16px',
+        },
+        duration: 3000,
+        position: 'top-center',
+      });
 
+      // Clear form
       setForm({
         name: '',
         email: '',
@@ -105,9 +104,39 @@ function Register() {
       });
 
       setErrors({});
+      setMessage('');
+
+      // Redirect to login page after a short delay
+      setTimeout(() => {
+        navigate('/login');
+      }, 1500);
 
     } catch (err) {
-      setMessage(err.response?.data?.message || 'Registration failed');
+      if (err.response?.data?.errors) {
+        // Handle field-specific validation errors
+        const fieldErrors = {};
+        Object.keys(err.response.data.errors).forEach(key => {
+          // Map server field names to form field names
+          if (key === 'birthdate') {
+            fieldErrors.birthdate = err.response.data.errors[key][0];
+          } else if (key === 'contact_number') {
+            fieldErrors.contact_number = err.response.data.errors[key][0];
+          } else if (key === 'password') {
+            fieldErrors.password = err.response.data.errors[key][0];
+          } else if (key === 'email') {
+            fieldErrors.email = err.response.data.errors[key][0];
+          } else if (key === 'name') {
+            fieldErrors.name = err.response.data.errors[key][0];
+          }
+        });
+        setErrors(fieldErrors);
+      }
+      const errorMessage = err.response?.data?.message || 'Registration failed';
+      // If the error message is about birthdate, also set it as a field error
+      if (errorMessage.toLowerCase().includes('birthdate')) {
+        setErrors(prev => ({ ...prev, birthdate: errorMessage }));
+      }
+      setMessage(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -115,6 +144,7 @@ function Register() {
 
   return (
     <AuthLayout>
+      <Toaster position="top-center" />
       {loading && <LoadingSpinner message="Registering patient..." />}
       
       <div className="auth-container">
@@ -136,25 +166,27 @@ function Register() {
                 <label className="form-label"><i className="bi bi-person me-2" />Full Name</label>
                 <input
                   type="text"
-                  className="form-control"
+                  className={`form-control ${errors.name ? 'is-invalid' : ''}`}
                   name="name"
                   value={form.name}
                   onChange={handleChange}
                   required
                 />
+                {errors.name && <div className="invalid-feedback">{errors.name}</div>}
               </div>
 
               <div className="mb-3">
                 <label className="form-label"><i className="bi bi-envelope me-2" />Email</label>
                 <input
                   type="email"
-                  className="form-control"
+                  className={`form-control ${errors.email ? 'is-invalid' : ''}`}
                   name="email"
                   value={form.email}
                   onChange={handleChange}
                   required
                   autoComplete="email"
                 />
+                {errors.email && <div className="invalid-feedback">{errors.email}</div>}
               </div>
 
               <div className="mb-3">
@@ -217,7 +249,11 @@ function Register() {
               </button>
             </form>
 
-            {message && <div className="alert alert-info text-center mt-3">{message}</div>}
+            {message && (
+              <div className={`alert text-center mt-3 ${message.includes('✅') || message.includes('⚠️') ? 'alert-info' : 'alert-danger'}`}>
+                {message}
+              </div>
+            )}
 
             <div className="text-center mt-3">
               <Link to="/login" className="d-block text-decoration-none text-primary mb-2">

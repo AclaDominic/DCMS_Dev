@@ -30,6 +30,22 @@ export default function NotificationBell() {
 
   useEffect(() => { loadUnread(); }, [loadUnread]);
 
+  const formatTimeAgo = (dateString) => {
+    if (!dateString) return "";
+    const now = new Date();
+    const date = new Date(dateString);
+    const diffInSeconds = Math.floor((now - date) / 1000);
+    
+    if (diffInSeconds < 60) return 'Just now';
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
+    if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)}d ago`;
+    
+    // For dates older than a week, show relative days
+    const diffInDays = Math.floor(diffInSeconds / 86400);
+    return `${diffInDays}d ago`;
+  };
+
   const toggle = async () => {
     const next = !open;
     setOpen(next);
@@ -269,9 +285,7 @@ export default function NotificationBell() {
                         </small>
                       )}
                       <small className="text-muted" style={{ fontSize: '0.7rem', whiteSpace: 'nowrap' }}>
-                        {n.created_at ? new Date(n.created_at).toLocaleDateString() : ""}
-                        <br />
-                        {n.created_at ? new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ""}
+                        {formatTimeAgo(n.created_at)}
                       </small>
                     </div>
                   </div>

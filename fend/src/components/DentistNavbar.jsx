@@ -69,42 +69,6 @@ function DentistNavbar() {
                 </Link>
               </li>
 
-              {/* Visit Codes Link */}
-              <li className="nav-item">
-                <Link
-                  className="nav-link"
-                  to="/dentist/dashboard"
-                  style={{ fontWeight: "500", color: "white" }}
-                >
-                  <i className="bi bi-key me-1"></i>
-                  Visit Codes
-                </Link>
-              </li>
-
-              {/* Schedule Link */}
-              <li className="nav-item">
-                <Link
-                  className="nav-link"
-                  to="/dentist/schedule"
-                  style={{ fontWeight: "500", color: "white" }}
-                >
-                  <i className="bi bi-calendar3 me-1"></i>
-                  Schedule
-                </Link>
-              </li>
-
-              {/* Profile Link */}
-              <li className="nav-item">
-                <Link
-                  className="nav-link"
-                  to="/dentist/profile"
-                  style={{ fontWeight: "500", color: "white" }}
-                >
-                  <i className="bi bi-person-circle me-1"></i>
-                  Profile
-                </Link>
-              </li>
-
               {/* Notifications */}
               <li className="nav-item">
                 <div className="notification-bell">

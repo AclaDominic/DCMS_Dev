@@ -42,9 +42,9 @@ function AdminLayout() {
     <div className={`admin-shell ${sidebarOpen ? "sidebar-open" : "sidebar-closed"}`}>
       {/* Sidebar */}
       <aside className="sidebar  text-white">
-        <div className="sidebar-header d-flex align-items-center justify-content-between">
-          <h5 className="m-0 fw-bold text-center">Admin Panel</h5>
-          <div className="d-flex align-items-center gap-2">
+        <div className="sidebar-header d-flex align-items-center justify-content-center position-relative">
+          <h5 className="m-0 fw-bold text-center w-100">Admin Panel</h5>
+          <div className="d-flex align-items-center gap-2 position-absolute" style={{ right: '0.9rem', zIndex: 2 }}>
             {/* Close button (mobile) */}
             <button
               className="btn btn-sm btn-outline-light d-lg-none"

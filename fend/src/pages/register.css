@@ -124,6 +124,22 @@
   border-color: #dc3545 !important;
 }
 
+/* Invalid feedback styling */
+.invalid-feedback{
+  color: #dc3545;
+  font-size: 0.875rem;
+  margin-top: 0.25rem;
+}
+
+/* Error alert styling */
+.alert-danger{
+  color: #721c24;
+  background-color: #f8d7da;
+  border-color: #f5c2c7;
+  border-radius: 12px;
+  padding: 12px 16px;
+}
+
 /* Primary button */
 .btn.btn-primary{
   background: linear-gradient(to right, var(--brand), var(--brand-dark));

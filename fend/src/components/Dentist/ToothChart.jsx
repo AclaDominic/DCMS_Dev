@@ -248,29 +248,33 @@ const ToothChart = ({ selectedTeeth = [], onTeethChange, showChart = false, onTo
                        <strong className="text-primary">UPPER TEETH (1-16)</strong>
                      </div>
                      <div className="d-flex justify-content-center flex-wrap gap-2">
-                       {[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16].map(toothNumber => {
-                         const tooth = adultToothData.find(t => t.number === toothNumber);
-                         return (
-                           <button
-                             key={toothNumber}
-                             type="button"
-                             className={`btn ${selectedTeeth.includes(toothNumber.toString()) 
-                               ? 'btn-warning' 
-                               : 'btn-outline-primary'
-                             }`}
-                             style={{ 
-                               width: '45px', 
-                               height: '45px',
-                               fontSize: '1rem',
-                               fontWeight: 'bold'
-                             }}
-                             onClick={() => handleToothClick(toothNumber)}
-                             title={`Tooth ${toothNumber}: ${tooth?.name}`}
-                           >
-                             {toothNumber}
-                           </button>
-                         );
-                       })}
+                      {[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16].map(toothNumber => {
+                        const tooth = adultToothData.find(t => t.number === toothNumber);
+                        return (
+                          <button
+                            key={toothNumber}
+                            type="button"
+                            className={`btn ${selectedTeeth.includes(toothNumber.toString()) 
+                              ? 'btn-warning' 
+                              : 'btn-outline-primary'
+                            }`}
+                           style={{ 
+                              width: toothNumber >= 10 ? '50px' : '45px', 
+                              height: '45px',
+                              fontSize: '1rem',
+                              fontWeight: 'bold',
+                              whiteSpace: 'nowrap',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}
+                            onClick={() => handleToothClick(toothNumber)}
+                            title={`Tooth ${toothNumber}: ${tooth?.name}`}
+                          >
+                            {toothNumber}
+                          </button>
+                        );
+                      })}
                      </div>
                    </div>
                    
@@ -280,29 +284,33 @@ const ToothChart = ({ selectedTeeth = [], onTeethChange, showChart = false, onTo
                        <strong className="text-primary">LOWER TEETH (32-17)</strong>
                      </div>
                      <div className="d-flex justify-content-center flex-wrap gap-2">
-                       {[32,31,30,29,28,27,26,25,24,23,22,21,20,19,18,17].map(toothNumber => {
-                         const tooth = adultToothData.find(t => t.number === toothNumber);
-                         return (
-                           <button
-                             key={toothNumber}
-                             type="button"
-                             className={`btn ${selectedTeeth.includes(toothNumber.toString()) 
-                               ? 'btn-warning' 
-                               : 'btn-outline-primary'
-                             }`}
-                             style={{ 
-                               width: '45px', 
-                               height: '45px',
-                               fontSize: '1rem',
-                               fontWeight: 'bold'
-                             }}
-                             onClick={() => handleToothClick(toothNumber)}
-                             title={`Tooth ${toothNumber}: ${tooth?.name}`}
-                           >
-                             {toothNumber}
-                           </button>
-                         );
-                       })}
+                      {[32,31,30,29,28,27,26,25,24,23,22,21,20,19,18,17].map(toothNumber => {
+                        const tooth = adultToothData.find(t => t.number === toothNumber);
+                        return (
+                          <button
+                            key={toothNumber}
+                            type="button"
+                            className={`btn ${selectedTeeth.includes(toothNumber.toString()) 
+                              ? 'btn-warning' 
+                              : 'btn-outline-primary'
+                            }`}
+                           style={{ 
+                              width: toothNumber >= 10 ? '50px' : '45px', 
+                              height: '45px',
+                              fontSize: '1rem',
+                              fontWeight: 'bold',
+                              whiteSpace: 'nowrap',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}
+                            onClick={() => handleToothClick(toothNumber)}
+                            title={`Tooth ${toothNumber}: ${tooth?.name}`}
+                          >
+                            {toothNumber}
+                          </button>
+                        );
+                      })}
                      </div>
                    </div>
                  </>
@@ -324,12 +332,16 @@ const ToothChart = ({ selectedTeeth = [], onTeethChange, showChart = false, onTo
                                ? 'btn-warning' 
                                : 'btn-outline-primary'
                              }`}
-                             style={{ 
-                               width: '45px', 
-                               height: '45px',
-                               fontSize: '1rem',
-                               fontWeight: 'bold'
-                             }}
+                            style={{ 
+                              width: '45px', 
+                              height: '45px',
+                              fontSize: '1rem',
+                              fontWeight: 'bold',
+                              whiteSpace: 'nowrap',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}
                              onClick={() => handleToothClick(toothLetter)}
                              title={`Tooth ${toothLetter}: ${tooth?.name}`}
                            >
@@ -356,12 +368,16 @@ const ToothChart = ({ selectedTeeth = [], onTeethChange, showChart = false, onTo
                                ? 'btn-warning' 
                                : 'btn-outline-primary'
                              }`}
-                             style={{ 
-                               width: '45px', 
-                               height: '45px',
-                               fontSize: '1rem',
-                               fontWeight: 'bold'
-                             }}
+                            style={{ 
+                              width: '45px', 
+                              height: '45px',
+                              fontSize: '1rem',
+                              fontWeight: 'bold',
+                              whiteSpace: 'nowrap',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}
                              onClick={() => handleToothClick(toothLetter)}
                              title={`Tooth ${toothLetter}: ${tooth?.name}`}
                            >

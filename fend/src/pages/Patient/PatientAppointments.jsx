@@ -1,6 +1,8 @@
 import { useEffect, useState, useRef } from "react";
 import api from "../../api/api";
 import PatientServiceHistory from "../../components/Patient/PatientServiceHistory";
+import ConfirmationModal from "../../components/ConfirmationModal";
+import toast, { Toaster } from "react-hot-toast";
 
 function PatientAppointments() {
   const [appointments, setAppointments] = useState([]);
@@ -11,6 +13,8 @@ function PatientAppointments() {
   const [generatingReceipt, setGeneratingReceipt] = useState(null); // appointment_id being processed
   const [canceling, setCanceling] = useState(null); // appointment_id being cancelled
   const [rescheduleModal, setRescheduleModal] = useState(null); // appointment being rescheduled
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [selectedAppointmentId, setSelectedAppointmentId] = useState(null);
   const [rescheduleDate, setRescheduleDate] = useState("");
   const [rescheduleSlots, setRescheduleSlots] = useState([]);
   const [selectedRescheduleSlot, setSelectedRescheduleSlot] = useState("");
@@ -123,20 +127,46 @@ function PatientAppointments() {
     }
   };
 
-  const handleCancel = async (id) => {
-    if (!window.confirm("Are you sure you want to cancel this appointment?")) return;
+  const handleCancelClick = (id) => {
+    setSelectedAppointmentId(id);
+    setShowCancelModal(true);
+  };
+
+  const handleCancel = async () => {
+    if (!selectedAppointmentId) return;
+
     try {
-      setCanceling(id);
+      setCanceling(selectedAppointmentId);
+      setShowCancelModal(false);
       await api.get("/sanctum/csrf-cookie");
-      await api.post(`/api/appointment/${id}/cancel`);
-      alert("Appointment cancelled successfully!");
+      await api.post(`/api/appointment/${selectedAppointmentId}/cancel`);
+      
+      toast.success("Appointment cancelled successfully!", {
+        style: {
+          background: '#28a745',
+          color: '#fff',
+          borderRadius: '8px',
+          padding: '16px',
+          fontSize: '16px',
+        },
+        duration: 4000,
+      });
+      
       fetchAppointments(currentPage);
+      setSelectedAppointmentId(null);
     } catch (err) {
       console.error("Cancel failed", err);
       const serverMsg =
         err.response?.data?.message ||
         "Failed to cancel appointment. Please try again.";
-      alert(serverMsg);
+      toast.error(serverMsg, {
+        style: {
+          background: '#dc3545',
+          color: '#fff',
+          borderRadius: '8px',
+          padding: '16px',
+        },
+      });
     } finally {
       setCanceling(null);
     }
@@ -344,6 +374,21 @@ function PatientAppointments() {
   };
 
   return (
+    <>
+      <Toaster position="top-center" />
+      <ConfirmationModal
+        show={showCancelModal}
+        onConfirm={handleCancel}
+        onCancel={() => {
+          setShowCancelModal(false);
+          setSelectedAppointmentId(null);
+        }}
+        title="Cancel Appointment"
+        message="Are you sure you want to cancel this appointment?"
+        confirmText="Yes, Cancel"
+        cancelText="No, Keep It"
+        variant="danger"
+      />
     <div className="w-100">
           <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4">
             <h2 className="h4 mb-3 mb-md-0">
@@ -646,7 +691,7 @@ function PatientAppointments() {
                                        (a.payment_status === "unpaid" || a.payment_status === "awaiting_payment"))) && (
                                       <button
                                         className="btn btn-outline-danger btn-sm"
-                                        onClick={() => handleCancel(a.id)}
+                                        onClick={() => handleCancelClick(a.id)}
                                         disabled={canceling === a.id || paying === a.id || generatingReceipt === a.id}
                                       >
                                         {canceling === a.id ? (
@@ -810,7 +855,7 @@ function PatientAppointments() {
                              (a.payment_status === "unpaid" || a.payment_status === "awaiting_payment"))) && (
                             <button
                               className="btn btn-outline-danger btn-sm flex-fill"
-                              onClick={() => handleCancel(a.id)}
+                              onClick={() => handleCancelClick(a.id)}
                               disabled={canceling === a.id || paying === a.id || generatingReceipt === a.id}
                             >
                               {canceling === a.id ? (
@@ -1017,6 +1062,7 @@ function PatientAppointments() {
             </div>
           )}
     </div>
+    </>
   );
 }
 
