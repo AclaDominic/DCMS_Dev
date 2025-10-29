@@ -11,7 +11,6 @@ function Register() {
     name: '',
     email: '',
     contact_number: '',
-    birthdate: '',
     password: '',
     confirmPassword: ''
   });
@@ -27,18 +26,6 @@ function Register() {
 
     if (!/^09\d{9}$/.test(form.contact_number)) {
       newErrors.contact_number = "Contact number must start with 09 and be 11 digits.";
-    }
-
-    if (!form.birthdate) {
-      newErrors.birthdate = "Birthdate is required.";
-    } else {
-      const birthDate = new Date(form.birthdate);
-      const today = new Date();
-      const age = today.getFullYear() - birthDate.getFullYear();
-      
-      if (age < 0 || age > 120) {
-        newErrors.birthdate = "Please enter a valid birthdate.";
-      }
     }
 
     if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}/.test(form.password)) {
@@ -72,7 +59,6 @@ function Register() {
         name: form.name,
         email: form.email,
         contact_number: form.contact_number,
-        birthdate: form.birthdate,
         password: form.password,
         password_confirmation: form.confirmPassword
       });
@@ -98,7 +84,6 @@ function Register() {
         name: '',
         email: '',
         contact_number: '',
-        birthdate: '',
         password: '',
         confirmPassword: ''
       });
@@ -117,9 +102,7 @@ function Register() {
         const fieldErrors = {};
         Object.keys(err.response.data.errors).forEach(key => {
           // Map server field names to form field names
-          if (key === 'birthdate') {
-            fieldErrors.birthdate = err.response.data.errors[key][0];
-          } else if (key === 'contact_number') {
+          if (key === 'contact_number') {
             fieldErrors.contact_number = err.response.data.errors[key][0];
           } else if (key === 'password') {
             fieldErrors.password = err.response.data.errors[key][0];
@@ -132,10 +115,6 @@ function Register() {
         setErrors(fieldErrors);
       }
       const errorMessage = err.response?.data?.message || 'Registration failed';
-      // If the error message is about birthdate, also set it as a field error
-      if (errorMessage.toLowerCase().includes('birthdate')) {
-        setErrors(prev => ({ ...prev, birthdate: errorMessage }));
-      }
       setMessage(errorMessage);
     } finally {
       setLoading(false);
@@ -200,19 +179,6 @@ function Register() {
                   required
                 />
                 {errors.contact_number && <div className="invalid-feedback">{errors.contact_number}</div>}
-              </div>
-
-              <div className="mb-3">
-                <label className="form-label"><i className="bi bi-calendar-date me-2" />Birthdate</label>
-                <input
-                  type="date"
-                  className={`form-control ${errors.birthdate ? 'is-invalid' : ''}`}
-                  name="birthdate"
-                  value={form.birthdate}
-                  onChange={handleChange}
-                  required
-                />
-                {errors.birthdate && <div className="invalid-feedback">{errors.birthdate}</div>}
               </div>
 
               <div className="mb-3">

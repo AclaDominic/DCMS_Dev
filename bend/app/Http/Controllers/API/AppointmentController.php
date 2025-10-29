@@ -20,6 +20,7 @@ use App\Services\SystemLogService;
 use App\Helpers\IpHelper;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 
 class AppointmentController extends Controller
 {
@@ -84,7 +85,7 @@ class AppointmentController extends Controller
     }
 
     // resolve booking patient by the authenticated user
-    $patient = Patient::byUser(auth()->id());
+    $patient = Patient::byUser(Auth::id());
     if (!$patient) {
         return response()->json([
             'message' => 'Your account is not yet linked to a patient record. Please contact the clinic.',
@@ -201,7 +202,7 @@ class AppointmentController extends Controller
                 SystemLogService::logAppointment(
                     'approve_failed_capacity',
                     $appointment->id,
-                    'Staff ' . auth()->user()->name . ' attempted to approve appointment #' . $appointment->id . ' but slot is full',
+                    'Staff ' . Auth::user()->name . ' attempted to approve appointment #' . $appointment->id . ' but slot is full',
                     [
                         'appointment_id' => $appointment->id,
                         'date' => $appointment->date,
@@ -223,7 +224,7 @@ class AppointmentController extends Controller
         SystemLogService::logAppointment(
             'approved',
             $appointment->id,
-            'Staff ' . auth()->user()->name . ' approved appointment #' . $appointment->id,
+            'Staff ' . Auth::user()->name . ' approved appointment #' . $appointment->id,
             [
                 'appointment_id' => $appointment->id,
                 'patient_id' => $appointment->patient_id,
@@ -278,7 +279,7 @@ class AppointmentController extends Controller
         SystemLogService::logAppointment(
             'rejected',
             $appointment->id,
-            'Staff ' . auth()->user()->name . ' rejected appointment #' . $appointment->id . ' - Reason: ' . $request->note,
+            'Staff ' . Auth::user()->name . ' rejected appointment #' . $appointment->id . ' - Reason: ' . $request->note,
             [
                 'appointment_id' => $appointment->id,
                 'patient_id' => $appointment->patient_id,
@@ -431,7 +432,7 @@ class AppointmentController extends Controller
 
     public function cancel($id)
     {
-        $user = auth()->user();
+        $user = Auth::user();
 
         if (!$user->patient) {
             return response()->json(['message' => 'Not linked to patient profile.'], 403);
@@ -467,7 +468,7 @@ class AppointmentController extends Controller
 
         // Cancel any existing Maya payments for this appointment
         if ($appointment->payment_method === 'maya') {
-            $mayaPayments = \App\Models\Payment::where('appointment_id', $appointment->id)
+            $mayaPayments = Payment::where('appointment_id', $appointment->id)
                 ->where('method', 'maya')
                 ->whereIn('status', ['unpaid', 'awaiting_payment'])
                 ->get();
@@ -554,7 +555,7 @@ class AppointmentController extends Controller
             SystemLogService::logAppointment(
                 'reminder_sent_custom',
                 $appointment->id,
-                'Staff ' . auth()->user()->name . ' sent a custom reminder for appointment #' . $appointment->id,
+                'Staff ' . Auth::user()->name . ' sent a custom reminder for appointment #' . $appointment->id,
                 [
                     'appointment_id' => $appointment->id,
                     'patient_id' => $appointment->patient_id,
@@ -651,7 +652,7 @@ class AppointmentController extends Controller
         SystemLogService::logAppointment(
             'resolve_by_code',
             $appointment->id,
-            'Staff ' . auth()->user()->name . ' looked up appointment by reference code: ' . $code,
+            'Staff ' . Auth::user()->name . ' looked up appointment by reference code: ' . $code,
             [
                 'reference_code' => $code,
                 'appointment_id' => $appointment->id,
@@ -689,7 +690,7 @@ class AppointmentController extends Controller
 
         // build usage map for the date (pending + approved + completed)
         $slotUsage = array_fill_keys($grid, 0);
-        $appointmentsQuery = Appointment::whereDate('date', $dateStr)
+        $appointmentsQuery = Appointment::where('date', $dateStr)
             ->whereIn('status', ['pending', 'approved', 'completed']);
         
         // Exclude the appointment being approved to avoid double-counting
@@ -798,8 +799,8 @@ class AppointmentController extends Controller
         $appointment->notes = trim(implode("\n", array_filter($noteLines)));
         $appointment->save();
 
-        \Illuminate\Support\Facades\DB::transaction(function () use ($user, $patient, $coverage, $balance, $v) {
-            $noticeId = \Illuminate\Support\Facades\DB::table('notifications')->insertGetId([
+        DB::transaction(function () use ($user, $patient, $coverage, $balance, $v) {
+            $noticeId = DB::table('notifications')->insertGetId([
                 'type'            => 'hmo_coverage',
                 'title'           => 'HMO Coverage Update',
                 'body'            => $v['message'],
@@ -819,7 +820,7 @@ class AppointmentController extends Controller
                 'updated_at'      => now(),
             ]);
 
-            \Illuminate\Support\Facades\DB::table('notification_targets')->upsert([
+            DB::table('notification_targets')->upsert([
                 [
                     'notification_id' => $noticeId,
                     'user_id'         => $patient->user_id,
@@ -847,7 +848,7 @@ class AppointmentController extends Controller
      */
     public function reschedule(Request $request, $id, ClinicDateResolverService $resolver)
     {
-        $user = auth()->user();
+        $user = Auth::user();
         if (!$user->patient) {
             return response()->json(['message' => 'Not linked to patient profile.'], 403);
         }
@@ -1045,11 +1046,11 @@ class AppointmentController extends Controller
     public function debugAuth(Request $request): \Illuminate\Http\JsonResponse
     {
         try {
-            $user = auth()->user();
-            $userId = auth()->id();
+            $user = Auth::user();
+            $userId = Auth::id();
             
             $debug = [
-                'authenticated' => auth()->check(),
+                'authenticated' => Auth::check(),
                 'user_id' => $userId,
                 'user' => $user ? [
                     'id' => $user->id,
@@ -1097,7 +1098,7 @@ class AppointmentController extends Controller
     public function checkBlockedStatus(Request $request): \Illuminate\Http\JsonResponse
     {
         try {
-            $patient = Patient::byUser(auth()->id());
+            $patient = Patient::byUser(Auth::id());
             
             if (!$patient) {
                 return response()->json([
@@ -1126,7 +1127,7 @@ class AppointmentController extends Controller
 
         } catch (\Exception $e) {
             Log::error('Error checking blocked status', [
-                'user_id' => auth()->id(),
+                'user_id' => Auth::id(),
                 'error' => $e->getMessage(),
             ]);
 
@@ -1272,7 +1273,7 @@ class AppointmentController extends Controller
         $appointment->load(['patient', 'service']);
 
         // Log appointment creation by staff
-        $staffName = auth()->user() ? auth()->user()->name : 'Staff';
+        $staffName = Auth::user() ? Auth::user()->name : 'Staff';
         SystemLogService::logAppointment(
             'created',
             $appointment->id,

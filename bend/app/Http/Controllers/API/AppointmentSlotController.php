@@ -8,6 +8,7 @@ use App\Models\Appointment;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\Services\ClinicDateResolverService;
+use Illuminate\Support\Facades\Auth;
 
 class AppointmentSlotController extends Controller
 {
@@ -24,7 +25,7 @@ class AppointmentSlotController extends Controller
         ]);
 
         // Get the authenticated patient
-        $patient = \App\Models\Patient::byUser(auth()->id());
+        $patient = \App\Models\Patient::byUser(Auth::id());
 
         $date = Carbon::createFromFormat('Y-m-d', $data['date'])->startOfDay();
         $snap = $resolver->resolve($date);
@@ -38,7 +39,7 @@ class AppointmentSlotController extends Controller
         $usage  = array_fill_keys($blocks, 0);
 
         // Count PENDING + APPROVED + COMPLETED on that date (parse "HH:MM[-SS]-HH:MM[-SS]")
-        $appts = Appointment::whereDate('date', $date->toDateString())
+        $appts = Appointment::where('date', $date->toDateString())
             ->whereIn('status', ['pending', 'approved', 'completed'])
             ->get(['time_slot']);
 

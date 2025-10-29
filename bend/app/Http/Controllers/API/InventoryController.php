@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use App\Http\Controllers\Controller;
 use App\Services\NotificationService;
+use Illuminate\Support\Facades\Auth;
 
 class InventoryController extends Controller
 {
@@ -26,7 +27,8 @@ class InventoryController extends Controller
     public function receive(Request $request)
     {
         // 🚧 Policy: staff can only receive if toggle is ON
-        if (!auth()->user()?->can('admin') && !AppSetting::staffCanReceive()) {
+        $user = Auth::user();
+        if (!$user || ($user->role !== 'admin' && !AppSetting::staffCanReceive())) {
             return response()->json(['message' => 'Receiving is disabled for staff.'], 403);
         }
 
@@ -77,7 +79,7 @@ class InventoryController extends Controller
                 'invoice_no' => $validated['invoice_no'] ?? null,
                 'invoice_date' => $validated['invoice_date'] ?? null,
                 'received_at' => $receivedAt,
-                'received_by' => auth()->id(),
+                'received_by' => Auth::id(),
                 'pack_size' => $validated['pack_size'] ?? null,
             ]);
 
@@ -87,7 +89,7 @@ class InventoryController extends Controller
                 'type' => InventoryMovement::TYPE_RECEIVE,
                 'quantity' => $validated['qty_received'],
                 'cost_at_time' => $validated['cost_per_unit'] ?? null,
-                'user_id' => auth()->id(),
+                'user_id' => Auth::id(),
                 'notes' => $validated['notes'] ?? null,
             ]);
 
@@ -254,7 +256,7 @@ class InventoryController extends Controller
                 'type' => InventoryMovement::TYPE_ADJUST,
                 'quantity' => $qty,
                 'adjust_reason' => $validated['adjust_reason'],
-                'user_id' => auth()->id(),
+                'user_id' => Auth::id(),
                 'notes' => $validated['notes'] ?? null,
             ]);
 

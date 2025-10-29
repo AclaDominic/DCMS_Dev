@@ -5,6 +5,7 @@ namespace App\Http\Controllers\API;
 use App\Http\Controllers\Controller;
 use App\Models\InventoryItem;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class InventoryItemController extends Controller
 {
@@ -35,7 +36,7 @@ class InventoryItemController extends Controller
         ]);
 
         $data['is_active']  = true;
-        $data['created_by'] = auth()->id();
+        $data['created_by'] = Auth::id();
 
         $item = InventoryItem::create($data);
         return response()->json($item, 201);

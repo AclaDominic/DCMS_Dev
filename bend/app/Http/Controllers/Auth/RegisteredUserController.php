@@ -30,7 +30,6 @@ class RegisteredUserController extends Controller
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
             'contact_number' => ['required', 'regex:/^(09|\+639)\d{9}$/', 'unique:users,contact_number'],
-            'birthdate' => ['required', 'date', 'before:today'],
         ]);
 
         // Check if the IP address is blocked
@@ -51,7 +50,6 @@ class RegisteredUserController extends Controller
                     'password' => Hash::make($request->string('password')),
                     'contact_number' => $request->contact_number,
                     'role' => 'patient',
-                    'notes' => "Birthdate: {$request->birthdate}", // Store birthdate in notes for later use
                 ]);
 
                 // If IP is blocked, flag the user account for monitoring
@@ -71,7 +69,7 @@ class RegisteredUserController extends Controller
                     );
 
                     // Add a note to track this registration
-                    $user->notes = "Birthdate: {$request->birthdate}. Account created from blocked IP address: {$userIp}. Monitor for appointment no-shows.";
+                    $user->notes = "Account created from blocked IP address: {$userIp}. Monitor for appointment no-shows.";
                     $user->save();
                 } else {
                     // Log successful registration

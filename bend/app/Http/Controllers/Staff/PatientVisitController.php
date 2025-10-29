@@ -377,7 +377,7 @@ class PatientVisitController extends Controller
             // Find and update matching appointments
             $matchingAppointments = Appointment::where('patient_id', $visit->patient_id)
                 ->where('service_id', $visit->service_id)
-                ->whereDate('date', $visit->visit_date)
+                ->where('date', $visit->visit_date)
                 ->whereIn('status', ['approved', 'completed'])
                 ->get();
 

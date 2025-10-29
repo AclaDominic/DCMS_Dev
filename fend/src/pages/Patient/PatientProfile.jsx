@@ -48,9 +48,44 @@ const PatientProfile = () => {
   };
 
 
+  const validateBirthdate = (dateString) => {
+    if (!dateString) return "Birthdate is required.";
+    
+    const birthDate = new Date(dateString);
+    const today = new Date();
+    const fourYearsAgo = new Date();
+    fourYearsAgo.setFullYear(today.getFullYear() - 4);
+    
+    if (birthDate > today) {
+      return "Birthdate cannot be in the future.";
+    }
+    
+    if (birthDate > fourYearsAgo) {
+      return "You must be at least 4 years old.";
+    }
+    
+    return null;
+  };
+
+  // Calculate the maximum allowed date (4 years ago)
+  const getMaxBirthdate = () => {
+    const fourYearsAgo = new Date();
+    fourYearsAgo.setFullYear(fourYearsAgo.getFullYear() - 4);
+    return fourYearsAgo.toISOString().split('T')[0];
+  };
+
   const handleLinkSelf = async () => {
     setLoading(true);
     setErrors({});
+    
+    // Frontend validation
+    const birthdateError = validateBirthdate(birthdate);
+    if (birthdateError) {
+      setErrors({ birthdate: [birthdateError] });
+      setLoading(false);
+      return;
+    }
+    
     try {
       await api.post("/api/patients/link-self", {
         contact_number: contactNumber,
@@ -275,13 +310,26 @@ const PatientProfile = () => {
                                 type="date"
                                 className={`form-control form-control-lg border-2 ${errors.birthdate ? 'is-invalid' : ''}`}
                                 value={birthdate}
-                                onChange={(e) => setBirthdate(e.target.value)}
+                                onChange={(e) => {
+                                  const value = e.target.value;
+                                  setBirthdate(value);
+                                  
+                                  // Real-time validation
+                                  const error = validateBirthdate(value);
+                                  if (error) {
+                                    setErrors(prev => ({ ...prev, birthdate: [error] }));
+                                  } else {
+                                    setErrors(prev => ({ ...prev, birthdate: null }));
+                                  }
+                                }}
+                                max={getMaxBirthdate()} // Must be at least 4 years old
+                                min={new Date(new Date().setFullYear(new Date().getFullYear() - 120)).toISOString().split('T')[0]} // Allow up to 120 years old
                                 style={{ fontSize: '1.1rem' }}
                               />
                               {errors.birthdate && (
                                 <div className="text-danger mt-2">
                                   <i className="bi bi-exclamation-triangle me-1"></i>
-                                  {errors.birthdate[0]}
+                                  {Array.isArray(errors.birthdate) ? errors.birthdate[0] : errors.birthdate}
                                 </div>
                               )}
                             </div>

@@ -9,6 +9,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use App\Services\SystemLogService;
+use Carbon\Carbon;
 
 class PatientController extends Controller
 {
@@ -27,7 +28,20 @@ class PatientController extends Controller
             'first_name' => 'required|string|max:100',
             'last_name' => 'required|string|max:100',
             'middle_name' => 'nullable|string|max:100',
-            'birthdate' => 'nullable|date',
+            'birthdate' => [
+                'nullable',
+                'date',
+                'before:today', // Cannot be in the future
+                function ($attribute, $value, $fail) {
+                    if ($value) {
+                        $birthdate = Carbon::parse($value);
+                        $minDate = Carbon::today()->subYears(4); // Must be at least 4 years old
+                        if ($birthdate->gt($minDate)) {
+                            $fail('The birthdate must be at least 4 years before today.');
+                        }
+                    }
+                },
+            ],
             'sex' => 'nullable|in:male,female',
             'contact_number' => 'nullable|string|max:20',
             'address' => 'nullable|string|max:255',
@@ -44,7 +58,7 @@ class PatientController extends Controller
                 'patient_id' => $patient->id,
                 'name' => $patient->first_name . ' ' . $patient->last_name,
                 'contact_number' => $patient->contact_number,
-                'added_by' => auth()->id()
+                'added_by' => Auth::id()
             ]
         );
 
@@ -86,7 +100,7 @@ class PatientController extends Controller
                 'patient_name' => $patient->first_name . ' ' . $patient->last_name,
                 'user_id' => $user->id,
                 'user_email' => $user->email,
-                'linked_by' => auth()->id()
+                'linked_by' => Auth::id()
             ]
         );
 
@@ -107,7 +121,7 @@ class PatientController extends Controller
             [
                 'patient_id' => $patient->id,
                 'patient_name' => $patient->first_name . ' ' . $patient->last_name,
-                'flagged_by' => auth()->id()
+                'flagged_by' => Auth::id()
             ]
         );
 
@@ -142,7 +156,18 @@ class PatientController extends Controller
             'first_name' => 'required|string|max:100',
             'middle_name' => 'nullable|string|max:100',
             'last_name' => 'required|string|max:100',
-            'birthdate' => 'required|date|before:today',
+            'birthdate' => [
+                'required',
+                'date',
+                'before:today', // Cannot be in the future
+                function ($attribute, $value, $fail) {
+                    $birthdate = Carbon::parse($value);
+                    $minDate = Carbon::today()->subYears(4); // Must be at least 4 years old
+                    if ($birthdate->gt($minDate)) {
+                        $fail('The birthdate must be at least 4 years before today.');
+                    }
+                },
+            ],
             'sex' => 'required|in:male,female',
         ]);
 

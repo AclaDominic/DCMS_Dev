@@ -371,6 +371,32 @@ function VisitTrackerManager() {
     }
   };
 
+  const validateBirthdate = (dateString) => {
+    if (!dateString) return null; // Optional field
+    
+    const birthDate = new Date(dateString);
+    const today = new Date();
+    const fourYearsAgo = new Date();
+    fourYearsAgo.setFullYear(today.getFullYear() - 4);
+    
+    if (birthDate > today) {
+      return "Birthdate cannot be in the future.";
+    }
+    
+    if (birthDate > fourYearsAgo) {
+      return "Patient must be at least 4 years old.";
+    }
+    
+    return null;
+  };
+
+  // Calculate the maximum allowed date (4 years ago)
+  const getMaxBirthdate = () => {
+    const fourYearsAgo = new Date();
+    fourYearsAgo.setFullYear(fourYearsAgo.getFullYear() - 4);
+    return fourYearsAgo.toISOString().split('T')[0];
+  };
+
   const handleCreateAppointment = async () => {
     if (!appointmentForm.service_id || !appointmentForm.date || !appointmentForm.start_time) {
       alert('Please select service, date, and time.');
@@ -380,6 +406,13 @@ function VisitTrackerManager() {
     // Check if per-teeth service requires teeth count
     if (selectedServiceDetails && selectedServiceDetails.per_teeth_service && !appointmentForm.teeth_count) {
       alert('Please enter the number of teeth for this per-teeth service.');
+      return;
+    }
+
+    // Validate birthdate if provided
+    const birthdateError = validateBirthdate(appointmentForm.birthdate);
+    if (birthdateError) {
+      alert(birthdateError);
       return;
     }
 
@@ -1245,8 +1278,21 @@ function VisitTrackerManager() {
                             type="date"
                             className="form-control"
                             value={appointmentForm.birthdate}
-                            onChange={(e) => setAppointmentForm(prev => ({ ...prev, birthdate: e.target.value }))}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              setAppointmentForm(prev => ({ ...prev, birthdate: value }));
+                              
+                              // Real-time validation
+                              const error = validateBirthdate(value);
+                              if (error) {
+                                alert(error);
+                              }
+                            }}
+                            max={getMaxBirthdate()} // Must be at least 4 years old
                           />
+                          <div className="form-text">
+                            Must be at least 4 years old (dates after {getMaxBirthdate()} are not selectable).
+                          </div>
                         </div>
                       </>
                     )}

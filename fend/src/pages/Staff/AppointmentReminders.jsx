@@ -56,11 +56,11 @@ function AppointmentReminders() {
         edited,
       });
 
-      alert("Reminder sent!");
+      alert("SMS reminder sent!");
       setShowModal(false);
       fetchRemindableAppointments();
     } catch (err) {
-      alert("Failed to send reminder.");
+      alert("Failed to send SMS reminder.");
       console.error(err);
     } finally {
       setSending((prev) => ({ ...prev, [id]: false }));
@@ -110,7 +110,7 @@ function AppointmentReminders() {
                       disabled={sending[a.id] || a.status !== 'approved'}
                       onClick={() => handleOpenModal(a)}
                     >
-                      {sending[a.id] ? "Sending..." : "Send Reminder"}
+                      {sending[a.id] ? "Sending..." : "Send SMS Reminder"}
                     </button>
                   </td>
                 </tr>
@@ -123,7 +123,7 @@ function AppointmentReminders() {
       {/* Modal */}
       <Modal show={showModal} onHide={() => setShowModal(false)} size="lg">
         <Modal.Header closeButton>
-          <Modal.Title>Edit Reminder Message</Modal.Title>
+          <Modal.Title>Edit SMS Reminder Message</Modal.Title>
         </Modal.Header>
         <Modal.Body>
           <Form.Group controlId="reminderMessage">
@@ -153,7 +153,7 @@ function AppointmentReminders() {
             onClick={handleSend}
             disabled={sending[selected?.id]}
           >
-            {sending[selected?.id] ? "Sending..." : "Send Reminder"}
+            {sending[selected?.id] ? "Sending..." : "Send SMS Reminder"}
           </Button>
         </Modal.Footer>
       </Modal>
