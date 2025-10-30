@@ -18,6 +18,8 @@ function Register() {
   const [errors, setErrors] = useState({});
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [showPrivacyModal, setShowPrivacyModal] = useState(false);
 
   const navigate = useNavigate();
 
@@ -34,6 +36,10 @@ function Register() {
 
     if (form.password !== form.confirmPassword) {
       newErrors.confirmPassword = "Passwords do not match.";
+    }
+
+    if (!acceptedTerms) {
+      newErrors.terms = "You must accept the Terms and Conditions and Privacy Policy to register.";
     }
 
     setErrors(newErrors);
@@ -209,7 +215,39 @@ function Register() {
                 {errors.confirmPassword && <div className="invalid-feedback">{errors.confirmPassword}</div>}
               </div>
 
-              <button type="submit" className="btn btn-primary w-100">
+              {/* Terms and Conditions Checkbox */}
+              <div className="mb-3">
+                <div className="form-check">
+                  <input
+                    className={`form-check-input ${errors.terms ? 'is-invalid' : ''}`}
+                    type="checkbox"
+                    id="acceptTerms"
+                    checked={acceptedTerms}
+                    onChange={(e) => {
+                      setAcceptedTerms(e.target.checked);
+                      setErrors({ ...errors, terms: null });
+                    }}
+                    required
+                  />
+                  <label className="form-check-label" htmlFor="acceptTerms">
+                    I agree to the{' '}
+                    <button
+                      type="button"
+                      className="btn btn-link p-0 text-decoration-none"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setShowPrivacyModal(true);
+                      }}
+                      style={{ verticalAlign: 'baseline' }}
+                    >
+                      Term, Privacy Policy
+                    </button>
+                  </label>
+                  {errors.terms && <div className="invalid-feedback d-block">{errors.terms}</div>}
+                </div>
+              </div>
+
+              <button type="submit" className="btn btn-primary w-100" disabled={!acceptedTerms}>
                 <i className="bi bi-person-plus me-2" />
                 Register
               </button>
@@ -227,19 +265,166 @@ function Register() {
                 Already have an account? Login
               </Link>
               
-              {/* Back to Login Button */}
-              <button
-                type="button"
-                className="btn btn-outline-secondary btn-sm"
-                onClick={() => navigate("/login")}
-              >
-                <i className="bi bi-arrow-left me-2" />
-                Back to Login
-              </button>
+          
             </div>
           </div>
         </div>
       </div>
+
+      {/* Privacy Policy and Terms Modal */}
+      {showPrivacyModal && (
+        <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <div className="modal-dialog modal-lg modal-dialog-scrollable">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">Terms, Privacy Policy</h5>
+                <button
+                  type="button"
+                  className="btn-close"
+                  onClick={() => setShowPrivacyModal(false)}
+                ></button>
+              </div>
+              <div className="modal-body">
+                <h6>Privacy Policy</h6>
+                <p><strong>Data Protection Act Compliance</strong></p>
+                <p>
+                  Kreative Dental Clinic is committed to protecting your privacy and personal information in accordance 
+                  with the Data Protection Act. We collect, use, store, and process your personal data only for the 
+                  purpose of providing dental services and managing your patient records.
+                </p>
+
+                <p><strong>Information We Collect:</strong></p>
+                <ul>
+                  <li>Personal identification information (name, email, contact number)</li>
+                  <li>Medical and dental history</li>
+                  <li>Appointment records and treatment information</li>
+                  <li>Billing and payment information</li>
+                  <li>Device and usage information when you access our online services</li>
+                </ul>
+
+                <p><strong>How We Use Your Information:</strong></p>
+                <ul>
+                  <li>To provide and improve our dental services</li>
+                  <li>To schedule and manage appointments</li>
+                  <li>To communicate with you about your treatment and appointments</li>
+                  <li>To maintain your medical records as required by law</li>
+                  <li>To process payments and billing</li>
+                  <li>To send important updates and notifications</li>
+                </ul>
+
+                <p><strong>Data Security:</strong></p>
+                <p>
+                  We implement appropriate technical and organizational measures to protect your personal information 
+                  against unauthorized access, alteration, disclosure, or destruction. Your data is stored securely 
+                  and access is restricted to authorized personnel only.
+                </p>
+
+                <p><strong>Your Rights:</strong></p>
+                <ul>
+                  <li>Right to access your personal information</li>
+                  <li>Right to rectification of inaccurate data</li>
+                  <li>Right to erasure (in certain circumstances)</li>
+                  <li>Right to data portability</li>
+                  <li>Right to object to processing</li>
+                  <li>Right to withdraw consent</li>
+                </ul>
+
+                <p><strong>Data Retention:</strong></p>
+                <p>
+                  We retain your personal information for as long as necessary to provide our services and as required 
+                  by applicable laws and regulations. Medical records are typically retained for a minimum period as 
+                  mandated by law.
+                </p>
+
+                <hr />
+
+                <h6>Terms and Conditions</h6>
+                <p><strong>Acceptance of Terms:</strong></p>
+                <p>
+                  By creating an account and using our services, you agree to comply with and be bound by these 
+                  Terms and Conditions. If you do not agree with any part of these terms, please do not use our services.
+                </p>
+
+                <p><strong>Account Responsibilities:</strong></p>
+                <ul>
+                  <li>You are responsible for maintaining the confidentiality of your account credentials</li>
+                  <li>You must provide accurate and complete information</li>
+                  <li>You must notify us immediately of any unauthorized use of your account</li>
+                  <li>You are responsible for all activities that occur under your account</li>
+                </ul>
+
+                <p><strong>Appointment Policies:</strong></p>
+                <ul>
+                  <li>Appointments should be made in advance through the system</li>
+                  <li>Cancellations should be made at least 24 hours in advance</li>
+                  <li>Late arrivals may result in rescheduling of your appointment</li>
+                  <li>Missed appointments without proper notice may incur a fee</li>
+                </ul>
+
+                <p><strong>Medical Information:</strong></p>
+                <p>
+                  The information provided in this system is for your convenience only. It is not a substitute for 
+                  professional medical advice, diagnosis, or treatment. Always consult with qualified dental professionals 
+                  for proper diagnosis and treatment.
+                </p>
+
+                <p><strong>Service Availability:</strong></p>
+                <p>
+                  We reserve the right to modify, suspend, or discontinue any aspect of the service at any time. 
+                  We do not guarantee uninterrupted or error-free access to our systems.
+                </p>
+
+                <p><strong>Limitation of Liability:</strong></p>
+                <p>
+                  To the fullest extent permitted by law, Kreative Dental Clinic shall not be liable for any indirect, 
+                  incidental, special, consequential, or punitive damages resulting from your use of our services.
+                </p>
+
+                <p><strong>Changes to Terms:</strong></p>
+                <p>
+                  We reserve the right to modify these Terms and Conditions at any time. Continued use of our services 
+                  after changes constitutes acceptance of the modified terms.
+                </p>
+
+                <hr />
+
+                <p><strong>Contact Information:</strong></p>
+                <p>
+                  If you have any questions about this Privacy Policy or Terms and Conditions, please contact us at:
+                </p>
+                <p>
+                  Kreative Dental Clinic<br />
+                  Email: kreativedent@gmail.com<br />
+                  Phone: 0927 759 2845
+                </p>
+
+                <p className="text-muted small mt-4">
+                  <strong>Effective Date:</strong> {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+                </p>
+              </div>
+              <div className="modal-footer">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setShowPrivacyModal(false)}
+                >
+                  Close
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={() => {
+                    setAcceptedTerms(true);
+                    setShowPrivacyModal(false);
+                  }}
+                >
+                  Accept and Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </AuthLayout>
   );
 }
