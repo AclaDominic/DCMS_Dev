@@ -12,10 +12,10 @@ Route::get('/', function () {
     return File::get(public_path('index.html'));
 });
 
-// Serve the built SPA for any path that is NOT /api, /sanctum, or /storage
+// Serve the built SPA for any path that is NOT /api, /sanctum, /storage, or /assets
 Route::get('/{any}', function () {
     return File::get(public_path('index.html'));
-})->where('any', '^(?!api)(?!sanctum)(?!storage).*$');
+})->where('any', '^(?!api)(?!sanctum)(?!storage)(?!assets).*$');
 
 Route::post('/login', [AuthenticatedSessionController::class, 'store']);
 

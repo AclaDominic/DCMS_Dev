@@ -1,7 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, lazy, Suspense } from "react";
 import api from "../../api/api";
 import { getFingerprint } from "../../utils/getFingerprint";
-import VisitTrackerManager from "../../components/Staff/VisitTrackerManager" // ✅ Import the manager
+
+// Lazy load VisitTrackerManager for code splitting
+const VisitTrackerManager = lazy(() => import("../../components/Staff/VisitTrackerManager"));
 
 const StaffDashboard = () => {
   const [status, setStatus] = useState(null);
@@ -60,7 +62,9 @@ const StaffDashboard = () => {
         visits.
       </p>
 
-      <VisitTrackerManager />
+      <Suspense fallback={<div className="text-center p-4">Loading visit tracker...</div>}>
+        <VisitTrackerManager />
+      </Suspense>
     </div>
   );
 };

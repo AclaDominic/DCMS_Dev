@@ -47,10 +47,11 @@ const DentistScheduleManager = lazy(() =>
 import StaffLayout from "../layouts/StaffLayout";
 import StaffDashboard from "../pages/Staff/StaffDashboard";
 import StaffProfile from "../pages/Staff/StaffProfile";
-import StaffAppointmentManager from "../pages/Staff/StaffAppointmentManager"; // Appointment management
+// Lazy load appointment-related components for code splitting
+const StaffAppointmentManager = lazy(() => import("../pages/Staff/StaffAppointmentManager"));
+const AppointmentFinder = lazy(() => import("../pages/Staff/AppointmentFinder"));
 import AdminAppointmentManager from "../pages/Admin/AdminAppointmentManager"; // Admin appointment management
 import AppointmentReminders from "../pages/Staff/AppointmentReminders";
-import AppointmentFinder from "../pages/Staff/AppointmentFinder";
 import ConsumeStockPage from "../pages/Staff/ConsumeStockPage";
 import StaffPaymentRecords from "../pages/Staff/PaymentRecords";
 import StaffPatientUserBindingPage from "../pages/Staff/PatientUserBindingPage";
@@ -150,8 +151,22 @@ export default function AppRouter() {
         <Route path="/staff" element={<StaffLayout />}>
           <Route index element={<StaffDashboard />} />
           <Route path="profile" element={<StaffProfile />} />
-          <Route path="appointments" element={<StaffAppointmentManager />} />
-          <Route path="appointment-finder" element={<AppointmentFinder />} />
+          <Route 
+            path="appointments" 
+            element={
+              <Suspense fallback={<div>Loading appointments...</div>}>
+                <StaffAppointmentManager />
+              </Suspense>
+            } 
+          />
+          <Route 
+            path="appointment-finder" 
+            element={
+              <Suspense fallback={<div>Loading appointment finder...</div>}>
+                <AppointmentFinder />
+              </Suspense>
+            } 
+          />
           <Route
             path="appointment-reminders"
             element={<AppointmentReminders />}

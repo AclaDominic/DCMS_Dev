@@ -1,6 +1,4 @@
 import { useEffect, useState } from "react";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
 import api from "../../api/api";
 import LoadingSpinner from "../../components/LoadingSpinner";
 import { addClinicHeader } from "../../utils/pdfHeader";
@@ -28,6 +26,10 @@ export default function PromoArchive() {
   };
 
   const exportToPDF = async () => {
+    // Dynamically import PDF libraries to reduce initial bundle size
+    const { default: jsPDF } = await import("jspdf");
+    const { default: autoTable } = await import("jspdf-autotable");
+    
     const doc = new jsPDF({ orientation: "p", unit: "pt", format: "a4" });
     
     const pageWidth = doc.internal.pageSize.width;
