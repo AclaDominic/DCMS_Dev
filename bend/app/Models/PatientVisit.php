@@ -78,6 +78,11 @@ class PatientVisit extends Model
         return $this->belongsTo(Appointment::class);
     }
 
+    public function additionalCharges()
+    {
+        return $this->hasMany(VisitAdditionalCharge::class);
+    }
+
     // Helper method to get encrypted notes
     public function getEncryptedNotes()
     {

@@ -281,6 +281,7 @@ export default function InventoryPage() {
                   <th>Unit</th>
                   <th>Threshold</th>
                   <th>On Hand</th>
+                  <th>Sellable</th>
                 </tr>
               </thead>
               <tbody>
@@ -308,12 +309,22 @@ export default function InventoryPage() {
                           )}
                         </div>
                       </td>
+                      <td>
+                        {it.is_sellable ? (
+                          <span className="badge bg-success" title={it.sellable_notes}>
+                            <i className="fas fa-shopping-cart me-1"></i>
+                            ₱{Number(it.patient_price || 0).toLocaleString()}
+                          </span>
+                        ) : (
+                          <span className="text-muted">-</span>
+                        )}
+                      </td>
                     </tr>
                   );
                 })}
                 {items.length === 0 && !loading && (
                   <tr>
-                    <td colSpan="6" className="text-center text-muted py-4">
+                    <td colSpan="7" className="text-center text-muted py-4">
                       No items yet.
                     </td>
                   </tr>

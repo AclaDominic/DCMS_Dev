@@ -387,7 +387,7 @@ class AppointmentController extends Controller
         }
 
         // Get completed patient visits with visit notes
-        $query = \App\Models\PatientVisit::with(['service', 'visitNotes'])
+        $query = \App\Models\PatientVisit::with(['service', 'visitNotes', 'additionalCharges.inventoryItem'])
             ->where('patient_id', $user->patient->id)
             ->where('status', 'completed');
 

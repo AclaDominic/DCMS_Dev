@@ -233,7 +233,7 @@ class PerformanceGoalTestSeeder extends Seeder
         $monthStart = Carbon::now()->startOfMonth();
         $monthEnd = Carbon::now()->endOfMonth();
         
-        // Create visits for current month (some completed, some scheduled)
+        // Create visits for current month (only completed visits for past dates)
         $visitsData = [];
         
         // Create 15 completed visits this month
@@ -249,23 +249,6 @@ class PerformanceGoalTestSeeder extends Seeder
                 'start_time' => $visitDate->copy()->setTime(rand(8, 16), [0, 30][rand(0, 1)]),
                 'end_time' => $visitDate->copy()->setTime(rand(8, 16), [0, 30][rand(0, 1)])->addMinutes($service->estimated_minutes ?? 60),
                 'status' => 'completed',
-                'is_seeded' => true,
-            ];
-        }
-        
-        // Create 5 scheduled visits for later this month
-        for ($i = 0; $i < 5; $i++) {
-            $visitDate = Carbon::now()->addDays(rand(1, $monthEnd->diffInDays(Carbon::now())));
-            $patient = $patients->random();
-            $service = $services->random();
-            
-            $visitsData[] = [
-                'patient_id' => $patient->id,
-                'service_id' => $service->id,
-                'visit_date' => $visitDate->toDateString(),
-                'start_time' => null, // Not completed yet
-                'end_time' => null,
-                'status' => 'pending',
                 'is_seeded' => true,
             ];
         }

@@ -32,6 +32,9 @@ class InventoryItemController extends Controller
             'low_stock_threshold' => 'nullable|integer|min:0',
             'default_pack_size'   => 'nullable|numeric|min:0',
             'is_controlled'       => 'boolean',
+            'is_sellable'         => 'boolean',
+            'patient_price'       => 'nullable|numeric|min:0',
+            'sellable_notes'      => 'nullable|string',
             'notes'               => 'nullable|string',
         ]);
 

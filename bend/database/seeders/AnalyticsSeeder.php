@@ -16,6 +16,7 @@ use App\Models\InventoryItem;
 use App\Models\InventoryBatch;
 use App\Models\InventoryMovement;
 use App\Models\Supplier;
+use App\Models\VisitAdditionalCharge;
 use App\Services\ClinicDateResolverService;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
@@ -53,9 +54,9 @@ class AnalyticsSeeder extends Seeder
             return;
         }
 
-        // Generate 1 year of data
+        // Generate 1 year of data - only past dates, not current day or future
         $startDate = Carbon::now()->subYear()->startOfMonth();
-        $endDate = Carbon::now()->endOfMonth();
+        $endDate = Carbon::now()->subDay()->endOfDay(); // Exclude today and future
 
         $this->command->info("Generating data from {$startDate->format('Y-m-d')} to {$endDate->format('Y-m-d')}");
 
@@ -82,14 +83,15 @@ class AnalyticsSeeder extends Seeder
         $this->command->info('Clearing existing analytics data...');
         
         DB::statement('SET FOREIGN_KEY_CHECKS=0;');
-        PatientVisit::truncate();
-        Appointment::truncate();
-        Payment::truncate();
-        GoalProgressSnapshot::truncate();
-        PerformanceGoal::truncate();
+        VisitAdditionalCharge::truncate();
         InventoryMovement::truncate();
         InventoryBatch::truncate();
         InventoryItem::truncate();
+        Payment::truncate();
+        PatientVisit::truncate();
+        Appointment::truncate();
+        GoalProgressSnapshot::truncate();
+        PerformanceGoal::truncate();
         Supplier::truncate();
         DB::statement('SET FOREIGN_KEY_CHECKS=1;');
     }
@@ -287,6 +289,11 @@ class AnalyticsSeeder extends Seeder
         // Generate data for each day
         for ($day = 1; $day <= $daysInMonth; $day++) {
             $currentDay = $startOfMonth->copy()->addDays($day - 1);
+            
+            // Skip current day and future dates (only generate past dates)
+            if ($currentDay->isToday() || $currentDay->isFuture()) {
+                continue;
+            }
             
             // Get clinic capacity for this day using the system's date resolver
             $resolver = app(ClinicDateResolverService::class);
@@ -803,6 +810,8 @@ class AnalyticsSeeder extends Seeder
                 'unit' => 'ml',
                 'low_stock_threshold' => 10,
                 'is_controlled' => true,
+                'is_sellable' => false,
+                'patient_price' => null,
                 'created_by' => $adminUser->id,
             ],
             [
@@ -812,6 +821,8 @@ class AnalyticsSeeder extends Seeder
                 'unit' => 'g',
                 'low_stock_threshold' => 5,
                 'is_controlled' => false,
+                'is_sellable' => false,
+                'patient_price' => null,
                 'created_by' => $adminUser->id,
             ],
             [
@@ -821,6 +832,8 @@ class AnalyticsSeeder extends Seeder
                 'unit' => 'pcs',
                 'low_stock_threshold' => 50,
                 'is_controlled' => false,
+                'is_sellable' => false,
+                'patient_price' => null,
                 'created_by' => $adminUser->id,
             ],
             [
@@ -830,6 +843,32 @@ class AnalyticsSeeder extends Seeder
                 'unit' => 'pcs',
                 'low_stock_threshold' => 20,
                 'is_controlled' => false,
+                'is_sellable' => false,
+                'patient_price' => null,
+                'created_by' => $adminUser->id,
+            ],
+            [
+                'name' => 'Amoxicillin 500mg',
+                'sku_code' => 'ABX-001',
+                'type' => 'drug',
+                'unit' => 'capsules',
+                'low_stock_threshold' => 100,
+                'is_controlled' => false,
+                'is_sellable' => true,
+                'patient_price' => 150.00,
+                'sellable_notes' => 'Antibiotic for post-dental procedure infection prevention',
+                'created_by' => $adminUser->id,
+            ],
+            [
+                'name' => 'Pain Relief Tablets',
+                'sku_code' => 'PAIN-001',
+                'type' => 'drug',
+                'unit' => 'pcs',
+                'low_stock_threshold' => 100,
+                'is_controlled' => false,
+                'is_sellable' => true,
+                'patient_price' => 75.00,
+                'sellable_notes' => 'Over-the-counter pain relief for post-procedure discomfort',
                 'created_by' => $adminUser->id,
             ],
         ];
@@ -843,6 +882,8 @@ class AnalyticsSeeder extends Seeder
                 'Dental Composite' => [200, 500],  // ₱200-500 per g
                 'Dental Floss' => [5, 15],        // ₱5-15 per piece
                 'Dental X-Ray Film' => [25, 50],  // ₱25-50 per piece
+                'Amoxicillin 500mg' => [80, 120],  // ₱80-120 per capsule
+                'Pain Relief Tablets' => [30, 50], // ₱30-50 per tablet
             ];
             
             $costRange = $costRanges[$item->name] ?? [10, 100];

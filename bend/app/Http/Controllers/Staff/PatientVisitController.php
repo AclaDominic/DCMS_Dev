@@ -35,7 +35,7 @@ class PatientVisitController extends Controller
         $totalVisits = PatientVisit::count();
         Log::info('🔍 INDEX: Total visits in database: ' . $totalVisits);
         
-        $visits = PatientVisit::with(['patient', 'service', 'visitNotes', 'payments'])
+        $visits = PatientVisit::with(['patient', 'service', 'visitNotes', 'payments', 'additionalCharges.inventoryItem'])
             ->orderBy('created_at', 'desc')
             ->take(50)
             ->get();
@@ -210,6 +210,10 @@ class PatientVisitController extends Controller
             'stock_items.*.item_id' => ['required', 'exists:inventory_items,id'],
             'stock_items.*.quantity' => ['required', 'numeric', 'min:0.001'],
             'stock_items.*.notes' => ['nullable', 'string'],
+            'billable_items' => ['nullable', 'array'],
+            'billable_items.*.item_id' => ['required', 'exists:inventory_items,id'],
+            'billable_items.*.quantity' => ['required', 'numeric', 'min:1'],
+            'billable_items.*.unit_price' => ['required', 'numeric', 'min:0'],
             'dentist_notes' => ['nullable', 'string', 'max:2000'],
             'findings' => ['nullable', 'string', 'max:2000'],
             'treatment_plan' => ['nullable', 'string', 'max:2000'],
@@ -303,21 +307,60 @@ class PatientVisitController extends Controller
                 ]);
             }
 
-            // 3. Update visit status
+            // 3. Handle billable items (additional charges)
+            if (!empty($validated['billable_items'])) {
+                foreach ($validated['billable_items'] as $item) {
+                    $inventoryItem = InventoryItem::findOrFail($item['item_id']);
+                    
+                    // Verify the item is sellable
+                    if (!$inventoryItem->is_sellable || !$inventoryItem->patient_price) {
+                        throw new \Exception("Item '{$inventoryItem->name}' is not configured as a sellable item.");
+                    }
+                    
+                    // Get the first available batch for tracking
+                    $batch = $inventoryItem->batches()
+                        ->where('qty_on_hand', '>', 0)
+                        ->orderBy('expiry_date', 'asc')
+                        ->orderBy('received_at', 'asc')
+                        ->first();
+                    
+                    \App\Models\VisitAdditionalCharge::create([
+                        'patient_visit_id' => $visit->id,
+                        'inventory_item_id' => $item['item_id'],
+                        'quantity' => (float) $item['quantity'],
+                        'unit_price' => (float) $item['unit_price'],
+                        'total_price' => (float) $item['quantity'] * (float) $item['unit_price'],
+                        'batch_id' => $batch?->id,
+                        'created_by' => $userId,
+                    ]);
+                }
+            }
+
+            // 4. Update visit status
             $visit->update([
                 'end_time' => now(),
                 'status' => 'completed',
             ]);
 
-            // 4. Handle payment verification/adjustment
+            // 5. Handle payment verification/adjustment
             $totalPaid = $visit->payments->sum('amount_paid');
             $servicePrice = $visit->service?->price ?? 0;
+            
+            // Calculate additional charges total
+            $additionalChargesTotal = 0;
+            if (!empty($validated['billable_items'])) {
+                foreach ($validated['billable_items'] as $item) {
+                    $additionalChargesTotal += ((float) $item['quantity'] * (float) $item['unit_price']);
+                }
+            }
+            
+            $totalPrice = $servicePrice + $additionalChargesTotal;
 
             if ($validated['payment_status'] === 'paid') {
                 // If already fully paid, no action needed
                 // If not fully paid, create a cash payment to cover the balance
-                if ($totalPaid < $servicePrice) {
-                    $balance = $servicePrice - $totalPaid;
+                if ($totalPaid < $totalPrice) {
+                    $balance = $totalPrice - $totalPaid;
                     Payment::create([
                         'patient_visit_id' => $visit->id,
                         'amount_due' => $balance,
@@ -330,17 +373,35 @@ class PatientVisitController extends Controller
                     ]);
                 }
             } elseif ($validated['payment_status'] === 'hmo_fully_covered') {
-                // HMO fully covered - create HMO payment record
-                Payment::create([
-                    'patient_visit_id' => $visit->id,
-                    'amount_due' => $servicePrice,
-                    'amount_paid' => $servicePrice,
-                    'method' => 'hmo',
-                    'status' => 'paid',
-                    'reference_no' => 'HMO-' . $visit->id . '-' . time(),
-                    'created_by' => $userId,
-                    'paid_at' => now(),
-                ]);
+                // HMO fully covered - only covers service price, not additional charges
+                // If there are additional charges, visit will be marked as partial/unpaid
+                if ($additionalChargesTotal > 0) {
+                    // Service is covered, but additional charges need to be paid
+                    Payment::create([
+                        'patient_visit_id' => $visit->id,
+                        'amount_due' => $servicePrice,
+                        'amount_paid' => $servicePrice,
+                        'method' => 'hmo',
+                        'status' => 'paid',
+                        'reference_no' => 'HMO-' . $visit->id . '-' . time(),
+                        'created_by' => $userId,
+                        'paid_at' => now(),
+                    ]);
+                    // Mark visit payment status as unpaid since there are additional charges
+                    // The user will need to handle this on the frontend
+                } else {
+                    // No additional charges, fully covered
+                    Payment::create([
+                        'patient_visit_id' => $visit->id,
+                        'amount_due' => $servicePrice,
+                        'amount_paid' => $servicePrice,
+                        'method' => 'hmo',
+                        'status' => 'paid',
+                        'reference_no' => 'HMO-' . $visit->id . '-' . time(),
+                        'created_by' => $userId,
+                        'paid_at' => now(),
+                    ]);
+                }
             } elseif ($validated['payment_status'] === 'partial' && isset($validated['onsite_payment_amount'])) {
                 // Add on-site payment
                 Payment::create([
@@ -405,7 +466,7 @@ class PatientVisitController extends Controller
 
             return response()->json([
                 'message' => 'Visit completed successfully',
-                'visit' => $visit->fresh(['patient', 'service', 'payments']),
+                'visit' => $visit->fresh(['patient', 'service', 'payments', 'additionalCharges']),
             ]);
         });
     }

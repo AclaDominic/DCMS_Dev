@@ -15,6 +15,9 @@ class InventoryItem extends Model
         'low_stock_threshold',
         'default_pack_size',
         'is_controlled',
+        'is_sellable',
+        'patient_price',
+        'sellable_notes',
         'is_active',
         'created_by',
         'notes',
@@ -23,6 +26,8 @@ class InventoryItem extends Model
     protected $casts = [
         'default_pack_size' => 'decimal:3',
         'is_controlled' => 'boolean',
+        'is_sellable' => 'boolean',
+        'patient_price' => 'decimal:2',
         'is_active' => 'boolean',
         'low_stock_threshold' => 'integer',
     ];

@@ -10,6 +10,9 @@ export default function InventoryItemForm({ onCreated }) {
     low_stock_threshold: 0,
     default_pack_size: "",
     is_controlled: false,
+    is_sellable: false,
+    patient_price: "",
+    sellable_notes: "",
     notes: "",
   });
   const [saving, setSaving] = useState(false);
@@ -21,7 +24,7 @@ export default function InventoryItemForm({ onCreated }) {
     setSaving(true);
     try {
       await api.post("/api/inventory/items", form);
-      setForm({ name:"", sku_code:"", type:"supply", unit:"pcs", low_stock_threshold:0, default_pack_size:"", is_controlled:false, notes:"" });
+      setForm({ name:"", sku_code:"", type:"supply", unit:"pcs", low_stock_threshold:0, default_pack_size:"", is_controlled:false, is_sellable: false, patient_price: "", sellable_notes: "", notes:"" });
       onCreated?.();
     } catch (err) {
       alert(err?.response?.data?.message || "Failed to save item");
@@ -114,6 +117,59 @@ export default function InventoryItemForm({ onCreated }) {
           </div>
         </div>
       </div>
+      
+      {/* Sellable Item Section */}
+      <div className="row mb-3">
+        <div className="col-12">
+          <div className="form-check">
+            <input 
+              type="checkbox" 
+              className="form-check-input" 
+              checked={form.is_sellable} 
+              onChange={e=>handle('is_sellable', e.target.checked)} 
+            />
+            <label className="form-check-label fw-semibold">
+              <i className="fas fa-shopping-cart me-2"></i>
+              This item can be sold to patients separately (not included in procedure)
+            </label>
+          </div>
+        </div>
+      </div>
+      
+      {form.is_sellable && (
+        <div className="row mb-3">
+          <div className="col-md-6">
+            <label className="form-label">
+              Patient Price (₱) <span className="text-danger">*</span>
+            </label>
+            <div className="input-group">
+              <span className="input-group-text">₱</span>
+              <input 
+                className="form-control" 
+                type="number" 
+                step="0.01"
+                min="0" 
+                placeholder="0.00" 
+                value={form.patient_price} 
+                onChange={e=>handle('patient_price', e.target.value)} 
+                required={form.is_sellable}
+              />
+            </div>
+            <small className="text-muted">Price that patients will pay for this item</small>
+          </div>
+          <div className="col-md-6">
+            <label className="form-label">Sellable Notes (optional)</label>
+            <textarea 
+              className="form-control" 
+              rows={2} 
+              placeholder="e.g., Antibiotic for post-procedure infection prevention" 
+              value={form.sellable_notes} 
+              onChange={e=>handle('sellable_notes', e.target.value)} 
+            />
+            <small className="text-muted">Notes shown to staff when selecting this item</small>
+          </div>
+        </div>
+      )}
       
       <div className="mb-3">
         <label className="form-label">Notes</label>

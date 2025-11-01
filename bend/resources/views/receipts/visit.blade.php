@@ -233,6 +233,36 @@
         </div>
     </div>
     
+    @if(isset($additional_charges) && $additional_charges->count() > 0)
+    <div class="payment-section">
+        <div class="section-title">Additional Items</div>
+        <table class="payment-table">
+            <thead>
+                <tr>
+                    <th>Item</th>
+                    <th>Quantity</th>
+                    <th>Unit Price</th>
+                    <th>Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach($additional_charges as $charge)
+                <tr>
+                    <td>{{ $charge['item_name'] }}</td>
+                    <td>{{ $charge['quantity'] }}</td>
+                    <td>₱{{ number_format($charge['unit_price'], 2) }}</td>
+                    <td>₱{{ number_format($charge['total_price'], 2) }}</td>
+                </tr>
+                @endforeach
+                <tr class="total-row">
+                    <td colspan="3"><strong>Additional Charges Subtotal</strong></td>
+                    <td class="amount">₱{{ number_format($additional_charges_total, 2) }}</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    @endif
+    
     <div class="payment-section">
         <div class="section-title">Payment Information</div>
         <table class="payment-table">
@@ -259,6 +289,20 @@
                     <td colspan="5" style="text-align: center;">No payment records found</td>
                 </tr>
                 @endforelse
+                @if(isset($service_amount))
+                <tr class="total-row">
+                    <td colspan="2"><strong>Service Amount</strong></td>
+                    <td class="amount">₱{{ number_format($service_amount, 2) }}</td>
+                    <td colspan="2"></td>
+                </tr>
+                @endif
+                @if(isset($additional_charges_total) && $additional_charges_total > 0)
+                <tr class="total-row">
+                    <td colspan="2"><strong>Additional Charges</strong></td>
+                    <td class="amount">₱{{ number_format($additional_charges_total, 2) }}</td>
+                    <td colspan="2"></td>
+                </tr>
+                @endif
                 <tr class="total-row">
                     <td colspan="2"><strong>Total Amount</strong></td>
                     <td class="amount">₱{{ number_format($total_amount, 2) }}</td>

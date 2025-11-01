@@ -89,7 +89,8 @@ class ReceiptController extends Controller
                 'service',
                 'payments',
                 'patient.hmos',
-                'visitNotes'
+                'visitNotes',
+                'additionalCharges.inventoryItem'
             ])->findOrFail($visitId);
 
             // Check if user has access to this visit
@@ -205,7 +206,8 @@ class ReceiptController extends Controller
                 'service',
                 'payments',
                 'patient.hmos',
-                'visitNotes'
+                'visitNotes',
+                'additionalCharges.inventoryItem'
             ])->findOrFail($visitId);
 
             // Check if user has access to this visit

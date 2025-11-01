@@ -280,16 +280,22 @@ class ReceiptService
         $user = $patient->user;
         $visitNotes = $visit->visitNotes;
 
+        // Load additional charges
+        $visit->load('additionalCharges.inventoryItem');
+
         // Debug logging to identify payment data issues
         Log::info('Visit receipt generation debug', [
             'visit_id' => $visit->id,
             'visit_status' => $visit->status,
             'payments_count' => $payments->count(),
             'payments_data' => $payments->toArray(),
+            'additional_charges_count' => $visit->additionalCharges->count(),
         ]);
 
-        // Calculate total amount
-        $totalAmount = $service ? $service->price : 0;
+        // Calculate total amount (service + additional charges)
+        $serviceAmount = $service ? $service->price : 0;
+        $additionalChargesTotal = $visit->additionalCharges->sum('total_price');
+        $totalAmount = $serviceAmount + $additionalChargesTotal;
         $totalPaid = $payments->sum('amount_paid');
 
         // Handle case where visit is completed but no Payment records exist
@@ -342,6 +348,18 @@ class ReceiptService
             'start_time' => $visit->start_time ? $visit->start_time->format('h:i A') : null,
             'end_time' => $visit->end_time ? $visit->end_time->format('h:i A') : null,
             'teeth_treated' => $visitNotes ? $visitNotes->teeth_treated : null,
+            
+            // Additional charges information
+            'additional_charges' => $visit->additionalCharges->map(function ($charge) {
+                return [
+                    'item_name' => $charge->inventoryItem->name,
+                    'quantity' => $charge->quantity,
+                    'unit_price' => $charge->unit_price,
+                    'total_price' => $charge->total_price,
+                ];
+            }),
+            'service_amount' => $serviceAmount,
+            'additional_charges_total' => $additionalChargesTotal,
             
             // Payment information
             'total_amount' => $totalAmount,

@@ -8,6 +8,9 @@ export default function VisitCompletionModal({ visit, onClose, onComplete }) {
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
+  // Billable items for additional charges
+  const [billableItems, setBillableItems] = useState([]);
+
   // Step 2: Notes
   const [dentistNotes, setDentistNotes] = useState("");
   const [findings, setFindings] = useState("");
@@ -74,6 +77,25 @@ export default function VisitCompletionModal({ visit, onClose, onComplete }) {
     setStockItems(stockItems.filter((_, i) => i !== index));
   };
 
+  const toggleBillableItem = (itemId, item) => {
+    const isAlreadySelected = billableItems.some(bi => bi.item_id === itemId);
+    if (isAlreadySelected) {
+      setBillableItems(billableItems.filter(bi => bi.item_id !== itemId));
+    } else {
+      setBillableItems([...billableItems, { 
+        item_id: itemId, 
+        quantity: 1, 
+        unit_price: Number(item.patient_price) || 0
+      }]);
+    }
+  };
+
+  const updateBillableItemQuantity = (itemId, quantity) => {
+    setBillableItems(billableItems.map(bi => 
+      bi.item_id === itemId ? { ...bi, quantity: Math.max(1, Number(quantity) || 1) } : bi
+    ));
+  };
+
   const calculatePaymentStatus = () => {
     const totalPaid = visit.payments?.reduce((sum, p) => sum + (p.amount_paid || 0), 0) || 0;
     const servicePrice = visit.service?.price || 0;
@@ -88,6 +110,11 @@ export default function VisitCompletionModal({ visit, onClose, onComplete }) {
     try {
       const payload = {
         stock_items: stockItems.filter(item => item.item_id && item.quantity),
+        billable_items: billableItems.map(item => ({
+          item_id: item.item_id,
+          quantity: Number(item.quantity) || 1,
+          unit_price: Number(item.unit_price) || 0
+        })),
         dentist_notes: dentistNotes,
         findings: findings,
         treatment_plan: treatmentPlan,
@@ -127,9 +154,15 @@ export default function VisitCompletionModal({ visit, onClose, onComplete }) {
     }
   };
 
-  const totalPaid = visit.payments?.reduce((sum, p) => sum + (p.amount_paid || 0), 0) || 0;
-  const servicePrice = visit.service?.price || 0;
-  const balance = servicePrice - totalPaid;
+  const totalPaid = visit.payments?.reduce((sum, p) => sum + (Number(p.amount_paid) || 0), 0) || 0;
+  const servicePrice = Number(visit.service?.price) || 0;
+  const additionalChargesTotal = billableItems.reduce((sum, item) => {
+    const unitPrice = Number(item.unit_price) || 0;
+    const quantity = Number(item.quantity) || 1;
+    return sum + (unitPrice * quantity);
+  }, 0);
+  const totalPrice = servicePrice + additionalChargesTotal;
+  const balance = totalPrice - totalPaid;
   
   // Check if there's a paid Maya payment
   const paidMayaPayment = visit.payments?.find(p => p.method === 'maya' && p.status === 'paid');
@@ -312,6 +345,53 @@ export default function VisitCompletionModal({ visit, onClose, onComplete }) {
                       Add Item
                     </button>
                   </div>
+
+                  {/* Billable Items Section */}
+                  <hr className="my-4" />
+                  <div className="alert alert-info py-2 mb-3">
+                    <i className="fas fa-info-circle me-2"></i>
+                    <strong>Additional Items:</strong> Select items that patients can purchase separately (not included in procedure)
+                  </div>
+                  
+                  <div className="card border-warning">
+                    <div className="card-body p-2">
+                      <div className="row">
+                        {inventoryItems.filter(item => item.is_sellable && item.patient_price).map((item) => (
+                          <div key={item.id} className="col-12 mb-2">
+                            <div className="form-check">
+                              <input
+                                className="form-check-input"
+                                type="checkbox"
+                                checked={billableItems.some(bi => bi.item_id === item.id)}
+                                onChange={() => toggleBillableItem(item.id, item)}
+                                id={`billable-${item.id}`}
+                              />
+                              <label className="form-check-label" htmlFor={`billable-${item.id}`}>
+                                {item.name} - ₱{Number(item.patient_price).toLocaleString()}
+                              </label>
+                            </div>
+                            {billableItems.some(bi => bi.item_id === item.id) && (
+                              <div className="ms-4 mt-1">
+                                <div className="input-group input-group-sm" style={{width: '150px'}}>
+                                  <span className="input-group-text">Qty:</span>
+                                  <input
+                                    type="number"
+                                    className="form-control"
+                                    min="1"
+                                    value={billableItems.find(bi => bi.item_id === item.id)?.quantity || 1}
+                                    onChange={(e) => updateBillableItemQuantity(item.id, e.target.value)}
+                                  />
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                      {inventoryItems.filter(item => item.is_sellable && item.patient_price).length === 0 && (
+                        <p className="text-muted mb-0 small">No billable items available. Configure items as sellable in inventory settings.</p>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
@@ -445,6 +525,36 @@ export default function VisitCompletionModal({ visit, onClose, onComplete }) {
                                 </div>
                               </div>
                             </div>
+                            {additionalChargesTotal > 0 && (
+                              <>
+                                <div className="col-12">
+                                  <hr className="my-2" />
+                                  <div className="fw-semibold mb-2">Additional Items:</div>
+                                  {billableItems.map((item) => {
+                                    const invItem = inventoryItems.find(i => i.id === item.item_id);
+                                    return (
+                                      <div key={item.item_id} className="d-flex justify-content-between mb-1">
+                                        <small>{invItem?.name} (x{item.quantity})</small>
+                                        <small className="fw-semibold">₱{Number(item.unit_price * item.quantity).toLocaleString()}</small>
+                                      </div>
+                                    );
+                                  })}
+                                  <hr className="my-2" />
+                                </div>
+                                <div className="col-6">
+                                  <div className="d-flex flex-column">
+                                    <small className="text-muted mb-1">Additional Charges</small>
+                                    <div className="fw-semibold text-warning">₱{additionalChargesTotal.toLocaleString()}</div>
+                                  </div>
+                                </div>
+                                <div className="col-6">
+                                  <div className="d-flex flex-column">
+                                    <small className="text-muted mb-1">Total Price</small>
+                                    <div className="fw-bold text-primary">₱{totalPrice.toLocaleString()}</div>
+                                  </div>
+                                </div>
+                              </>
+                            )}
                             <div className="col-6">
                               <div className="d-flex flex-column">
                                 <small className="text-muted mb-1">Total Paid</small>
@@ -476,7 +586,7 @@ export default function VisitCompletionModal({ visit, onClose, onComplete }) {
                                 Maya Payment Completed
                               </h6>
                               <p className="mb-1">
-                                <strong>Amount Paid:</strong> ₱{paidMayaPayment.amount_paid?.toLocaleString()}
+                                <strong>Amount Paid:</strong> ₱{Number(paidMayaPayment.amount_paid || 0).toLocaleString()}
                               </p>
                               <p className="mb-0">
                                 <strong>Payment Date:</strong> {new Date(paidMayaPayment.paid_at).toLocaleString()}
@@ -485,6 +595,30 @@ export default function VisitCompletionModal({ visit, onClose, onComplete }) {
                                 <i className="fas fa-lock me-1"></i>
                                 Payment information is read-only as the Maya payment has been successfully completed.
                               </small>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {additionalChargesTotal > 0 && !isMayaPaymentCompleted && (
+                      <div className="col-12">
+                        <div className="alert alert-warning border-0 shadow-sm">
+                          <div className="d-flex align-items-start">
+                            <i className="fas fa-exclamation-triangle fa-2x text-warning me-3"></i>
+                            <div className="flex-grow-1">
+                              <h6 className="alert-heading mb-1">
+                                <i className="fas fa-info-circle me-2"></i>
+                                Additional Items Selected
+                              </h6>
+                              <p className="mb-1">
+                                <strong>Additional Charges:</strong> ₱{additionalChargesTotal.toLocaleString()}
+                              </p>
+                              <p className="mb-0 small">
+                                <i className="fas fa-lightbulb me-1"></i>
+                                <strong>HMO/Maya payments only cover the service amount.</strong> If the patient's HMO/Maya payment doesn't cover additional charges, 
+                                select "Partially Paid" and enter the on-site payment amount for the additional items.
+                              </p>
                             </div>
                           </div>
                         </div>
