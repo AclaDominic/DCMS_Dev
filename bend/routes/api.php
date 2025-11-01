@@ -343,6 +343,7 @@ Route::middleware(['auth:sanctum', 'check.account.status', EnsureDeviceIsApprove
     // Visits
     Route::prefix('visits')->group(function () {
         Route::get('/', [PatientVisitController::class, 'index']);
+        Route::get('/stats', [PatientVisitController::class, 'stats']);
         Route::post('/', [PatientVisitController::class, 'store']);
         Route::post('/{id}/finish', [PatientVisitController::class, 'finish']);
         Route::post('/{id}/complete-with-details', [PatientVisitController::class, 'completeWithDetails']);

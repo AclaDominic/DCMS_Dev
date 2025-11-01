@@ -493,27 +493,48 @@ class PatientVisitController extends Controller
             'target_patient_id' => 'required|exists:patients,id',
         ]);
 
-        $visit = PatientVisit::findOrFail($visitId);
-        $oldPatient = Patient::findOrFail($visit->patient_id);
-        $targetPatient = Patient::findOrFail($request->target_patient_id);
+        return DB::transaction(function () use ($request, $visitId) {
+            $visit = PatientVisit::with('patient')->findOrFail($visitId);
+            $oldPatientId = $visit->patient_id;
+            $oldPatient = $visit->patient;
+            $targetPatient = Patient::findOrFail($request->target_patient_id);
 
-        // Replace the link to the correct patient profile
-        $visit->update([
-            'patient_id' => $targetPatient->id,
-        ]);
+            // Only allow linking walk-in visits, not appointment-based visits
+            if ($visit->appointment_id !== null) {
+                Log::warning('🛑 LINK: Attempted to link appointment-based visit', [
+                    'old_patient_id' => $oldPatientId,
+                    'visit_id' => $visitId,
+                    'appointment_id' => $visit->appointment_id
+                ]);
+                return response()->json([
+                    'message' => 'Cannot link visit: This visit is from an appointment and is already associated with a patient.',
+                ], 422);
+            }
 
-        // Log example: "Linked visit from Patient #12 → #4 by Staff #2"
-        // In future, insert this into system_logs with performed_by, note, etc.
+            // Check if the old patient has any other visits BEFORE we update
+            $otherVisits = PatientVisit::where('patient_id', $oldPatientId)->count();
+            
+            // Replace the link to the correct patient profile
+            $visit->update([
+                'patient_id' => $targetPatient->id,
+            ]);
 
-        // Delete the temporary patient profile
-        Log::info('🗑️ LINK: About to delete temporary patient ID: ' . $oldPatient->id . ', Name: ' . $oldPatient->first_name . ' ' . $oldPatient->last_name);
-        $oldPatient->delete(); // full delete for now
-        Log::info('🗑️ LINK: Deleted temporary patient ID: ' . $oldPatient->id);
+            // Delete the temporary patient profile (only if it's a walk-in patient with no other visits)
+            if ($otherVisits === 0) {
+                // Safe to delete: this was the only visit for this temporary patient
+                Log::info('🗑️ LINK: About to delete temporary patient ID: ' . $oldPatientId . ', Name: ' . $oldPatient->first_name . ' ' . $oldPatient->last_name);
+                $oldPatient->delete();
+                Log::info('🗑️ LINK: Deleted temporary patient ID: ' . $oldPatientId);
+            } else {
+                // Keep the patient: they have other visits
+                Log::info('ℹ️ LINK: Keeping patient ID: ' . $oldPatientId . ' because they have ' . $otherVisits . ' other visits');
+            }
 
-        return response()->json([
-            'message' => 'Visit successfully linked to existing patient profile.',
-            'visit' => $visit->load('patient'),
-        ]);
+            return response()->json([
+                'message' => 'Visit successfully linked to existing patient profile.',
+                'visit' => $visit->load('patient'),
+            ]);
+        });
     }
 
     /**
@@ -972,6 +993,41 @@ class PatientVisitController extends Controller
             'notification_id' => $notification->id,
             'dentist_name' => $dentist->dentist_name ?? $dentist->dentist_code,
         ]);
+    }
+
+    // Get dashboard statistics
+    public function stats()
+    {
+        try {
+            $today = Carbon::today()->toDateString();
+
+            // Today's visits: 
+            // - All pending visits (regardless of date) to alert staff about unfinished work
+            // - Plus completed visits from today
+            $todayVisits = PatientVisit::where(function($query) use ($today) {
+                    $query->where('status', 'pending')  // Include all pending visits
+                          ->orWhere(function($q) use ($today) {
+                              $q->where('visit_date', $today)
+                                ->where('status', 'completed');
+                          });
+                })
+                ->count();
+
+            // Pending visits: all pending visits regardless of date
+            $pendingVisits = PatientVisit::where('status', 'pending')
+                ->count();
+
+            return response()->json([
+                'today_visits' => $todayVisits,
+                'pending_visits' => $pendingVisits,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to fetch visit statistics: ' . $e->getMessage());
+            return response()->json([
+                'today_visits' => 0,
+                'pending_visits' => 0,
+            ], 500);
+        }
     }
 
 }

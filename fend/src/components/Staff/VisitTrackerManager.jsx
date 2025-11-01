@@ -259,11 +259,11 @@ function VisitTrackerManager() {
         setPotentialMatches(response.data.potential_matches);
         setShowMatchesModal(true);
         // Keep editingVisit open so user can link if needed
+        // Don't fetchVisits here to avoid race condition
       } else {
         setEditingVisit(null);
+        await fetchVisits();
       }
-      
-      await fetchVisits();
     } catch (err) {
       alert("Failed to update patient.");
     }

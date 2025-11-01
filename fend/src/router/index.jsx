@@ -55,6 +55,7 @@ import AppointmentReminders from "../pages/Staff/AppointmentReminders";
 import ConsumeStockPage from "../pages/Staff/ConsumeStockPage";
 import StaffPaymentRecords from "../pages/Staff/PaymentRecords";
 import StaffPatientUserBindingPage from "../pages/Staff/PatientUserBindingPage";
+import VisitTrackerManager from "../components/Staff/VisitTrackerManager";
 
 // Patient layout and pages
 import PatientLayout from "../layouts/PatientLayout";
@@ -174,6 +175,8 @@ export default function AppRouter() {
           <Route path="payment-records" element={<StaffPaymentRecords />} />
           {/* Patient-User Binding */}
           <Route path="patient-binding" element={<StaffPatientUserBindingPage />} />
+          {/* Patient Visit Tracker */}
+          <Route path="visit-tracker" element={<VisitTrackerManager />} />
           <Route
             path="inventory"
             element={
