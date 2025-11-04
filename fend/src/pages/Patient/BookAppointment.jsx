@@ -41,9 +41,9 @@ function BookAppointment() {
   const [myPatientId, setMyPatientId] = useState(null);
   const [patientHmoId, setPatientHmoId] = useState(null);
   const [loadingPatientId, setLoadingPatientId] = useState(false);
+  const [warningStatus, setWarningStatus] = useState(null);
 
-
-  // try to get the logged-in patient's id
+  // try to get the logged-in patient's id and check warning status
   useEffect(() => {
     let mounted = true;
     (async () => {
@@ -52,6 +52,16 @@ function BookAppointment() {
         const { data } = await api.get("/api/user");
         const pid = data?.patient?.id ?? null;
         if (mounted && pid) setMyPatientId(Number(pid));
+        
+        // Check warning status
+        if (mounted && data?.warning_status) {
+          setWarningStatus({
+            under_warning: true,
+            allowed_payment_methods: ['maya']
+          });
+          // Set payment method to maya by default if under warning
+          setPaymentMethod('maya');
+        }
       } catch (_) {
         // ignore; HMO section will show a warning
       } finally {
@@ -116,6 +126,11 @@ function BookAppointment() {
 
   const handlePaymentChange = (e) => {
     const v = e.target.value;
+    // Prevent changing away from maya if under warning
+    if (warningStatus?.under_warning && v !== 'maya') {
+      setBookingMessage('⚠️ PAYMENT RESTRICTION\n\nYour account is under warning due to previous no-shows. You can only book appointments using Maya (online payment) at this time.');
+      return;
+    }
     setPaymentMethod(v);
     if (v !== "hmo") {
       setPatientHmoId(null); // clear selection when leaving HMO
@@ -166,6 +181,10 @@ function BookAppointment() {
       
       // Check if this is a blocked patient error
       if (errorData?.blocked) {
+        setBookingMessage(errorData.message);
+      } 
+      // Check if this is a warning status payment restriction error
+      else if (errorData?.warning_status) {
         setBookingMessage(errorData.message);
       } else {
         setBookingMessage(errorData?.message || "Booking failed.");
@@ -389,10 +408,23 @@ function BookAppointment() {
                             onChange={handlePaymentChange}
                             style={{ fontSize: '1.1rem' }}
                           >
-                            <option value="cash">💵 Cash (on-site payment)</option>
+                            <option value="cash" disabled={warningStatus?.under_warning}>
+                              💵 Cash (on-site payment)
+                              {warningStatus?.under_warning && ' - Not available'}
+                            </option>
                             <option value="maya">💳 Maya (online payment)</option>
-                            <option value="hmo">🏥 HMO (insurance)</option>
+                            <option value="hmo" disabled={warningStatus?.under_warning}>
+                              🏥 HMO (insurance)
+                              {warningStatus?.under_warning && ' - Not available'}
+                            </option>
                           </select>
+                          {warningStatus?.under_warning && (
+                            <div className="alert alert-warning mt-3 border-0 shadow-sm">
+                              <i className="bi bi-exclamation-triangle me-2"></i>
+                              <strong>Payment Restriction:</strong> Your account is under warning due to previous no-shows. 
+                              You can only book appointments using Maya (online payment) at this time.
+                            </div>
+                          )}
                         </div>
 
                         {paymentMethod === "hmo" && (

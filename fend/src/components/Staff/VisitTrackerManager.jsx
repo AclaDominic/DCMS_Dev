@@ -4,6 +4,7 @@ import VisitCompletionModal from "./VisitCompletionModal";
 import VisitNotesModal from "./VisitNotesModal";
 import SendVisitCodeModal from "./SendVisitCodeModal";
 import MedicalHistoryFormModal from "./MedicalHistoryFormModal";
+import TimeBlockModal from "./TimeBlockModal";
 
 function VisitTrackerManager() {
   const [visits, setVisits] = useState([]);
@@ -40,6 +41,7 @@ function VisitTrackerManager() {
   const [showMakeAppointmentModal, setShowMakeAppointmentModal] = useState(false);
   const [showMedicalHistoryModal, setShowMedicalHistoryModal] = useState(false);
   const [medicalHistoryVisit, setMedicalHistoryVisit] = useState(null);
+  const [showTimeBlockModal, setShowTimeBlockModal] = useState(false);
   const [appointmentForm, setAppointmentForm] = useState({
     patient_id: '',
     first_name: '',
@@ -498,7 +500,16 @@ function VisitTrackerManager() {
 
   return (
     <div className="h-100 d-flex flex-column">
-      <h3>📝 Patient Visit Tracker</h3>
+      <div className="d-flex justify-content-between align-items-center mb-3">
+        <h3>📝 Patient Visit Tracker</h3>
+        <button
+          className="btn btn-outline-primary"
+          onClick={() => setShowTimeBlockModal(true)}
+        >
+          <i className="bi bi-calendar-check me-2"></i>
+          View Today's Schedule
+        </button>
+      </div>
 
       <div className="card p-3 mb-4">
         <label>Visit Type</label>
@@ -1780,6 +1791,12 @@ function VisitTrackerManager() {
           </div>
         </div>
       )}
+
+      {/* Time Block Modal */}
+      <TimeBlockModal 
+        show={showTimeBlockModal} 
+        onClose={() => setShowTimeBlockModal(false)} 
+      />
     </div>
   );
 }

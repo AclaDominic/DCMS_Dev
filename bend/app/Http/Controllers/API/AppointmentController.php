@@ -18,6 +18,7 @@ use App\Services\NotificationService as SystemNotificationService;
 use App\Services\PatientManagerService;
 use App\Services\SystemLogService;
 use App\Helpers\IpHelper;
+use App\Models\PatientManager;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
@@ -104,6 +105,19 @@ class AppointmentController extends Controller
             'block_type' => $blockInfo['block_type'],
             'block_reason' => $blockInfo['block_reason'],
         ], 403);
+    }
+
+    // Check if patient has warning status - only allow Maya payment
+    $patientManager = PatientManager::where('patient_id', $patient->id)->first();
+    if ($patientManager && $patientManager->isUnderWarning()) {
+        // Only allow Maya payment method for warning status
+        if ($validated['payment_method'] !== 'maya') {
+            return response()->json([
+                'message' => '⚠️ PAYMENT RESTRICTION\n\nYour account is under warning due to previous no-shows. You can only book appointments using Maya (online payment) at this time.\n\nPlease select Maya as your payment method or visit our clinic in person for walk-in services.',
+                'warning_status' => true,
+                'allowed_payment_methods' => ['maya'],
+            ], 422);
+        }
     }
 
     // Check for overlapping appointments for the same patient
@@ -1038,6 +1052,77 @@ class AppointmentController extends Controller
         $contactMessage = "\n\n📞 Need help? Contact our clinic if you believe this is an error.";
         
         return $baseMessage . $resolutionMessage . $contactMessage;
+    }
+
+    /**
+     * GET /api/staff/today-time-blocks
+     * Returns today's appointment time blocks (appointments only, no walk-ins)
+     */
+    public function getTodayTimeBlocks(Request $request, ClinicDateResolverService $resolver)
+    {
+        $today = now()->startOfDay();
+        $todayStr = $today->toDateString();
+        
+        // Get clinic hours for today
+        $snap = $resolver->resolve($today);
+        
+        if (!$snap['is_open']) {
+            return response()->json([
+                'is_open' => false,
+                'blocks' => [],
+            ]);
+        }
+        
+        // Build 30-min time blocks
+        $blocks = ClinicDateResolverService::buildBlocks($snap['open_time'], $snap['close_time']);
+        
+        // Get approved appointments for today
+        $appointments = Appointment::where('date', $todayStr)
+            ->whereIn('status', ['approved', 'completed'])
+            ->with(['patient.user', 'service'])
+            ->get();
+        
+        // Map appointments to blocks
+        $blockData = [];
+        foreach ($blocks as $block) {
+            $blockAppointments = [];
+            
+            foreach ($appointments as $apt) {
+                if (!$apt->time_slot || strpos($apt->time_slot, '-') === false) continue;
+                
+                [$startStr] = explode('-', $apt->time_slot, 2);
+                $startStr = trim($startStr);
+                if (strlen($startStr) === 8) {
+                    $startStr = \Carbon\Carbon::createFromFormat('H:i:s', $startStr)->format('H:i');
+                }
+                
+                // Check if appointment starts in this block
+                if ($startStr === $block) {
+                    $blockAppointments[] = [
+                        'id' => $apt->id,
+                        'patient_name' => $apt->patient->first_name . ' ' . $apt->patient->last_name,
+                        'service_name' => $apt->service->name,
+                        'time_slot' => $apt->time_slot,
+                        'status' => $apt->status,
+                        'reference_code' => $apt->reference_code,
+                    ];
+                }
+            }
+            
+            $blockData[] = [
+                'time' => $block,
+                'appointments' => $blockAppointments,
+                'count' => count($blockAppointments),
+            ];
+        }
+        
+        return response()->json([
+            'is_open' => true,
+            'open_time' => $snap['open_time'],
+            'close_time' => $snap['close_time'],
+            'capacity' => $snap['effective_capacity'],
+            'blocks' => $blockData,
+        ]);
     }
 
     /**

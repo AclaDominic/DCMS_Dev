@@ -220,6 +220,14 @@ Route::middleware(['auth:sanctum', 'check.account.status'])->group(function () {
     // User profile endpoint
     Route::get('/user', function (Request $request) {
         $user = $request->user()->load('patient');
+        
+        $warningStatus = false;
+        if ($user->patient) {
+            $patientManager = \App\Models\PatientManager::where('patient_id', $user->patient->id)->first();
+            if ($patientManager && $patientManager->isUnderWarning()) {
+                $warningStatus = true;
+            }
+        }
 
         return response()->json([
             'id' => $user->id,
@@ -230,6 +238,7 @@ Route::middleware(['auth:sanctum', 'check.account.status'])->group(function () {
             'status' => $user->status,
             'patient' => $user->patient,
             'is_linked' => optional($user->patient)->is_linked ?? false,
+            'warning_status' => $warningStatus,
         ]);
     });
 
@@ -362,6 +371,9 @@ Route::middleware(['auth:sanctum', 'check.account.status', EnsureDeviceIsApprove
         Route::post('/{id}/save-dentist-notes', [PatientVisitController::class, 'saveDentistNotes']);
         Route::get('/{id}/dentist-notes', [PatientVisitController::class, 'getDentistNotes']);
     });
+
+    // Staff appointment schedule
+    Route::get('/staff/today-time-blocks', [AppointmentController::class, 'getTodayTimeBlocks']);
 
     // Dentist schedules (read-only access for staff to send visit codes)
     Route::get('/dentists', [DentistScheduleController::class, 'index']);
