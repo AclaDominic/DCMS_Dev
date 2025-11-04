@@ -1018,7 +1018,7 @@ function VisitTrackerManager() {
                               {p.first_name} {p.last_name}
                             </td>
                             <td>{p.contact_number || "—"}</td>
-                            <td>{p.birthdate || "—"}</td>
+                            <td>{p.birthdate ? new Date(p.birthdate).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }) : "—"}</td>
                             <td>
                               <button
                                 className="btn btn-sm btn-outline-primary"
@@ -1073,11 +1073,18 @@ function VisitTrackerManager() {
                   disabled={!selectedPatient}
                   onClick={async () => {
                     try {
+                      const payload = {
+                        target_patient_id: selectedPatient.id,
+                      };
+                      
+                      // Preserve service_id if it was selected in the edit form
+                      if (editForm.service_id) {
+                        payload.service_id = editForm.service_id;
+                      }
+                      
                       await api.post(
                         `/api/visits/${editingVisit.id}/link-existing`,
-                        {
-                          target_patient_id: selectedPatient.id,
-                        }
+                        payload
                       );
                       setShowLinkModal(false);
                       setEditingVisit(null);
@@ -1135,9 +1142,16 @@ function VisitTrackerManager() {
                         onClick={async () => {
                           if (window.confirm(`Link this visit to ${match.first_name} ${match.last_name}?`)) {
                             try {
-                              await api.post(`/api/visits/${editingVisit.id}/link-existing`, {
+                              const payload = {
                                 target_patient_id: match.id,
-                              });
+                              };
+                              
+                              // Preserve service_id if it was selected in the edit form
+                              if (editForm.service_id) {
+                                payload.service_id = editForm.service_id;
+                              }
+                              
+                              await api.post(`/api/visits/${editingVisit.id}/link-existing`, payload);
                               setShowMatchesModal(false);
                               setEditingVisit(null);
                               await fetchVisits();

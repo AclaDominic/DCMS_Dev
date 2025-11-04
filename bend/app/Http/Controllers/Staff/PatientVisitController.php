@@ -853,6 +853,7 @@ class PatientVisitController extends Controller
     {
         $request->validate([
             'target_patient_id' => 'required|exists:patients,id',
+            'service_id' => 'nullable|exists:services,id',
         ]);
 
         return DB::transaction(function () use ($request, $visitId) {
@@ -876,10 +877,18 @@ class PatientVisitController extends Controller
             // Check if the old patient has any other visits BEFORE we update
             $otherVisits = PatientVisit::where('patient_id', $oldPatientId)->count();
             
-            // Replace the link to the correct patient profile
-            $visit->update([
+            // Prepare update data
+            $updateData = [
                 'patient_id' => $targetPatient->id,
-            ]);
+            ];
+            
+            // Preserve service_id if provided
+            if ($request->has('service_id') && $request->service_id) {
+                $updateData['service_id'] = $request->service_id;
+            }
+            
+            // Replace the link to the correct patient profile
+            $visit->update($updateData);
 
             // Delete the temporary patient profile (only if it's a walk-in patient with no other visits)
             if ($otherVisits === 0) {
