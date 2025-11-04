@@ -150,12 +150,21 @@ class PatientVisitController extends Controller
             'service_id' => 'nullable|exists:services,id',
         ]);
 
-        // Check for potential matching patients before updating
-        $potentialMatches = Patient::findPotentialMatches(
-            $validated['first_name'],
-            $validated['last_name'],
-            $patient->id
-        );
+        // Only check for potential matching patients if the name actually changed
+        $nameChanged = 
+            strtolower(trim($validated['first_name'])) !== strtolower(trim($patient->first_name)) ||
+            strtolower(trim($validated['last_name'])) !== strtolower(trim($patient->last_name));
+
+        $potentialMatches = collect(); // Default to empty collection
+
+        if ($nameChanged) {
+            // Check for potential matching patients before updating
+            $potentialMatches = Patient::findPotentialMatches(
+                $validated['first_name'],
+                $validated['last_name'],
+                $patient->id
+            );
+        }
 
         $patient->update([
             'first_name' => $validated['first_name'],
