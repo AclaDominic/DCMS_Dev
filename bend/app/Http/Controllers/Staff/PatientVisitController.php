@@ -20,6 +20,8 @@ use Illuminate\Support\Facades\Log;
 use App\Models\DentistSchedule;
 use App\Models\Notification;
 use App\Models\NotificationTarget;
+use App\Models\PatientMedicalHistory;
+use Illuminate\Support\Facades\Auth;
 
 
 class PatientVisitController extends Controller
@@ -100,7 +102,20 @@ class PatientVisitController extends Controller
                 return response()->json(['message' => 'Invalid or unavailable reference code.'], 422);
             }
 
-            // Create the visit
+            // Check if visit already exists for this appointment
+            $existingVisit = PatientVisit::where('appointment_id', $appointment->id)
+                ->where('status', 'pending')
+                ->first();
+
+            if ($existingVisit) {
+                return response()->json([
+                    'visit' => $existingVisit->load(['patient', 'service']),
+                    'requires_medical_history' => $existingVisit->medical_history_status === 'pending',
+                    'message' => 'Visit already exists for this appointment.',
+                ]);
+            }
+
+            // Create the visit WITHOUT visit_code - it will be generated after history is completed
             $visit = PatientVisit::create([
                 'patient_id' => $appointment->patient_id,
                 'appointment_id' => $appointment->id,
@@ -108,14 +123,15 @@ class PatientVisitController extends Controller
                 'visit_date' => now()->toDateString(),
                 'start_time' => now(),
                 'status' => 'pending',
-                'visit_code' => PatientVisit::generateVisitCode(),
+                'visit_code' => null, // Will be generated after history completion
+                'medical_history_status' => 'pending',
             ]);
 
-            // Prevent code reuse (recommended)
-            $appointment->reference_code = null;
-            $appointment->save();
-
-            return response()->json($visit, 201);
+            return response()->json([
+                'visit' => $visit->load(['patient', 'service']),
+                'requires_medical_history' => true,
+                'message' => 'Medical history required before visit can proceed.',
+            ], 201);
         }
 
         return response()->json(['message' => 'Invalid visit type.'], 422);
@@ -173,7 +189,283 @@ class PatientVisitController extends Controller
         return response()->json(['message' => 'Patient updated']);
     }
 
+    /**
+     * GET /api/visits/{id}/medical-history-form
+     * Get form data for medical history (pre-filled from previous records and patient data)
+     */
+    public function getMedicalHistoryForm($id)
+    {
+        $visit = PatientVisit::with('patient', 'appointment')->findOrFail($id);
+        
+        // Check if already completed
+        if ($visit->medical_history_status === 'completed') {
+            $medicalHistory = PatientMedicalHistory::where('patient_visit_id', $visit->id)->first();
+            return response()->json([
+                'medical_history' => $medicalHistory,
+                'visit' => $visit,
+                'is_completed' => true,
+                'message' => 'Medical history already completed for this visit.',
+            ]);
+        }
+        
+        $patient = $visit->patient;
+        
+        // Get the MOST RECENT medical history for this patient (from previous visits)
+        $previousHistory = PatientMedicalHistory::where('patient_id', $patient->id)
+            ->where('patient_visit_id', '!=', $visit->id) // Exclude current visit
+            ->orderBy('completed_at', 'desc')
+            ->first();
+        
+        // Pre-fill data structure
+        $prefilledData = [];
+        
+        // 1. Pre-fill from patient record (current data)
+        if ($patient) {
+            $prefilledData = [
+                'full_name' => $patient->first_name . ' ' . $patient->last_name,
+                'sex' => $patient->sex,
+                'address' => $patient->address,
+                'contact_number' => $patient->contact_number,
+                'date_of_birth' => $patient->birthdate?->format('Y-m-d'),
+                'age' => $patient->birthdate ? now()->diffInYears($patient->birthdate) : null,
+            ];
+        }
+        
+        // 2. Pre-fill from previous medical history (if exists)
+        if ($previousHistory) {
+            $prefilledData = array_merge($prefilledData, [
+                // Patient Information
+                'occupation' => $previousHistory->occupation,
+                'email' => $previousHistory->email,
+                'previous_dentist' => $previousHistory->previous_dentist,
+                'last_dental_visit' => $previousHistory->last_dental_visit?->format('Y-m-d'),
+                'physician_name' => $previousHistory->physician_name,
+                'physician_address' => $previousHistory->physician_address,
+                
+                // Health Questions
+                'in_good_health' => $previousHistory->in_good_health,
+                'under_medical_treatment' => $previousHistory->under_medical_treatment,
+                'medical_treatment_details' => $previousHistory->medical_treatment_details,
+                'serious_illness_surgery' => $previousHistory->serious_illness_surgery,
+                'illness_surgery_details' => $previousHistory->illness_surgery_details,
+                'hospitalized' => $previousHistory->hospitalized,
+                'hospitalization_details' => $previousHistory->hospitalization_details,
+                'taking_medications' => $previousHistory->taking_medications,
+                'medications_list' => $previousHistory->medications_list,
+                'uses_tobacco' => $previousHistory->uses_tobacco,
+                'uses_alcohol_drugs' => $previousHistory->uses_alcohol_drugs,
+                
+                // Allergies
+                'allergic_local_anesthetic' => $previousHistory->allergic_local_anesthetic,
+                'allergic_penicillin' => $previousHistory->allergic_penicillin,
+                'allergic_sulfa' => $previousHistory->allergic_sulfa,
+                'allergic_aspirin' => $previousHistory->allergic_aspirin,
+                'allergic_latex' => $previousHistory->allergic_latex,
+                'allergic_others' => $previousHistory->allergic_others,
+                
+                // For Women Only
+                'is_pregnant' => $previousHistory->is_pregnant,
+                'is_nursing' => $previousHistory->is_nursing,
+                'taking_birth_control' => $previousHistory->taking_birth_control,
+                
+                // Vital Information
+                'blood_type' => $previousHistory->blood_type,
+                'blood_pressure' => $previousHistory->blood_pressure,
+                'bleeding_time' => $previousHistory->bleeding_time,
+                
+                // Medical Conditions
+                'high_blood_pressure' => $previousHistory->high_blood_pressure,
+                'low_blood_pressure' => $previousHistory->low_blood_pressure,
+                'heart_disease' => $previousHistory->heart_disease,
+                'heart_murmur' => $previousHistory->heart_murmur,
+                'chest_pain' => $previousHistory->chest_pain,
+                'stroke' => $previousHistory->stroke,
+                'diabetes' => $previousHistory->diabetes,
+                'hepatitis' => $previousHistory->hepatitis,
+                'tuberculosis' => $previousHistory->tuberculosis,
+                'kidney_disease' => $previousHistory->kidney_disease,
+                'cancer' => $previousHistory->cancer,
+                'asthma' => $previousHistory->asthma,
+                'anemia' => $previousHistory->anemia,
+                'arthritis' => $previousHistory->arthritis,
+                'epilepsy' => $previousHistory->epilepsy,
+                'aids_hiv' => $previousHistory->aids_hiv,
+                'stomach_troubles' => $previousHistory->stomach_troubles,
+                'thyroid_problems' => $previousHistory->thyroid_problems,
+                'hay_fever' => $previousHistory->hay_fever,
+                'head_injuries' => $previousHistory->head_injuries,
+                'rapid_weight_loss' => $previousHistory->rapid_weight_loss,
+                'joint_replacement' => $previousHistory->joint_replacement,
+                'radiation_therapy' => $previousHistory->radiation_therapy,
+                'swollen_ankles' => $previousHistory->swollen_ankles,
+                'other_conditions' => $previousHistory->other_conditions,
+            ]);
+        }
+        
+        return response()->json([
+            'form_data' => $prefilledData,
+            'visit' => $visit,
+            'patient' => $patient,
+            'previous_history_exists' => $previousHistory !== null,
+            'previous_history_date' => $previousHistory?->completed_at?->format('Y-m-d'),
+            'requires_medical_history' => $visit->medical_history_status === 'pending',
+            'message' => $previousHistory 
+                ? 'Form pre-filled with previous medical history. Please review and update if necessary.' 
+                : 'No previous medical history found. Please complete the form.',
+        ]);
+    }
 
+    /**
+     * POST /api/visits/{id}/medical-history
+     * Complete medical history for visit (saves new record, even if pre-filled)
+     */
+    public function submitMedicalHistory(Request $request, $id)
+    {
+        $visit = PatientVisit::with('patient')->findOrFail($id);
+        
+        // Check if already completed
+        if ($visit->medical_history_status === 'completed') {
+            return response()->json([
+                'message' => 'Medical history already completed for this visit.',
+                'visit' => $visit,
+            ], 422);
+        }
+
+        $validated = $request->validate([
+            // Patient Information
+            'full_name' => 'nullable|string|max:255',
+            'age' => 'nullable|integer|min:0|max:150',
+            'sex' => 'nullable|in:male,female',
+            'address' => 'nullable|string|max:500',
+            'contact_number' => 'nullable|string|max:20',
+            'occupation' => 'nullable|string|max:255',
+            'date_of_birth' => 'nullable|date',
+            'email' => 'nullable|email|max:255',
+            'previous_dentist' => 'nullable|string|max:255',
+            'last_dental_visit' => 'nullable|date',
+            'physician_name' => 'nullable|string|max:255',
+            'physician_address' => 'nullable|string|max:500',
+            
+            // Health Questions
+            'in_good_health' => 'nullable|boolean',
+            'under_medical_treatment' => 'nullable|boolean',
+            'medical_treatment_details' => 'nullable|string',
+            'serious_illness_surgery' => 'nullable|boolean',
+            'illness_surgery_details' => 'nullable|string',
+            'hospitalized' => 'nullable|boolean',
+            'hospitalization_details' => 'nullable|string',
+            'taking_medications' => 'nullable|boolean',
+            'medications_list' => 'nullable|string',
+            'uses_tobacco' => 'nullable|boolean',
+            'uses_alcohol_drugs' => 'nullable|boolean',
+            
+            // Allergies
+            'allergic_local_anesthetic' => 'nullable|boolean',
+            'allergic_penicillin' => 'nullable|boolean',
+            'allergic_sulfa' => 'nullable|boolean',
+            'allergic_aspirin' => 'nullable|boolean',
+            'allergic_latex' => 'nullable|boolean',
+            'allergic_others' => 'nullable|string',
+            
+            // For Women Only
+            'is_pregnant' => 'nullable|boolean',
+            'is_nursing' => 'nullable|boolean',
+            'taking_birth_control' => 'nullable|boolean',
+            
+            // Vital Information
+            'blood_type' => 'nullable|string|max:10',
+            'blood_pressure' => 'nullable|string|max:50',
+            'bleeding_time' => 'nullable|string|max:50',
+            
+            // Medical Conditions (all boolean)
+            'high_blood_pressure' => 'nullable|boolean',
+            'low_blood_pressure' => 'nullable|boolean',
+            'heart_disease' => 'nullable|boolean',
+            'heart_murmur' => 'nullable|boolean',
+            'chest_pain' => 'nullable|boolean',
+            'stroke' => 'nullable|boolean',
+            'diabetes' => 'nullable|boolean',
+            'hepatitis' => 'nullable|boolean',
+            'tuberculosis' => 'nullable|boolean',
+            'kidney_disease' => 'nullable|boolean',
+            'cancer' => 'nullable|boolean',
+            'asthma' => 'nullable|boolean',
+            'anemia' => 'nullable|boolean',
+            'arthritis' => 'nullable|boolean',
+            'epilepsy' => 'nullable|boolean',
+            'aids_hiv' => 'nullable|boolean',
+            'stomach_troubles' => 'nullable|boolean',
+            'thyroid_problems' => 'nullable|boolean',
+            'hay_fever' => 'nullable|boolean',
+            'head_injuries' => 'nullable|boolean',
+            'rapid_weight_loss' => 'nullable|boolean',
+            'joint_replacement' => 'nullable|boolean',
+            'radiation_therapy' => 'nullable|boolean',
+            'swollen_ankles' => 'nullable|boolean',
+            'other_conditions' => 'nullable|string',
+        ]);
+
+        return DB::transaction(function () use ($visit, $validated) {
+            // Auto-fill some fields from patient if not provided
+            if ($visit->patient) {
+                $validated['full_name'] = $validated['full_name'] ?? 
+                    ($visit->patient->first_name . ' ' . $visit->patient->last_name);
+                $validated['sex'] = $validated['sex'] ?? $visit->patient->sex;
+                $validated['address'] = $validated['address'] ?? $visit->patient->address;
+                $validated['contact_number'] = $validated['contact_number'] ?? $visit->patient->contact_number;
+                $validated['date_of_birth'] = $validated['date_of_birth'] ?? $visit->patient->birthdate?->toDateString();
+                
+                // Calculate age if date_of_birth is available
+                if (isset($validated['date_of_birth']) && !isset($validated['age'])) {
+                    $validated['age'] = now()->diffInYears(\Carbon\Carbon::parse($validated['date_of_birth']));
+                }
+            }
+
+            // Create medical history (NEW record for this visit, even if data is same)
+            $medicalHistory = PatientMedicalHistory::create(array_merge($validated, [
+                'patient_id' => $visit->patient_id,
+                'patient_visit_id' => $visit->id,
+                'completed_by' => Auth::id(),
+                'completed_at' => now(),
+            ]));
+
+            // Update visit status and generate visit code
+            $visit->update([
+                'medical_history_status' => 'completed',
+                'medical_history_id' => $medicalHistory->id,
+                'visit_code' => PatientVisit::generateVisitCode(), // Generate code after history completion
+            ]);
+
+            // Prevent code reuse on appointment
+            if ($visit->appointment) {
+                $visit->appointment->reference_code = null;
+                $visit->appointment->save();
+            }
+
+            return response()->json([
+                'message' => 'Medical history completed. Visit code generated.',
+                'visit' => $visit->load('patient', 'service', 'appointment'),
+                'medical_history' => $medicalHistory,
+            ]);
+        });
+    }
+
+    /**
+     * GET /api/visits/{id}/medical-history
+     * Get completed medical history for a visit
+     */
+    public function getMedicalHistory($id)
+    {
+        $visit = PatientVisit::findOrFail($id);
+        
+        $medicalHistory = PatientMedicalHistory::where('patient_visit_id', $visit->id)->first();
+        
+        return response()->json([
+            'medical_history' => $medicalHistory,
+            'visit' => $visit,
+            'requires_medical_history' => $visit->medical_history_status === 'pending',
+        ]);
+    }
 
     // 🟡 Mark a visit as finished (end timer)
     public function finish($id)
@@ -857,9 +1149,15 @@ class PatientVisitController extends Controller
             ]);
         }
 
-        // Get complete patient history
+                // Get complete patient history
         $patientHistory = $visit->getCompletePatientHistory();
-
+        
+        // Get medical history for this visit (if completed)
+        $medicalHistory = null;
+        if ($visit->medical_history_status === 'completed' && $visit->medical_history_id) {
+            $medicalHistory = PatientMedicalHistory::with('completedBy')->where('patient_visit_id', $visit->id)->first();
+        }
+        
         // Return minimal patient summary and history
         return response()->json([
             'visit' => [
@@ -869,6 +1167,7 @@ class PatientVisitController extends Controller
                 'start_time' => $visit->start_time,
                 'consultation_started_at' => $visit->consultation_started_at,
                 'status' => $visit->status,
+                'medical_history_status' => $visit->medical_history_status,
             ],
             'patient' => [
                 'id' => $visit->patient->id,
@@ -885,6 +1184,7 @@ class PatientVisitController extends Controller
                 'teeth_count' => $visit->appointment->teeth_count,
             ] : null,
             'patient_history' => $patientHistory,
+            'medical_history' => $medicalHistory,
             'has_existing_notes' => $visit->visitNotes ? true : false,
         ]);
     }
@@ -989,6 +1289,16 @@ class PatientVisitController extends Controller
         // Check if visit is still pending
         if ($visit->status !== 'pending') {
             return response()->json(['message' => 'Visit is no longer pending.'], 422);
+        }
+        
+        // Check if medical history is completed
+        if ($visit->medical_history_status !== 'completed') {
+            return response()->json(['message' => 'Medical history must be completed before sending visit code to dentist.'], 422);
+        }
+        
+        // Check if visit code exists
+        if (!$visit->visit_code) {
+            return response()->json(['message' => 'Visit code has not been generated. Please complete the medical history first.'], 422);
         }
 
         // Create notification for the dentist

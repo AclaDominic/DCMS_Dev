@@ -12,7 +12,8 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule): void
     {
-        $schedule->command('appointments:mark-no-shows')->everyThirtyMinutes();
+        // Run every 15 minutes to check for appointments that are 15 minutes late
+        $schedule->command('appointments:mark-no-shows')->everyFifteenMinutes();
         $schedule->command('goals:update-progress')->dailyAt('01:15');
         $schedule->command('promos:auto-cancel-expired')->dailyAt('02:00');
         

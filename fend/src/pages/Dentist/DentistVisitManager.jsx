@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import api from "../../api/api";
 import LoadingSpinner from "../../components/LoadingSpinner";
 import ToothChart from "../../components/Dentist/ToothChart";
+import MedicalHistoryView from "../../components/Dentist/MedicalHistoryView";
 
 function DentistVisitManager() {
   const navigate = useNavigate();
@@ -85,7 +86,7 @@ function DentistVisitManager() {
         minWidth: '140px'
       }}
     >
-      <i className={`bi bi-${icon === "📝" ? "pencil-square" : "clock-history"} me-2`}></i>
+      <i className={`bi bi-${icon === "📝" ? "pencil-square" : icon === "🏥" ? "file-medical" : "clock-history"} me-2`}></i>
       <span className="d-none d-sm-inline">{label}</span>
       <span className="d-sm-none">{label.split(' ')[0]}</span>
     </button>
@@ -261,6 +262,7 @@ function DentistVisitManager() {
                     {/* Tab Navigation */}
                     <div className="d-flex flex-column flex-sm-row gap-2 mb-4" role="group" aria-label="Visit tabs">
                       <TabButton id="notes" icon="📝" label="Enter Notes" />
+                      <TabButton id="medical-history" icon="🏥" label="Medical History" />
                       <TabButton id="history" icon="📋" label="Patient History" />
                     </div>
 
@@ -355,9 +357,18 @@ function DentistVisitManager() {
                             </button>
                           </div>
                         </div>
-                      )}
+                        )}
 
-                      {activeTab === "history" && (
+  {activeTab === "medical-history" && (
+    <div className="tab-pane fade show active">
+      <div className="mb-4">
+        <h6>Medical and Dental History</h6>
+        <MedicalHistoryView medicalHistory={visitData.medical_history} />
+      </div>
+    </div>
+  )}
+  
+  {activeTab === "history" && (
                         <div className="tab-pane fade show active">
                           {visitData.patient_history && visitData.patient_history.length > 0 ? (
                             <div className="mb-4">

@@ -9,7 +9,8 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 // Scheduled Tasks
-Schedule::command('appointments:mark-no-shows')->everyThirtyMinutes();
+// Run every 15 minutes to check for appointments that are 15 minutes late
+Schedule::command('appointments:mark-no-shows')->everyFifteenMinutes();
 Schedule::command('goals:update-progress')->dailyAt('01:15');
 Schedule::command('promos:auto-cancel-expired')->dailyAt('02:00');
 

@@ -3,6 +3,7 @@ import api from "../../api/api";
 import VisitCompletionModal from "./VisitCompletionModal";
 import VisitNotesModal from "./VisitNotesModal";
 import SendVisitCodeModal from "./SendVisitCodeModal";
+import MedicalHistoryFormModal from "./MedicalHistoryFormModal";
 
 function VisitTrackerManager() {
   const [visits, setVisits] = useState([]);
@@ -32,11 +33,13 @@ function VisitTrackerManager() {
   const [showAllVisits, setShowAllVisits] = useState(false);
   const [completingVisit, setCompletingVisit] = useState(null);
   const [viewingNotes, setViewingNotes] = useState(null);
-  const [sendingReceipt, setSendingReceipt] = useState(null);
-  const [sendingVisitCode, setSendingVisitCode] = useState(null);
+    const [sendingReceipt, setSendingReceipt] = useState(null);       
+  const [sendingVisitCode, setSendingVisitCode] = useState(null);   
   const [potentialMatches, setPotentialMatches] = useState([]);
-  const [showMatchesModal, setShowMatchesModal] = useState(false);
+  const [showMatchesModal, setShowMatchesModal] = useState(false);  
   const [showMakeAppointmentModal, setShowMakeAppointmentModal] = useState(false);
+  const [showMedicalHistoryModal, setShowMedicalHistoryModal] = useState(false);
+  const [medicalHistoryVisit, setMedicalHistoryVisit] = useState(null);
   const [appointmentForm, setAppointmentForm] = useState({
     patient_id: '',
     first_name: '',
@@ -112,7 +115,7 @@ function VisitTrackerManager() {
       }
       console.log("🚀 Creating visit with payload:", payload);
       const response = await api.post("/api/visits", payload);
-      const visit = response.data;
+      const visit = response.data.visit || response.data;
       console.log("✅ Visit created successfully:", visit);
       console.log("📋 Visit details:", {
         id: visit.id,
@@ -123,8 +126,10 @@ function VisitTrackerManager() {
         start_time: visit.start_time
       });
       
-      // Show visit code to staff
-      if (visit.visit_code) {
+      // Check if requires_medical_history flag is present (for appointment-based visits)
+      if (response.data.requires_medical_history) {
+        alert(`Visit created. Please complete the medical history form before sending the visit code to the dentist.`);
+      } else if (visit.visit_code) {
         alert(`Visit started successfully!\n\nVisit Code: ${visit.visit_code}\n\nShare this code with the dentist to begin consultation.`);
       }
       
@@ -261,12 +266,39 @@ function VisitTrackerManager() {
         // Keep editingVisit open so user can link if needed
         // Don't fetchVisits here to avoid race condition
       } else {
+        const savedEditingVisit = editingVisit; // Store before clearing
         setEditingVisit(null);
         await fetchVisits();
+        
+        // NEW: Auto-open medical history modal for walk-in after edit save
+        // Check if this is a walk-in (no appointment_id) and service is selected
+        if (!savedEditingVisit.appointment_id && editForm.service_id) {
+          try {
+            const updatedVisitResponse = await api.get(`/api/visits/${savedEditingVisit.id}`);
+            if (updatedVisitResponse.data.medical_history_status === 'pending') {
+              setMedicalHistoryVisit(updatedVisitResponse.data);
+              setShowMedicalHistoryModal(true);
+            }
+          } catch (err) {
+            console.error("Failed to fetch updated visit for medical history:", err);
+          }
+        }
       }
     } catch (err) {
       alert("Failed to update patient.");
     }
+  };
+
+  const handleOpenMedicalHistory = (visit) => {
+    setMedicalHistoryVisit(visit);
+    setShowMedicalHistoryModal(true);
+  };
+
+  const handleMedicalHistorySuccess = async (data) => {
+    // Refresh visits to get updated visit_code
+    await fetchVisits();
+    setShowMedicalHistoryModal(false);
+    setMedicalHistoryVisit(null);
   };
 
   const handleMakeAppointmentClick = async () => {
@@ -594,6 +626,7 @@ function VisitTrackerManager() {
                   <th>Note</th>
                   <th>Started At</th>
                   <th>Status</th>
+                  <th>Medical History</th>
                   <th style={{minWidth: '200px'}}>Actions</th>
                 </tr>
               </thead>
@@ -653,23 +686,71 @@ function VisitTrackerManager() {
 
                     <td>{v.status}</td>
                     <td>
+                      {v.medical_history_status === 'completed' ? (
+                        <span className="badge bg-success">
+                          <i className="bi bi-check-circle me-1"></i>
+                          Completed
+                        </span>
+                      ) : (
+                        <span className="badge bg-warning text-dark">
+                          <i className="bi bi-clock me-1"></i>
+                          Pending
+                        </span>
+                      )}
+                    </td>
+                    <td>
                       {v.status === "pending" && (
-                        <div className="d-flex gap-1 flex-wrap">
+                        <div className="d-flex gap-1 flex-wrap">    
+                          <button
+                            className="btn btn-warning btn-sm"      
+                            onClick={() => handleEditClick(v)}      
+                          >
+                            Edit
+                          </button>
+                          
+                          {/* Medical History Button */}
+                          <button
+                            className={`btn btn-sm ${v.medical_history_status === 'completed' ? 'btn-success' : 'btn-info'}`}
+                            onClick={() => handleOpenMedicalHistory(v)}
+                            title={v.medical_history_status === 'completed' ? 'View/Edit Medical History' : 'Complete Medical History'}
+                          >
+                            <i className={`bi ${v.medical_history_status === 'completed' ? 'bi-check-circle' : 'bi-file-medical'} me-1`}></i>
+                            Medical History
+                          </button>
+                          
+                          {/* Conditionally show Send Visit Code button or badge */}
+                          {v.visit_code ? (
+                            <button
+                              className="btn btn-primary btn-sm"
+                              onClick={() => setSendingVisitCode(v)}
+                              disabled={v.medical_history_status === 'pending'}
+                              title={v.medical_history_status === 'pending' ? 'Complete medical history first' : 'Send visit code to dentist'}
+                            >
+                              <i className="bi bi-send me-1"></i>
+                              Send Visit Code to Dentist
+                            </button>
+                          ) : (
+                            <span className="badge bg-warning text-dark">
+                              <i className="bi bi-exclamation-triangle me-1"></i>
+                              Medical History Required
+                            </span>
+                          )}
+                          
                           <button
                             className={`btn btn-sm ${
-                              v.service_id ? "btn-success" : "btn-outline-secondary"
+                              v.service_id ? "btn-success" : "btn-outline-secondary"                                                    
                             }`}
-                            onClick={() => handleAction(v.id, "finish")}
+                            onClick={() => handleAction(v.id, "finish")}                                                                
                             disabled={!v.service_id}
                             title={
-                              !v.service_id 
-                                ? "Please select a service first" 
+                              !v.service_id
+                                ? "Please select a service first"   
                                 : "Complete this visit"
                             }
                           >
                             {!v.service_id ? (
                               <>
-                                <i className="bi bi-exclamation-triangle me-1"></i>
+                                <i className="bi bi-exclamation-triangle me-1"></i>                                                     
                                 Finish
                               </>
                             ) : (
@@ -677,21 +758,7 @@ function VisitTrackerManager() {
                             )}
                           </button>
                           <button
-                            className="btn btn-info btn-sm"
-                            onClick={() => setSendingVisitCode(v)}
-                            title="Send visit code to available dentist"
-                          >
-                            <i className="bi bi-send me-1"></i>
-                            Send Code
-                          </button>
-                          <button
-                            className="btn btn-warning btn-sm"
-                            onClick={() => handleEditClick(v)}
-                          >
-                            Edit
-                          </button>
-                          <button
-                            className="btn btn-danger btn-sm"
+                            className="btn btn-danger btn-sm"       
                             onClick={() => {
                               setRejectingVisitId(v.id);
                               setRejectReason("");
@@ -1127,14 +1194,26 @@ function VisitTrackerManager() {
         />
       )}
 
-      {/* Send Visit Code Modal */}
+            {/* Send Visit Code Modal */}
       {sendingVisitCode && (
         <SendVisitCodeModal
           visit={sendingVisitCode}
           onClose={() => setSendingVisitCode(null)}
           onSuccess={(dentist) => {
-            console.log(`Visit code sent to Dr. ${dentist.dentist_name || dentist.dentist_code}`);
+            console.log(`Visit code sent to Dr. ${dentist.dentist_name || dentist.dentist_code}`);                                      
           }}
+        />
+      )}
+
+      {/* Medical History Modal */}
+      {showMedicalHistoryModal && medicalHistoryVisit && (
+        <MedicalHistoryFormModal
+          visit={medicalHistoryVisit}
+          onClose={() => {
+            setShowMedicalHistoryModal(false);
+            setMedicalHistoryVisit(null);
+          }}
+          onSuccess={handleMedicalHistorySuccess}
         />
       )}
 

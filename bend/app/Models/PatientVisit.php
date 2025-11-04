@@ -23,6 +23,8 @@ class PatientVisit extends Model
         'receipt_sent_at',
         'receipt_sent_to',
         'is_seeded',
+        'medical_history_status',
+        'medical_history_id',
     ];
 
     protected $casts = [
@@ -81,6 +83,11 @@ class PatientVisit extends Model
     public function additionalCharges()
     {
         return $this->hasMany(VisitAdditionalCharge::class);
+    }
+
+    public function medicalHistory()
+    {
+        return $this->hasOne(PatientMedicalHistory::class, 'patient_visit_id');
     }
 
     // Helper method to get encrypted notes

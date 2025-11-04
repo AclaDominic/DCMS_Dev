@@ -24,7 +24,7 @@ class MarkNoShows extends Command
      *
      * @var string
      */
-    protected $description = 'Mark approved appointments as no_show if more than 1 hour past start with no visit, or at closing time if not yet started.';
+    protected $description = 'Mark approved appointments as no_show if more than 15 minutes past start with no visit, or at closing time if not yet started.';
 
     /**
      * Execute the console command.
@@ -78,10 +78,10 @@ class MarkNoShows extends Command
             $shouldMarkNoShow = false;
             $reason = '';
 
-            // Case 1: More than 1 hour past appointment start time
-            if ($now->gt($startAt->copy()->addHour())) {
+            // Case 1: More than 15 minutes past appointment start time
+            if ($now->gt($startAt->copy()->addMinutes(15))) {
                 $shouldMarkNoShow = true;
-                $reason = 'More than 1 hour past appointment start time';
+                $reason = 'More than 15 minutes past appointment start time';
             }
             
             // Case 2: At or past closing time and appointment hasn't started yet

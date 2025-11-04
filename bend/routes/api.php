@@ -353,6 +353,9 @@ Route::middleware(['auth:sanctum', 'check.account.status', EnsureDeviceIsApprove
         Route::post('/{visit}/link-existing', [PatientVisitController::class, 'linkToExistingPatient']);
         Route::post('/{id}/view-notes', [PatientVisitController::class, 'viewNotes']);
         Route::post('/send-visit-code', [PatientVisitController::class, 'sendVisitCode']);
+        Route::get('/{id}/medical-history-form', [PatientVisitController::class, 'getMedicalHistoryForm']);
+        Route::post('/{id}/medical-history', [PatientVisitController::class, 'submitMedicalHistory']);
+        Route::get('/{id}/medical-history', [PatientVisitController::class, 'getMedicalHistory']);
         
         // Visit code resolution and notes (accessible to staff and dentists)
         Route::get('/resolve/{code}', [PatientVisitController::class, 'resolveCode'])->middleware('throttle:10,1');
