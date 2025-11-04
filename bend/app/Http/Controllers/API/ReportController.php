@@ -211,6 +211,7 @@ class ReportController extends Controller
         });
 
         // Payment method share (cash, hmo, maya) from paid payments in the month
+        // Note: Excludes refunded payments (status = 'refunded') since we filter for 'paid' only
         $payCurr = DB::table('payments')
             ->where('status', 'paid')
             ->whereBetween('paid_at', [$start, $end])
@@ -242,6 +243,7 @@ class ReportController extends Controller
         $mayaSharePrev = round(($mayaPrev / $denomPrev) * 100.0, 2);
 
         // Revenue by service (from paid payments linked to visits) - exclude services marked as excluded from analytics
+        // Note: Excludes refunded payments (status = 'refunded') since we filter for 'paid' only
         $revenueByServiceCurr = DB::table('payments as p')
             ->join('patient_visits as v', 'p.patient_visit_id', '=', 'v.id')
             ->leftJoin('services as s', 's.id', '=', 'v.service_id')
@@ -279,6 +281,7 @@ class ReportController extends Controller
         });
 
         // Total revenue for the month
+        // Note: Excludes refunded payments (status = 'refunded') since we filter for 'paid' only
         $totalRevenueCurr = DB::table('payments')
             ->where('status', 'paid')
             ->whereBetween('paid_at', [$start, $end])
@@ -609,6 +612,7 @@ class ReportController extends Controller
             ->value('avg_min') ?? 0);
 
         // Total revenue
+        // Note: Excludes refunded payments (status = 'refunded') since we filter for 'paid' only
         $totalRevenueCurr = DB::table('payments')
             ->where('status', 'paid')
             ->whereBetween('paid_at', [$start, $end])
@@ -702,7 +706,7 @@ class ReportController extends Controller
                         ->count();
                     $appointments[] = (int) $yearAppointments;
                     
-                    // Revenue for this year
+                    // Revenue for this year (excludes refunded payments - status = 'refunded')
                     $yearRevenue = DB::table('payments')
                         ->where('status', 'paid')
                         ->whereBetween('paid_at', [$yearStart, $yearEnd])
@@ -750,7 +754,7 @@ class ReportController extends Controller
                         ->count();
                     $appointments[] = (int) $monthAppointments;
                     
-                    // Revenue for this month
+                    // Revenue for this month (excludes refunded payments - status = 'refunded')
                     $monthRevenue = DB::table('payments')
                         ->where('status', 'paid')
                         ->whereBetween('paid_at', [$monthStart, $monthEnd])
@@ -803,7 +807,7 @@ class ReportController extends Controller
                         ->count();
                     $appointments[] = (int) $yearAppointments;
                     
-                    // Revenue for this year
+                    // Revenue for this year (excludes refunded payments - status = 'refunded')
                     $yearRevenue = DB::table('payments')
                         ->where('status', 'paid')
                         ->whereBetween('paid_at', [$yearStart, $yearEnd])
@@ -851,7 +855,7 @@ class ReportController extends Controller
                         ->count();
                     $appointments[] = (int) $monthAppointments;
                     
-                    // Revenue for this month
+                    // Revenue for this month (excludes refunded payments - status = 'refunded')
                     $monthRevenue = DB::table('payments')
                         ->where('status', 'paid')
                         ->whereBetween('paid_at', [$monthStart, $monthEnd])
@@ -1370,6 +1374,7 @@ class ReportController extends Controller
                 ->whereBetween('start_time', [$start, $end])
                 ->count();
 
+            // Revenue excludes refunded payments (status = 'refunded')
             $currentRevenue = DB::table('payments as p')
                 ->join('patient_visits as v', 'p.patient_visit_id', '=', 'v.id')
                 ->where('v.service_id', $service->id)
@@ -1384,6 +1389,7 @@ class ReportController extends Controller
                 ->whereBetween('start_time', [$prevStart, $prevEnd])
                 ->count();
 
+            // Revenue excludes refunded payments (status = 'refunded')
             $prevRevenue = DB::table('payments as p')
                 ->join('patient_visits as v', 'p.patient_visit_id', '=', 'v.id')
                 ->where('v.service_id', $service->id)
@@ -1603,6 +1609,7 @@ class ReportController extends Controller
      */
     private function getDecliningServices($start, $end, $prevStart, $prevEnd)
     {
+        // Revenue excludes refunded payments (status = 'refunded')
         $currentRevenue = DB::table('payments as p')
             ->join('patient_visits as v', 'p.patient_visit_id', '=', 'v.id')
             ->leftJoin('services as s', 's.id', '=', 'v.service_id')

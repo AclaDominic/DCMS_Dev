@@ -9,6 +9,7 @@ const StaffDashboard = () => {
   const [todayVisits, setTodayVisits] = useState(0);
   const [pendingAppointments, setPendingAppointments] = useState(0);
   const [pendingVisits, setPendingVisits] = useState(0);
+  const [remindersCount, setRemindersCount] = useState(0);
   const [loadingStats, setLoadingStats] = useState(false);
 
   useEffect(() => {
@@ -41,6 +42,10 @@ const StaffDashboard = () => {
       // Fetch pending appointments
       const appointmentsRes = await api.get("/api/appointments?status=pending");
       setPendingAppointments(appointmentsRes.data.length || 0);
+
+      // Fetch remindable appointments
+      const remindersRes = await api.get("/api/appointments/remindable");
+      setRemindersCount(remindersRes.data.length || 0);
     } catch (err) {
       console.error("Failed to load statistics", err);
     } finally {
@@ -92,7 +97,7 @@ const StaffDashboard = () => {
       {/* Statistics Cards */}
       <div className="row g-3 mb-4">
         {/* Today's Visits Card */}
-        <div className="col-12 col-md-4">
+        <div className="col-12 col-md-6 col-lg-3">
           <div className="card border-0 shadow-sm h-100" style={{ borderRadius: '16px', cursor: 'pointer' }}
                onClick={() => navigate('/staff/visit-tracker')}>
             <div className="card-body p-4">
@@ -114,7 +119,7 @@ const StaffDashboard = () => {
         </div>
 
         {/* Pending Appointments Card */}
-        <div className="col-12 col-md-4">
+        <div className="col-12 col-md-6 col-lg-3">
           <div className="card border-0 shadow-sm h-100" style={{ borderRadius: '16px', cursor: 'pointer' }}
                onClick={() => navigate('/staff/appointments')}>
             <div className="card-body p-4">
@@ -136,7 +141,7 @@ const StaffDashboard = () => {
         </div>
 
         {/* Pending Visits Card */}
-        <div className="col-12 col-md-4">
+        <div className="col-12 col-md-6 col-lg-3">
           <div className="card border-0 shadow-sm h-100" style={{ borderRadius: '16px', cursor: 'pointer' }}
                onClick={() => navigate('/staff/visit-tracker')}>
             <div className="card-body p-4">
@@ -151,6 +156,28 @@ const StaffDashboard = () => {
                     {loadingStats ? '...' : pendingVisits}
                   </div>
                   <small className="text-muted">Awaiting completion</small>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Appointment Reminders Card */}
+        <div className="col-12 col-md-6 col-lg-3">
+          <div className="card border-0 shadow-sm h-100" style={{ borderRadius: '16px', cursor: 'pointer' }}
+               onClick={() => navigate('/staff/appointment-reminders')}>
+            <div className="card-body p-4">
+              <div className="d-flex align-items-center">
+                <div className="bg-success rounded-circle me-3 d-flex align-items-center justify-content-center flex-shrink-0" 
+                     style={{ width: '50px', height: '50px', fontSize: '1.5rem' }}>
+                  <i className="bi bi-bell text-white"></i>
+                </div>
+                <div className="flex-grow-1 min-width-0">
+                  <div className="text-muted small fw-semibold">Appointment Reminders</div>
+                  <div className="fs-3 fw-bold text-success">
+                    {loadingStats ? '...' : remindersCount}
+                  </div>
+                  <small className="text-muted">Needs to be sent</small>
                 </div>
               </div>
             </div>

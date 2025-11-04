@@ -39,6 +39,8 @@ import PatientManager from "../pages/Admin/PatientManager";
 import TimeBlockUtilizationDashboard from "../pages/Admin/TimeBlockUtilizationDashboard";
 import PaymentRecords from "../pages/Admin/PaymentRecords";
 import AdminPatientUserBindingPage from "../pages/Admin/PatientUserBindingPage";
+import RefundRequestManager from "../pages/Admin/RefundRequestManager";
+import RefundSettings from "../pages/Admin/RefundSettings";
 const DentistScheduleManager = lazy(() =>
   import("../pages/Admin/DentistScheduleManager")
 ); // Lazy load dentist schedule manager
@@ -145,6 +147,9 @@ export default function AppRouter() {
           <Route path="time-blocks" element={<TimeBlockUtilizationDashboard />} />
           {/* Patient-User Binding */}
           <Route path="patient-binding" element={<AdminPatientUserBindingPage />} />
+          {/* Refund Management */}
+          <Route path="refund-requests" element={<RefundRequestManager />} />
+          <Route path="refund-settings" element={<RefundSettings />} />
           {/* Add more admin routes as needed */}
         </Route>
 

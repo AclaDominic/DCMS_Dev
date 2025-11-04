@@ -554,9 +554,15 @@ class AppointmentController extends Controller
         $message = $request->input('message', '');
         $edited = (bool) $request->input('edited', false);
 
+        // Convert phone number to E.164 format if needed
+        $phoneNumber = $user->contact_number;
+        if ($phoneNumber && preg_match('/^09([0-9]{9})$/', $phoneNumber, $matches)) {
+            $phoneNumber = '+639' . $matches[1];
+        }
+
         // send via logger (no real SMS)
         NotificationService::send(
-            to: $user->contact_number,
+            to: $phoneNumber,
             subject: 'Dental Appointment Reminder',
             message: $message
         );

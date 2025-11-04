@@ -56,6 +56,13 @@ class NotificationService
         ]);
 
         try {
+            // Validate and truncate sender ID to AWS requirement (1-11 characters)
+            $senderId = config('services.sns.sender_id');
+            if ($senderId && strlen($senderId) > 11) {
+                $senderId = substr($senderId, 0, 11);
+                Log::warning("Sender ID truncated to 11 characters: {$senderId}");
+            }
+
             $result = $sns->publish([
                 'Message'        => $message,
                 'PhoneNumber'    => $to,
@@ -64,9 +71,9 @@ class NotificationService
                         'DataType'    => 'String',
                         'StringValue' => config('services.sns.sms_type'),
                     ],
-                    'AWS.SNS.SMS.SenderID' => config('services.sns.sender_id') ? [
+                    'AWS.SNS.SMS.SenderID' => $senderId ? [
                         'DataType'    => 'String',
-                        'StringValue' => config('services.sns.sender_id'),
+                        'StringValue' => $senderId,
                     ] : null,
                 ]),
             ]);
@@ -97,7 +104,7 @@ class NotificationService
         $timeSlot   = (string) $appointment->time_slot;
         $refCode    = (string) ($appointment->reference_code ?? 'N/A');
 
-        $default = "Hello {$userName}, this is a reminder for your dental appointment on {$date} at {$timeSlot} for {$service}. Ref: {$refCode}. Please arrive on time. – Pitogo's Dental Clinic";
+        $default = "Hello {$userName}, this is a reminder for your dental appointment on {$date} at {$timeSlot} for {$service}. Ref: {$refCode}. Please arrive on time. – Kreative Dental Clinic";
 
         if ($edited && is_string($custom) && trim($custom) !== '') {
             return $custom;
