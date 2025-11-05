@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Appointment;
 use App\Models\PatientVisit;
+use App\Models\RefundRequest;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
@@ -188,6 +189,9 @@ class ReceiptService
      */
     private function prepareAppointmentData(Appointment $appointment)
     {
+        // Load refund request relationship
+        $appointment->load('refundRequest');
+        
         $patient = $appointment->patient;
         $service = $appointment->service;
         $payments = $appointment->payments;
@@ -266,6 +270,18 @@ class ReceiptService
             // Additional information
             'notes' => $appointment->notes,
             'appointment_status' => ucfirst($appointment->status),
+            
+            // Refund information (if applicable)
+            'refund_request' => $appointment->refundRequest ? [
+                'id' => $appointment->refundRequest->id,
+                'status' => $appointment->refundRequest->status,
+                'original_amount' => $appointment->refundRequest->original_amount,
+                'cancellation_fee' => $appointment->refundRequest->cancellation_fee,
+                'refund_amount' => $appointment->refundRequest->refund_amount,
+                'reason' => $appointment->refundRequest->reason,
+                'requested_at' => $appointment->refundRequest->requested_at ? $appointment->refundRequest->requested_at->format('M d, Y h:i A') : null,
+                'processed_at' => $appointment->refundRequest->processed_at ? $appointment->refundRequest->processed_at->format('M d, Y h:i A') : null,
+            ] : null,
         ];
     }
 
@@ -369,6 +385,157 @@ class ReceiptService
             // Additional information
             'visit_status' => ucfirst($visit->status),
             'has_notes' => $visitNotes ? true : false,
+        ];
+    }
+
+    /**
+     * Generate PDF receipt for a refund
+     */
+    public function generateRefundReceipt(RefundRequest $refundRequest)
+    {
+        $data = $this->prepareRefundData($refundRequest);
+        
+        $pdf = Pdf::loadView('receipts.refund', $data)
+            ->setPaper('a4', 'portrait')
+            ->setOptions([
+                'defaultFont' => 'DejaVu Sans',
+                'isHtml5ParserEnabled' => true,
+                'isRemoteEnabled' => true,
+                'isPhpEnabled' => true
+            ]);
+
+        return $pdf->output();
+    }
+
+    /**
+     * Send refund receipt via email
+     */
+    public function sendRefundReceiptEmail(RefundRequest $refundRequest)
+    {
+        // Don't send emails for seeded data
+        if ($refundRequest->appointment && $refundRequest->appointment->is_seeded) {
+            Log::info('Skipping email for seeded refund request', [
+                'refund_request_id' => $refundRequest->id,
+                'reason' => 'Seeded data - email sending disabled'
+            ]);
+            return false;
+        }
+
+        $data = $this->prepareRefundData($refundRequest);
+        
+        $pdf = Pdf::loadView('receipts.refund', $data)
+            ->setPaper('a4', 'portrait')
+            ->setOptions([
+                'defaultFont' => 'DejaVu Sans',
+                'isHtml5ParserEnabled' => true,
+                'isRemoteEnabled' => true,
+                'isPhpEnabled' => true
+            ]);
+
+        $pdfContent = $pdf->output();
+        $filename = 'refund-receipt-' . $refundRequest->id . '.pdf';
+
+        // Store PDF temporarily
+        $tempPath = 'temp/receipts/' . $filename;
+        Storage::put($tempPath, $pdfContent);
+
+        try {
+            $patient = $refundRequest->patient;
+            $user = $patient->user;
+
+            if (!$user || !$user->email) {
+                Log::warning('Cannot send refund receipt email - patient not linked to user with email', [
+                    'refund_request_id' => $refundRequest->id,
+                    'patient_id' => $patient->id,
+                ]);
+                Storage::delete($tempPath);
+                return false;
+            }
+
+            Mail::send('emails.refund_receipt', $data, function ($message) use ($refundRequest, $user, $tempPath, $filename) {
+                $message->to($user->email)
+                        ->subject('Refund Receipt - Kreative Dental & Orthodontics')
+                        ->attach(Storage::path($tempPath), [
+                            'as' => $filename,
+                            'mime' => 'application/pdf'
+                        ]);
+            });
+
+            // Clean up temporary file
+            Storage::delete($tempPath);
+
+            Log::info('Refund receipt email sent successfully', [
+                'refund_request_id' => $refundRequest->id,
+                'patient_email' => $user->email
+            ]);
+
+            return true;
+
+        } catch (\Exception $e) {
+            // Clean up temporary file on error
+            if (Storage::exists($tempPath)) {
+                Storage::delete($tempPath);
+            }
+            Log::error('Failed to send refund receipt email', [
+                'refund_request_id' => $refundRequest->id,
+                'error' => $e->getMessage(),
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Prepare data for refund receipt
+     */
+    private function prepareRefundData(RefundRequest $refundRequest)
+    {
+        $refundRequest->load(['patient.user', 'appointment.service', 'payment']);
+        
+        $patient = $refundRequest->patient;
+        $user = $patient->user;
+        $appointment = $refundRequest->appointment;
+        $service = $appointment ? $appointment->service : null;
+
+        return [
+            'receipt_type' => 'refund',
+            'receipt_number' => 'REFUND-' . $refundRequest->id,
+            'receipt_date' => $refundRequest->processed_at ? $refundRequest->processed_at->format('M d, Y') : now()->format('M d, Y'),
+            'receipt_time' => $refundRequest->processed_at ? $refundRequest->processed_at->format('h:i A') : now()->format('h:i A'),
+            
+            // Clinic information
+            'clinic_name' => 'Kreative Dental & Orthodontics',
+            'clinic_address' => '123 Dental Street, City, Province 1234',
+            'clinic_phone' => '+63 123 456 7890',
+            'clinic_email' => 'info@kreativedental.com',
+            
+            // Patient information
+            'patient_name' => $patient->first_name . ' ' . $patient->last_name,
+            'patient_email' => $user ? $user->email : null,
+            'patient_phone' => $patient->contact_number,
+            'patient_address' => $patient->address,
+            
+            // Appointment information
+            'appointment_id' => $appointment ? $appointment->id : null,
+            'appointment_reference' => $appointment ? $appointment->reference_code : null,
+            'service_name' => $service ? $service->name : null,
+            'appointment_date' => $appointment && $appointment->date ? \Carbon\Carbon::parse($appointment->date)->format('M d, Y') : null,
+            'appointment_time' => $appointment ? $appointment->time_slot : null,
+            
+            // Refund information
+            'refund_request_id' => $refundRequest->id,
+            'refund_status' => ucfirst($refundRequest->status),
+            'original_amount' => $refundRequest->original_amount,
+            'cancellation_fee' => $refundRequest->cancellation_fee,
+            'refund_amount' => $refundRequest->refund_amount,
+            'reason' => $refundRequest->reason,
+            'requested_at' => $refundRequest->requested_at ? $refundRequest->requested_at->format('M d, Y h:i A') : null,
+            'approved_at' => $refundRequest->approved_at ? $refundRequest->approved_at->format('M d, Y h:i A') : null,
+            'processed_at' => $refundRequest->processed_at ? $refundRequest->processed_at->format('M d, Y h:i A') : null,
+            'admin_notes' => $refundRequest->admin_notes,
+            
+            // Payment information
+            'payment_method' => $refundRequest->payment ? ucfirst($refundRequest->payment->method) : 'Maya',
+            'payment_reference' => $refundRequest->payment ? $refundRequest->payment->reference_no : null,
         ];
     }
 }

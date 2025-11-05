@@ -258,6 +258,60 @@
         </table>
     </div>
     
+    @if($refund_request && $refund_request['status'] !== 'rejected')
+    <div class="payment-section" style="margin-top: 25px;">
+        <div class="section-title" style="color: #dc3545;">Refund Information</div>
+        <table class="payment-table">
+            <thead>
+                <tr>
+                    <th>Description</th>
+                    <th>Amount</th>
+                    <th>Status</th>
+                    @if($refund_request['processed_at'])
+                    <th>Processed Date</th>
+                    @endif
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Original Payment Amount</td>
+                    <td>₱{{ number_format($refund_request['original_amount'], 2) }}</td>
+                    <td rowspan="{{ $refund_request['cancellation_fee'] > 0 ? 3 : 2 }}">
+                        <span style="
+                            padding: 4px 8px;
+                            border-radius: 4px;
+                            font-weight: bold;
+                            font-size: 11px;
+                            background-color: {{ $refund_request['status'] === 'processed' ? '#d4edda' : ($refund_request['status'] === 'approved' ? '#cfe2ff' : '#fff3cd') }};
+                            color: {{ $refund_request['status'] === 'processed' ? '#155724' : ($refund_request['status'] === 'approved' ? '#084298' : '#856404') }};
+                        ">
+                            {{ ucfirst($refund_request['status']) }}
+                        </span>
+                    </td>
+                    @if($refund_request['processed_at'])
+                    <td rowspan="{{ $refund_request['cancellation_fee'] > 0 ? 3 : 2 }}">{{ $refund_request['processed_at'] }}</td>
+                    @endif
+                </tr>
+                @if($refund_request['cancellation_fee'] > 0)
+                <tr>
+                    <td>Cancellation Fee</td>
+                    <td>-₱{{ number_format($refund_request['cancellation_fee'], 2) }}</td>
+                </tr>
+                @endif
+                <tr class="total-row" style="background-color: #fff3cd;">
+                    <td><strong>Refund Amount</strong></td>
+                    <td class="amount" style="color: #dc3545;">₱{{ number_format($refund_request['refund_amount'], 2) }}</td>
+                </tr>
+            </tbody>
+        </table>
+        @if($refund_request['reason'])
+        <div style="margin-top: 10px; padding: 10px; background-color: #f8f9fa; border-radius: 5px;">
+            <strong>Reason:</strong> {{ $refund_request['reason'] }}
+        </div>
+        @endif
+    </div>
+    @endif
+    
     @if($notes)
     <div class="notes-section">
         <h4>Additional Notes</h4>

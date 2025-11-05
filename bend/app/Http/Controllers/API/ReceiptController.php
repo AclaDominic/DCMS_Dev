@@ -29,7 +29,8 @@ class ReceiptController extends Controller
                 'patient.user',
                 'service',
                 'payments',
-                'patient.hmos'
+                'patient.hmos',
+                'refundRequest'
             ])->findOrFail($appointmentId);
 
             // Ensure all required relationships are loaded

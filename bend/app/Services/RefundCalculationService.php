@@ -1,0 +1,66 @@
+<?php
+
+namespace App\Services;
+
+use App\Models\Appointment;
+use App\Models\Payment;
+use App\Models\RefundSetting;
+use Carbon\Carbon;
+
+class RefundCalculationService
+{
+    /**
+     * Calculate refund amount based on appointment cancellation
+     * 
+     * @param Appointment $appointment
+     * @param Payment $payment
+     * @return array ['original_amount' => float, 'cancellation_fee' => float, 'refund_amount' => float]
+     */
+    public function calculateRefundAmount(Appointment $appointment, Payment $payment): array
+    {
+        $settings = RefundSetting::getSettings();
+        $originalAmount = (float) $payment->amount_paid ?: (float) $payment->amount_due;
+        
+        // Check if cancelled within deadline
+        // Deadline: appointment date/time minus cancellation_deadline_hours
+        // If cancelled BEFORE the deadline, no fee. If cancelled AFTER the deadline, apply fee.
+        $appointmentDateTime = Carbon::parse($appointment->date)->startOfDay();
+        
+        // If appointment has a time_slot, use it to get the exact appointment time
+        if ($appointment->time_slot) {
+            $timeParts = explode('-', $appointment->time_slot);
+            if (count($timeParts) > 0) {
+                $timeStr = trim($timeParts[0]);
+                if (preg_match('/^(\d{2}):(\d{2})/', $timeStr, $matches)) {
+                    $appointmentDateTime->setTime((int)$matches[1], (int)$matches[2], 0);
+                }
+            }
+        }
+        
+        $deadlineDateTime = $appointmentDateTime->copy()->subHours($settings->cancellation_deadline_hours);
+        $now = Carbon::now();
+        
+        $cancellationFee = 0;
+        
+        // If cancelled AFTER deadline (now is past the deadline), apply cancellation fee
+        // If cancelled BEFORE deadline (now is before the deadline), no fee
+        if ($now->greaterThanOrEqualTo($deadlineDateTime)) {
+            // Get cancellation fee from service if available
+            if ($appointment->service && $appointment->service->cancellation_fee) {
+                $cancellationFee = (float) $appointment->service->cancellation_fee;
+            } else {
+                // Default: 20% of original amount
+                $cancellationFee = $originalAmount * 0.20;
+            }
+        }
+        
+        $refundAmount = max(0, $originalAmount - $cancellationFee);
+        
+        return [
+            'original_amount' => round($originalAmount, 2),
+            'cancellation_fee' => round($cancellationFee, 2),
+            'refund_amount' => round($refundAmount, 2),
+        ];
+    }
+}
+

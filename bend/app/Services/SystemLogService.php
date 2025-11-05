@@ -125,4 +125,12 @@ class SystemLogService
     {
         return self::log('dentist', $action, $dentistId, $message, $context);
     }
+
+    /**
+     * Log refund-related events
+     */
+    public static function logRefund(string $action, ?int $refundRequestId = null, string $message = '', array $context = [])
+    {
+        return self::log('refund', $action, $refundRequestId, $message, $context);
+    }
 }

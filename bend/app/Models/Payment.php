@@ -15,6 +15,7 @@ class Payment extends Model
     public const STATUS_PAID             = 'paid';
     public const STATUS_FAILED           = 'failed';
     public const STATUS_CANCELLED        = 'cancelled';
+    public const STATUS_REFUNDED         = 'refunded';
 
     // Default values (useful when creating rows)
     protected $attributes = [
@@ -38,6 +39,8 @@ class Payment extends Model
         'redirect_url',
         'paid_at',
         'cancelled_at',
+        'refunded_at',
+        'refunded_by',
         'expires_at',
         'webhook_first_received_at',
         'webhook_last_payload',
@@ -50,6 +53,7 @@ class Payment extends Model
         'amount_paid'               => 'decimal:2',
         'paid_at'                   => 'datetime',
         'cancelled_at'              => 'datetime',
+        'refunded_at'               => 'datetime',
         'expires_at'                => 'datetime',
         'webhook_first_received_at' => 'datetime',
         'webhook_last_payload'      => 'array',
@@ -70,6 +74,16 @@ class Payment extends Model
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function refundedBy()
+    {
+        return $this->belongsTo(User::class, 'refunded_by');
+    }
+
+    public function refundRequest()
+    {
+        return $this->hasOne(RefundRequest::class);
     }
 
     // ---- Query scopes ----
@@ -117,5 +131,14 @@ class Payment extends Model
     public function getIsPaidAttribute(): bool
     {
         return $this->status === self::STATUS_PAID;
+    }
+
+    public function markRefunded(?int $refundedBy = null): void
+    {
+        $this->forceFill([
+            'status' => self::STATUS_REFUNDED,
+            'refunded_at' => now(),
+            'refunded_by' => $refundedBy ?? auth()->id(),
+        ])->save();
     }
 }

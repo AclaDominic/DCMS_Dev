@@ -349,6 +349,107 @@ class MayaController extends Controller
         return response()->json(['ok' => true]);
     }
 
+    /**
+     * Process refund via Maya API (for future use - manual processing currently)
+     * This method is kept for potential future automatic refund processing
+     */
+    public function refund(Request $request, $paymentId)
+    {
+        $request->validate([
+            'refund_amount' => 'required|numeric|min:0.01',
+            'reason' => 'nullable|string|max:500',
+        ]);
+
+        $payment = Payment::findOrFail($paymentId);
+
+        if ($payment->method !== 'maya') {
+            return response()->json([
+                'message' => 'Only Maya payments can be refunded through this endpoint.',
+            ], 422);
+        }
+
+        if (!$payment->maya_payment_id) {
+            return response()->json([
+                'message' => 'Payment does not have a Maya payment ID.',
+            ], 422);
+        }
+
+        if ($payment->status !== Payment::STATUS_PAID) {
+            return response()->json([
+                'message' => 'Only paid payments can be refunded.',
+            ], 422);
+        }
+
+        $refundAmount = (float) $request->refund_amount;
+        if ($refundAmount > $payment->amount_paid) {
+            return response()->json([
+                'message' => 'Refund amount cannot exceed the paid amount.',
+            ], 422);
+        }
+
+        // Use secret key for refund API
+        $secretKey = (string) config('services.maya.secret');
+        $baseUrl = rtrim(env('MAYA_BASE', 'https://pg-sandbox.paymaya.com'), '/');
+        
+        // Maya refund endpoint (adjust based on actual Maya API documentation)
+        $refundPath = '/payments/v1/payments/{id}/refunds';
+        $endpoint = $baseUrl . str_replace('{id}', urlencode($payment->maya_payment_id), $refundPath);
+
+        $payload = [
+            'totalAmount' => [
+                'value' => number_format($refundAmount, 2, '.', ''),
+                'currency' => $payment->currency,
+            ],
+            'reason' => $request->reason ?? 'Refund request',
+        ];
+
+        Log::info('maya.refund.attempt', [
+            'payment_id' => $payment->id,
+            'maya_payment_id' => $payment->maya_payment_id,
+            'refund_amount' => $refundAmount,
+            'endpoint' => $endpoint,
+        ]);
+
+        $resp = Http::withHeaders([
+            'Authorization' => 'Basic ' . base64_encode($secretKey . ':'),
+            'Content-Type' => 'application/json',
+            'Accept' => 'application/json',
+            'X-Request-Id' => (string) Str::uuid(),
+        ])->post($endpoint, $payload);
+
+        Log::info('maya.refund.response', [
+            'payment_id' => $payment->id,
+            'status' => $resp->status(),
+            'body' => $resp->json() ?: $resp->body(),
+        ]);
+
+        if ($resp->successful()) {
+            $data = $resp->json();
+            
+            // Update payment status to refunded
+            $payment->markRefunded(auth()->id());
+
+            // Update webhook payload with refund info
+            $payment->update([
+                'webhook_last_payload' => array_merge(
+                    $payment->webhook_last_payload ?? [],
+                    ['refund' => $data]
+                ),
+            ]);
+
+            return response()->json([
+                'message' => 'Refund processed successfully.',
+                'refund' => $data,
+                'payment' => $payment->fresh(),
+            ]);
+        }
+
+        return response()->json([
+            'message' => 'Failed to process refund via Maya API.',
+            'maya' => $resp->json() ?: ['raw' => $resp->body()],
+        ], $resp->status());
+    }
+
     private function computeAmount(Request $request): float
     {
         // TODO: compute from appointment/visit/promos

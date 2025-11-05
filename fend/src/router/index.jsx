@@ -178,6 +178,8 @@ export default function AppRouter() {
             element={<AppointmentReminders />}
           />
           <Route path="payment-records" element={<StaffPaymentRecords />} />
+          {/* Refund Management */}
+          <Route path="refund-requests" element={<RefundRequestManager />} />
           {/* Patient-User Binding */}
           <Route path="patient-binding" element={<StaffPatientUserBindingPage />} />
           {/* Patient Visit Tracker */}

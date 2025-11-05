@@ -5,6 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
+// RefundRequest is in the same namespace, so no use statement needed
+
 class Appointment extends Model
 {
     use HasFactory;
@@ -44,6 +46,11 @@ class Appointment extends Model
     public function latestPayment()
     {
         return $this->hasOne(\App\Models\Payment::class)->latestOfMany();
+    }
+
+    public function refundRequest()
+    {
+        return $this->hasOne(RefundRequest::class);
     }
 
     // Helper method to calculate total cost for per-teeth services

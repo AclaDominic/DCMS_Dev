@@ -2,6 +2,7 @@
 
 use Illuminate\Http\Request;
 use App\Http\Middleware\AdminOnly;
+use App\Http\Middleware\AdminOrStaff;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\API\MayaController;
 
@@ -35,6 +36,8 @@ use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Admin\SystemLogController;
 use App\Http\Controllers\Admin\PaymentRecordController;
 use App\Http\Controllers\Admin\QueuedEmailsController;
+use App\Http\Controllers\Admin\RefundRequestController;
+use App\Http\Controllers\Admin\RefundSettingsController;
 use App\Http\Controllers\API\ReportController;
 use App\Http\Controllers\API\GoalController;
 use App\Http\Controllers\API\DentistUserController;
@@ -107,6 +110,12 @@ Route::middleware(['auth:sanctum', 'check.account.status', AdminOnly::class])->g
     Route::prefix('admin/payment-records')->group(function () {
         Route::get('/', [PaymentRecordController::class, 'index']);
         Route::get('/{paymentId}/receipt-data', [PaymentRecordController::class, 'getReceiptData']);
+    });
+
+    // Refund settings
+    Route::prefix('admin/refund-settings')->group(function () {
+        Route::get('/', [RefundSettingsController::class, 'show']);
+        Route::patch('/', [RefundSettingsController::class, 'update']);
     });
 
     // Service management
@@ -214,6 +223,21 @@ Route::middleware(['auth:sanctum', 'check.account.status', AdminOnly::class])->g
 });
 
 // ------------------------
+// Admin and Staff routes (refund management)
+// ------------------------
+Route::middleware(['auth:sanctum', 'check.account.status', AdminOrStaff::class])->group(function () {
+    // Refund management (accessible to both admin and staff)
+    Route::prefix('admin/refund-requests')->group(function () {
+        Route::get('/', [RefundRequestController::class, 'index']);
+        Route::post('/', [RefundRequestController::class, 'store']);
+        Route::get('/{id}', [RefundRequestController::class, 'show']);
+        Route::post('/{id}/approve', [RefundRequestController::class, 'approve']);
+        Route::post('/{id}/reject', [RefundRequestController::class, 'reject']);
+        Route::post('/{id}/process', [RefundRequestController::class, 'process']);
+    });
+});
+
+// ------------------------
 // Authenticated routes (any logged-in user)
 // ------------------------
 Route::middleware(['auth:sanctum', 'check.account.status'])->group(function () {
@@ -315,6 +339,7 @@ Route::middleware(['auth:sanctum', 'check.account.status'])->group(function () {
 
     // If you prefer status behind auth, keep it here instead of public:
     Route::get('/maya/payments/{paymentId}/status', [MayaController::class, 'status']);
+    Route::post('/maya/payments/{paymentId}/refund', [MayaController::class, 'refund']);
 
     // HMO
     Route::get('/patients/{patient}/hmos', [PatientHmoController::class, 'index'])->name('hmos.index');

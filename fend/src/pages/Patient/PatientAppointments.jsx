@@ -139,9 +139,14 @@ function PatientAppointments() {
       setCanceling(selectedAppointmentId);
       setShowCancelModal(false);
       await api.get("/sanctum/csrf-cookie");
-      await api.post(`/api/appointment/${selectedAppointmentId}/cancel`);
+      const response = await api.post(`/api/appointment/${selectedAppointmentId}/cancel`);
       
-      toast.success("Appointment cancelled successfully!", {
+      // Check if refund request was created
+      const refundMessage = response?.data?.refund_request_created 
+        ? " A refund request has been created and will be processed shortly." 
+        : "";
+      
+      toast.success("Appointment cancelled successfully!" + refundMessage, {
         style: {
           background: '#28a745',
           color: '#fff',
@@ -632,7 +637,22 @@ function PatientAppointments() {
                                     {a.payment_status?.replace('_', ' ')}
                                   </span>
                                 </td>
-                                <td>{renderStatusBadge(a.status)}</td>
+                                <td>
+                                  {renderStatusBadge(a.status)}
+                                  {a.status === "cancelled" && a.refund_request && (
+                                    <div className="mt-1">
+                                      <small className={`badge ${
+                                        a.refund_request.status === "pending" ? "bg-warning text-dark" :
+                                        a.refund_request.status === "approved" ? "bg-info" :
+                                        a.refund_request.status === "processed" ? "bg-success" :
+                                        a.refund_request.status === "rejected" ? "bg-danger" : "bg-secondary"
+                                      }`}>
+                                        Refund: {a.refund_request.status}
+                                        {a.refund_request.refund_amount > 0 && ` (₱${Number(a.refund_request.refund_amount).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})})`}
+                                      </small>
+                                    </div>
+                                  )}
+                                </td>
                                 <td className="text-muted small">{a.notes || "—"}</td>
                                 <td>
                                   <div className="d-flex gap-1 flex-wrap">
@@ -685,10 +705,12 @@ function PatientAppointments() {
                                       </button>
                                     )}
 
-                                    {/* Show cancel button for pending or (approved + unpaid) appointments */}
+                                    {/* Show cancel button for pending, approved (unpaid/awaiting), or approved paid Maya appointments */}
                                     {(a.status === "pending" || 
                                       (a.status === "approved" && 
-                                       (a.payment_status === "unpaid" || a.payment_status === "awaiting_payment"))) && (
+                                       (a.payment_status === "unpaid" || 
+                                        a.payment_status === "awaiting_payment" || 
+                                        (a.payment_method === "maya" && a.payment_status === "paid")))) && (
                                       <button
                                         className="btn btn-outline-danger btn-sm"
                                         onClick={() => handleCancelClick(a.id)}
@@ -794,6 +816,23 @@ function PatientAppointments() {
                           </div>
                         </div>
 
+                        {a.status === "cancelled" && a.refund_request && (
+                          <div className="mt-2">
+                            <small className="text-muted">Refund Status:</small>
+                            <div>
+                              <small className={`badge ${
+                                a.refund_request.status === "pending" ? "bg-warning text-dark" :
+                                a.refund_request.status === "approved" ? "bg-info" :
+                                a.refund_request.status === "processed" ? "bg-success" :
+                                a.refund_request.status === "rejected" ? "bg-danger" : "bg-secondary"
+                              }`}>
+                                {a.refund_request.status}
+                                {a.refund_request.refund_amount > 0 && ` - ₱${Number(a.refund_request.refund_amount).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`}
+                              </small>
+                            </div>
+                          </div>
+                        )}
+
                         {a.notes && (
                           <div className="mt-2">
                             <small className="text-muted">Notes:</small>
@@ -849,10 +888,12 @@ function PatientAppointments() {
                             </button>
                           )}
 
-                          {/* Show cancel button for pending or (approved + unpaid) appointments */}
+                          {/* Show cancel button for pending, approved (unpaid/awaiting), or approved paid Maya appointments */}
                           {(a.status === "pending" || 
                             (a.status === "approved" && 
-                             (a.payment_status === "unpaid" || a.payment_status === "awaiting_payment"))) && (
+                             (a.payment_status === "unpaid" || 
+                              a.payment_status === "awaiting_payment" || 
+                              (a.payment_method === "maya" && a.payment_status === "paid")))) && (
                             <button
                               className="btn btn-outline-danger btn-sm flex-fill"
                               onClick={() => handleCancelClick(a.id)}
