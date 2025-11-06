@@ -13,6 +13,8 @@ export default function StaffAppointmentManager() {
   const [loading, setLoading] = useState(false);
   const [selected, setSelected] = useState(null); // for rejection modal
   const [note, setNote] = useState("");
+  const [cancellationReason, setCancellationReason] = useState("health_safety_concern");
+  const [treatmentAdjustmentNotes, setTreatmentAdjustmentNotes] = useState("");
   const [processingId, setProcessingId] = useState(null); // holds appointment ID being processed
   const [verifyId, setVerifyId] = useState(null);
   const [verifyAppt, setVerifyAppt] = useState(null);
@@ -96,9 +98,15 @@ export default function StaffAppointmentManager() {
 
     setProcessingId(selected.id);
     try {
-      await api.post(`/api/appointments/${selected.id}/reject`, { note });
+      await api.post(`/api/appointments/${selected.id}/reject`, { 
+        note,
+        cancellation_reason: cancellationReason,
+        treatment_adjustment_notes: treatmentAdjustmentNotes || null
+      });
       setSelected(null);
       setNote("");
+      setCancellationReason("health_safety_concern");
+      setTreatmentAdjustmentNotes("");
       fetchAppointments();
     } catch (err) {
       console.error("Reject error:", err.response?.data || err.message);
@@ -290,25 +298,67 @@ export default function StaffAppointmentManager() {
           backgroundColor: 'rgba(0,0,0,0.5)', 
           zIndex: 1050 
         }}>
-          <div className="bg-white rounded-3 shadow-lg" style={{ width: '400px', maxWidth: '90vw' }}>
+          <div className="bg-white rounded-3 shadow-lg" style={{ width: '500px', maxWidth: '90vw', maxHeight: '90vh', overflowY: 'auto' }}>
             <div className="p-4">
               <h2 className="h4 fw-bold mb-3" style={{ color: '#1e293b' }}>Reject Appointment</h2>
               <p className="text-muted mb-3">
                 Enter reason for rejecting appointment on <strong>{selected.date}</strong> at{" "}
                 <strong>{selected.time_slot}</strong>
               </p>
-              <textarea
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                className="form-control mb-3"
-                rows={3}
-                placeholder="Enter rejection reason..."
-                style={{ borderRadius: '8px', border: '2px solid #e9ecef' }}
-              />
+              
+              <div className="mb-3">
+                <label className="form-label fw-semibold">Cancellation Reason</label>
+                <select
+                  className="form-select"
+                  value={cancellationReason}
+                  onChange={(e) => setCancellationReason(e.target.value)}
+                  style={{ borderRadius: '8px', border: '2px solid #e9ecef' }}
+                >
+                  <option value="health_safety_concern">Health/Safety Concern</option>
+                  <option value="medical_contraindication">Medical Contraindication</option>
+                  <option value="clinic_cancellation">Clinic Cancellation</option>
+                  <option value="admin_cancellation">Admin Cancellation</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+
+              <div className="mb-3">
+                <label className="form-label fw-semibold">Rejection Note (Required)</label>
+                <textarea
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  className="form-control"
+                  rows={3}
+                  placeholder="Enter rejection reason..."
+                  style={{ borderRadius: '8px', border: '2px solid #e9ecef' }}
+                />
+              </div>
+
+              {(cancellationReason === 'health_safety_concern' || 
+                cancellationReason === 'medical_contraindication' || 
+                cancellationReason === 'other') && (
+                <div className="mb-3">
+                  <label className="form-label fw-semibold">Treatment Adjustment Notes</label>
+                  <textarea
+                    value={treatmentAdjustmentNotes}
+                    onChange={(e) => setTreatmentAdjustmentNotes(e.target.value)}
+                    className="form-control"
+                    rows={3}
+                    placeholder="Provide detailed notes about the treatment adjustment..."
+                    style={{ borderRadius: '8px', border: '2px solid #e9ecef' }}
+                  />
+                  <small className="text-muted">Optional: Add detailed notes about health/safety concerns or medical contraindications</small>
+                </div>
+              )}
+
               <div className="d-flex justify-content-end gap-2">
                 <button
                   className="btn btn-outline-secondary"
-                  onClick={() => setSelected(null)}
+                  onClick={() => {
+                    setSelected(null);
+                    setCancellationReason("health_safety_concern");
+                    setTreatmentAdjustmentNotes("");
+                  }}
                   style={{ borderRadius: '8px', fontWeight: '600' }}
                 >
                   Cancel

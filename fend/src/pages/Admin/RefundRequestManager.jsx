@@ -124,6 +124,47 @@ export default function RefundRequestManager() {
     });
   };
 
+  const getDeadlineStatus = (request) => {
+    if (!request.deadline_at) return { badge: "secondary", text: "No deadline", icon: "calendar-x" };
+    
+    const deadline = new Date(request.deadline_at);
+    const now = new Date();
+    const diffTime = deadline - now;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays < 0) {
+      return { 
+        badge: "danger", 
+        text: `${Math.abs(diffDays)} day${Math.abs(diffDays) !== 1 ? 's' : ''} overdue`, 
+        icon: "exclamation-triangle",
+        isOverdue: true 
+      };
+    } else if (diffDays <= 2) {
+      return { 
+        badge: "warning", 
+        text: `${diffDays} day${diffDays !== 1 ? 's' : ''} remaining`, 
+        icon: "clock",
+        isApproaching: true 
+      };
+    } else {
+      return { 
+        badge: "success", 
+        text: `${diffDays} day${diffDays !== 1 ? 's' : ''} remaining`, 
+        icon: "check-circle",
+        isOnTime: true 
+      };
+    }
+  };
+
+  const formatDeadlineDate = (dateString) => {
+    if (!dateString) return "—";
+    return new Date(dateString).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  };
+
   const statusCounts = {
     all: refundRequests.length,
     pending: refundRequests.filter((r) => r.status === "pending").length,
@@ -217,6 +258,7 @@ export default function RefundRequestManager() {
                       <th>Refund Amount</th>
                       <th>Status</th>
                       <th>Requested At</th>
+                      <th>Deadline</th>
                       <th>Actions</th>
                     </tr>
                   </thead>
@@ -262,6 +304,28 @@ export default function RefundRequestManager() {
                         </td>
                         <td>
                           <small>{formatDate(request.requested_at)}</small>
+                        </td>
+                        <td>
+                          {request.deadline_at && (
+                            <div>
+                              <small className="d-block text-muted mb-1">
+                                {formatDeadlineDate(request.deadline_at)}
+                              </small>
+                              {(() => {
+                                const deadlineStatus = getDeadlineStatus(request);
+                                return (
+                                  <span
+                                    className={`badge bg-${deadlineStatus.badge} d-inline-flex align-items-center gap-1`}
+                                    title={deadlineStatus.isOverdue ? "Deadline has passed" : deadlineStatus.isApproaching ? "Approaching deadline" : "On track"}
+                                  >
+                                    <i className={`bi bi-${deadlineStatus.icon}`}></i>
+                                    {deadlineStatus.text}
+                                  </span>
+                                );
+                              })()}
+                            </div>
+                          )}
+                          {!request.deadline_at && <span className="text-muted">—</span>}
                         </td>
                         <td>
                           <div className="d-flex gap-1">
@@ -356,7 +420,7 @@ export default function RefundRequestManager() {
                 </div>
                 <div className="modal-body">
                   <div className="row mb-3">
-                    <div className="col-md-6">
+                    <div className="col-md-4">
                       <strong>Status:</strong>
                       <br />
                       <span
@@ -367,10 +431,34 @@ export default function RefundRequestManager() {
                         {selectedRequest.status.toUpperCase()}
                       </span>
                     </div>
-                    <div className="col-md-6">
+                    <div className="col-md-4">
                       <strong>Requested At:</strong>
                       <br />
                       {formatDate(selectedRequest.requested_at)}
+                    </div>
+                    <div className="col-md-4">
+                      <strong>Processing Deadline:</strong>
+                      <br />
+                      {selectedRequest.deadline_at ? (
+                        <div>
+                          <div className="mb-1">
+                            {formatDeadlineDate(selectedRequest.deadline_at)}
+                          </div>
+                          {(() => {
+                            const deadlineStatus = getDeadlineStatus(selectedRequest);
+                            return (
+                              <span
+                                className={`badge bg-${deadlineStatus.badge} d-inline-flex align-items-center gap-1`}
+                              >
+                                <i className={`bi bi-${deadlineStatus.icon}`}></i>
+                                {deadlineStatus.text}
+                              </span>
+                            );
+                          })()}
+                        </div>
+                      ) : (
+                        <span className="text-muted">No deadline set</span>
+                      )}
                     </div>
                   </div>
                   <div className="row mb-3">

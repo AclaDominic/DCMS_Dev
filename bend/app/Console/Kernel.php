@@ -25,6 +25,9 @@ class Kernel extends ConsoleKernel
 
         // Add the inventory scan near expiry command
         $schedule->command('inventory:scan-near-expiry')->dailyAt('08:00');
+        
+        // Check refund deadlines daily
+        $schedule->command('refunds:check-deadlines')->dailyAt('09:00');
     }
 
     /**

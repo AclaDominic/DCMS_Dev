@@ -262,13 +262,18 @@ class AppointmentController extends Controller
             return response()->json(['error' => 'Appointment already processed.'], 422);
         }
 
-        $request->validate([
+        $validated = $request->validate([
             'note' => 'required|string|max:1000',
+            'cancellation_reason' => 'nullable|in:patient_request,admin_cancellation,health_safety_concern,clinic_cancellation,medical_contraindication,other',
+            'treatment_adjustment_notes' => 'nullable|string|max:1000',
         ]);
 
         $from = $appointment->status;
         $appointment->status = 'rejected';
-        $appointment->notes = $request->note;
+        $appointment->notes = $validated['note'];
+        // Default to health_safety_concern for rejections, but allow override
+        $appointment->cancellation_reason = $validated['cancellation_reason'] ?? Appointment::CANCELLATION_REASON_HEALTH_SAFETY_CONCERN;
+        $appointment->treatment_adjustment_notes = $validated['treatment_adjustment_notes'] ?? null;
         
         // Update payment status to unpaid for rejected appointments
         $appointment->payment_status = 'unpaid';
@@ -312,7 +317,7 @@ class AppointmentController extends Controller
 
     public function index(Request $request)
     {
-        $query = Appointment::with(['service', 'patient']);
+        $query = Appointment::with(['service', 'patient', 'refundRequest']);
 
         // Optional filter by status
         if ($request->has('status')) {
@@ -447,10 +452,16 @@ class AppointmentController extends Controller
         ]);
     }
 
-    public function cancel($id, ?Request $request = null)
+    public function cancel(Request $request, $id)
     {
         $user = Auth::user();
         $isAdmin = ($user->role ?? null) === 'admin';
+
+        // Validate request (fields are optional)
+        $validated = $request->validate([
+            'cancellation_reason' => 'nullable|in:patient_request,admin_cancellation,health_safety_concern,clinic_cancellation,medical_contraindication,other',
+            'treatment_adjustment_notes' => 'nullable|string|max:1000',
+        ]);
 
         // Admin can cancel any appointment, patients can only cancel their own
         if ($isAdmin) {
@@ -459,6 +470,7 @@ class AppointmentController extends Controller
                 return response()->json(['message' => 'Appointment not found.'], 404);
             }
             $reason = 'Cancelled by admin';
+            $defaultReason = Appointment::CANCELLATION_REASON_ADMIN_CANCELLATION;
         } else {
             if (!$user->patient) {
                 return response()->json(['message' => 'Not linked to patient profile.'], 403);
@@ -472,6 +484,7 @@ class AppointmentController extends Controller
                 return response()->json(['message' => 'Appointment not found.'], 404);
             }
             $reason = 'Cancelled by patient';
+            $defaultReason = Appointment::CANCELLATION_REASON_PATIENT_REQUEST;
         }
 
         // Allow cancellation if:
@@ -491,6 +504,8 @@ class AppointmentController extends Controller
         $appointment->status = 'cancelled';
         $appointment->notes = $reason;
         $appointment->canceled_at = now();
+        $appointment->cancellation_reason = $validated['cancellation_reason'] ?? $defaultReason;
+        $appointment->treatment_adjustment_notes = $validated['treatment_adjustment_notes'] ?? null;
         
         // Update payment status to unpaid for cancelled appointments (only if not paid)
         if (!$wasPaid) {

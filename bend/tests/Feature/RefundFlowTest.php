@@ -9,6 +9,7 @@ use App\Models\Appointment;
 use App\Models\Payment;
 use App\Models\RefundRequest;
 use App\Models\RefundSetting;
+use App\Models\ClinicWeeklySchedule;
 use App\Services\RefundCalculationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
@@ -30,6 +31,17 @@ class RefundFlowTest extends TestCase
             'create_zero_refund_request' => false,
             'reminder_days' => 5,
         ]);
+        
+        // Create clinic weekly schedule (Monday-Friday open, weekends closed)
+        // This is needed for deadline calculation in RefundRequest
+        for ($day = 1; $day <= 5; $day++) { // Monday to Friday
+            ClinicWeeklySchedule::create([
+                'weekday' => $day,
+                'is_open' => true,
+                'open_time' => '08:00',
+                'close_time' => '17:00',
+            ]);
+        }
     }
 
     /**
@@ -46,33 +58,27 @@ class RefundFlowTest extends TestCase
      */
     public function test_admin_cancellation_with_close_appointment_date()
     {
-        // Create admin user with activated status
         $admin = User::factory()->create([
             'role' => 'admin',
             'status' => 'activated',
         ]);
         
-        // Create patient and user
         $patientUser = User::factory()->create(['role' => 'patient']);
         $patient = Patient::factory()->create(['user_id' => $patientUser->id]);
         
-        // Create service
         $service = Service::factory()->create(['price' => 1500.00]);
         
-        // Create appointment with Maya payment
-        // Set appointment to 25+ hours from now to be within 24-hour deadline
         $futureDate = Carbon::now()->addHours(25);
         $appointment = Appointment::factory()->create([
             'patient_id' => $patient->id,
             'service_id' => $service->id,
             'date' => $futureDate->format('Y-m-d'),
-            'time_slot' => $futureDate->format('H:i') . '-15:00', // Use the future time
+            'time_slot' => $futureDate->format('H:i') . '-15:00',
             'status' => 'pending',
             'payment_method' => 'maya',
             'payment_status' => 'unpaid',
         ]);
         
-        // Create Maya payment
         $payment = Payment::factory()->create([
             'appointment_id' => $appointment->id,
             'method' => 'maya',
@@ -82,33 +88,30 @@ class RefundFlowTest extends TestCase
             'paid_at' => now(),
         ]);
         
-        // Approve appointment
         $this->actingAs($admin)->postJson("/api/appointments/{$appointment->id}/approve");
         
-        // Update appointment payment status to paid
         $appointment->update(['payment_status' => 'paid']);
         
-        // Admin cancels appointment
         $response = $this->actingAs($admin)->postJson("/api/appointment/{$appointment->id}/cancel");
         
         $response->assertStatus(200);
         $response->assertJson(['message' => 'Appointment canceled.']);
         
-        // Verify refund request was created
+        $appointment->refresh();
+        $this->assertEquals(Appointment::CANCELLATION_REASON_ADMIN_CANCELLATION, $appointment->cancellation_reason);
+        
         $refundRequest = RefundRequest::where('appointment_id', $appointment->id)->first();
         $this->assertNotNull($refundRequest);
         
-        // Verify full refund (within deadline, cancellation_fee = 0)
         $this->assertEquals(1500.00, $refundRequest->original_amount);
         $this->assertEquals(0.00, $refundRequest->cancellation_fee);
         $this->assertEquals(1500.00, $refundRequest->refund_amount);
         $this->assertEquals(RefundRequest::STATUS_PENDING, $refundRequest->status);
         $this->assertEquals('Cancelled by admin', $refundRequest->reason);
         
-        // Verify refund request exists
-        $this->assertNotNull($refundRequest->id);
+        $this->assertNotNull($refundRequest->deadline_at);
+        $this->assertInstanceOf(\Carbon\Carbon::class, $refundRequest->deadline_at);
         
-        // Test refund approval workflow
         $approveResponse = $this->actingAs($admin)->postJson("/api/admin/refund-requests/{$refundRequest->id}/approve", [
             'admin_notes' => 'Approved for full refund',
         ]);
@@ -118,7 +121,6 @@ class RefundFlowTest extends TestCase
         $this->assertEquals(RefundRequest::STATUS_APPROVED, $refundRequest->status);
         $this->assertNotNull($refundRequest->approved_at);
         
-        // Test marking refund as processed
         $processResponse = $this->actingAs($admin)->postJson("/api/admin/refund-requests/{$refundRequest->id}/process", [
             'admin_notes' => 'Refund processed manually',
         ]);
@@ -129,7 +131,6 @@ class RefundFlowTest extends TestCase
         $this->assertNotNull($refundRequest->processed_at);
         $this->assertEquals($admin->id, $refundRequest->processed_by);
         
-        // Verify payment status updated to refunded
         $payment->refresh();
         $this->assertEquals(Payment::STATUS_REFUNDED, $payment->status);
         $this->assertNotNull($payment->refunded_at);
@@ -140,26 +141,22 @@ class RefundFlowTest extends TestCase
      */
     public function test_patient_cancellation_within_deadline_full_refund()
     {
-        // Create patient and user
         $patientUser = User::factory()->create(['role' => 'patient']);
         $patient = Patient::factory()->create(['user_id' => $patientUser->id]);
         
-        // Create service
         $service = Service::factory()->create(['price' => 2000.00]);
         
-        // Create appointment with date 25+ hours from now (within 24-hour deadline)
         $futureDate = Carbon::now()->addHours(25);
         $appointment = Appointment::factory()->create([
             'patient_id' => $patient->id,
             'service_id' => $service->id,
             'date' => $futureDate->format('Y-m-d'),
-            'time_slot' => $futureDate->format('H:i') . '-15:00', // Use the future time
+            'time_slot' => $futureDate->format('H:i') . '-15:00',
             'status' => 'approved',
             'payment_method' => 'maya',
             'payment_status' => 'paid',
         ]);
         
-        // Create Maya payment
         $payment = Payment::factory()->create([
             'appointment_id' => $appointment->id,
             'method' => 'maya',
@@ -169,18 +166,21 @@ class RefundFlowTest extends TestCase
             'paid_at' => now(),
         ]);
         
-        // Patient cancels appointment
         $response = $this->actingAs($patientUser)->postJson("/api/appointment/{$appointment->id}/cancel");
         
         $response->assertStatus(200);
         
-        // Verify refund request was created with full refund
+        $appointment->refresh();
+        $this->assertEquals(Appointment::CANCELLATION_REASON_PATIENT_REQUEST, $appointment->cancellation_reason);
+        
         $refundRequest = RefundRequest::where('appointment_id', $appointment->id)->first();
         $this->assertNotNull($refundRequest);
         $this->assertEquals(2000.00, $refundRequest->original_amount);
         $this->assertEquals(0.00, $refundRequest->cancellation_fee);
         $this->assertEquals(2000.00, $refundRequest->refund_amount);
         $this->assertEquals('Cancelled by patient', $refundRequest->reason);
+        
+        $this->assertNotNull($refundRequest->deadline_at);
     }
 
     /**
@@ -188,17 +188,14 @@ class RefundFlowTest extends TestCase
      */
     public function test_patient_cancellation_after_deadline_partial_refund()
     {
-        // Create patient and user
         $patientUser = User::factory()->create(['role' => 'patient']);
         $patient = Patient::factory()->create(['user_id' => $patientUser->id]);
         
-        // Create service with cancellation fee
         $service = Service::factory()->create([
             'price' => 2000.00,
             'cancellation_fee' => 400.00,
         ]);
         
-        // Create appointment with date today (past deadline)
         $appointment = Appointment::factory()->create([
             'patient_id' => $patient->id,
             'service_id' => $service->id,
@@ -208,7 +205,6 @@ class RefundFlowTest extends TestCase
             'payment_status' => 'paid',
         ]);
         
-        // Create Maya payment
         $payment = Payment::factory()->create([
             'appointment_id' => $appointment->id,
             'method' => 'maya',
@@ -218,38 +214,91 @@ class RefundFlowTest extends TestCase
             'paid_at' => now(),
         ]);
         
-        // Patient cancels appointment
         $response = $this->actingAs($patientUser)->postJson("/api/appointment/{$appointment->id}/cancel");
         
         $response->assertStatus(200);
         
-        // Verify refund request was created with cancellation fee
+        $appointment->refresh();
+        $this->assertEquals(Appointment::CANCELLATION_REASON_PATIENT_REQUEST, $appointment->cancellation_reason);
+        
         $refundRequest = RefundRequest::where('appointment_id', $appointment->id)->first();
         $this->assertNotNull($refundRequest);
         $this->assertEquals(2000.00, $refundRequest->original_amount);
         $this->assertEquals(400.00, $refundRequest->cancellation_fee);
         $this->assertEquals(1600.00, $refundRequest->refund_amount);
         
-        // Test refund approval and processing workflow
+        $this->assertNotNull($refundRequest->deadline_at);
+        
         $admin = User::factory()->create([
             'role' => 'admin',
             'status' => 'activated',
         ]);
         
-        // Approve refund
         $approveResponse = $this->actingAs($admin)->postJson("/api/admin/refund-requests/{$refundRequest->id}/approve");
         $approveResponse->assertStatus(200);
         $refundRequest->refresh();
         $this->assertEquals(RefundRequest::STATUS_APPROVED, $refundRequest->status);
         
-        // Process refund
         $this->actingAs($admin)->postJson("/api/admin/refund-requests/{$refundRequest->id}/process");
         $refundRequest->refresh();
         $this->assertEquals(RefundRequest::STATUS_PROCESSED, $refundRequest->status);
         
-        // Verify payment relationship
         $payment->refresh();
         $this->assertEquals(Payment::STATUS_REFUNDED, $payment->status);
+    }
+
+    /**
+     * Scenario 3: Clinic Cancellation creates full refund regardless of deadline
+     */
+    public function test_clinic_cancellation_creates_full_refund_regardless_of_deadline()
+    {
+        $admin = User::factory()->create([
+            'role' => 'admin',
+            'status' => 'activated',
+        ]);
+        
+        $patientUser = User::factory()->create(['role' => 'patient']);
+        $patient = Patient::factory()->create(['user_id' => $patientUser->id]);
+        
+        $service = Service::factory()->create([
+            'price' => 2000.00,
+            'cancellation_fee' => 400.00,
+        ]);
+        
+        $appointment = Appointment::factory()->create([
+            'patient_id' => $patient->id,
+            'service_id' => $service->id,
+            'date' => Carbon::today()->format('Y-m-d'),
+            'status' => 'approved',
+            'payment_method' => 'maya',
+            'payment_status' => 'paid',
+        ]);
+        
+        $payment = Payment::factory()->create([
+            'appointment_id' => $appointment->id,
+            'method' => 'maya',
+            'status' => Payment::STATUS_PAID,
+            'amount_due' => 2000.00,
+            'amount_paid' => 2000.00,
+            'paid_at' => now(),
+        ]);
+        
+        $response = $this->actingAs($admin)->postJson("/api/appointment/{$appointment->id}/cancel", [
+            'cancellation_reason' => Appointment::CANCELLATION_REASON_CLINIC_CANCELLATION,
+        ]);
+        
+        $response->assertStatus(200);
+        
+        $appointment->refresh();
+        $this->assertEquals(Appointment::CANCELLATION_REASON_CLINIC_CANCELLATION, $appointment->cancellation_reason);
+        
+        $refundRequest = RefundRequest::where('appointment_id', $appointment->id)->first();
+        $this->assertNotNull($refundRequest);
+        $this->assertEquals(2000.00, $refundRequest->original_amount);
+        $this->assertEquals(0.00, $refundRequest->cancellation_fee);
+        $this->assertEquals(2000.00, $refundRequest->refund_amount);
+        
+        $this->assertNotNull($refundRequest->deadline_at);
     }
 }
 

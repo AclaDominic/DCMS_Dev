@@ -41,6 +41,7 @@ class RefundCalculationServiceTest extends TestCase
             'service_id' => $service->id,
             'date' => $futureDate->format('Y-m-d'),
             'time_slot' => $futureDate->format('H:i') . '-15:00', // Use the future time
+            'cancellation_reason' => Appointment::CANCELLATION_REASON_PATIENT_REQUEST,
         ]);
         
         $payment = Payment::factory()->create([
@@ -66,6 +67,7 @@ class RefundCalculationServiceTest extends TestCase
         $appointment = Appointment::factory()->create([
             'service_id' => $service->id,
             'date' => Carbon::today()->format('Y-m-d'), // Today - past deadline
+            'cancellation_reason' => Appointment::CANCELLATION_REASON_PATIENT_REQUEST,
         ]);
         
         $payment = Payment::factory()->create([
@@ -91,6 +93,7 @@ class RefundCalculationServiceTest extends TestCase
         $appointment = Appointment::factory()->create([
             'service_id' => $service->id,
             'date' => Carbon::today()->format('Y-m-d'), // Today - past deadline
+            'cancellation_reason' => Appointment::CANCELLATION_REASON_PATIENT_REQUEST,
         ]);
         
         $payment = Payment::factory()->create([
@@ -119,6 +122,7 @@ class RefundCalculationServiceTest extends TestCase
             'service_id' => $service->id,
             'date' => $futureDate->format('Y-m-d'),
             'time_slot' => $futureDate->format('H:i') . '-15:00', // Use the future time
+            'cancellation_reason' => Appointment::CANCELLATION_REASON_PATIENT_REQUEST,
         ]);
         
         $payment = Payment::factory()->create([
@@ -144,6 +148,7 @@ class RefundCalculationServiceTest extends TestCase
         $appointment = Appointment::factory()->create([
             'service_id' => $service->id,
             'date' => Carbon::today()->format('Y-m-d'), // Past deadline
+            'cancellation_reason' => Appointment::CANCELLATION_REASON_PATIENT_REQUEST,
         ]);
         
         $payment = Payment::factory()->create([
@@ -166,6 +171,7 @@ class RefundCalculationServiceTest extends TestCase
         $appointment = Appointment::factory()->create([
             'service_id' => $service->id,
             'date' => Carbon::tomorrow()->format('Y-m-d'),
+            'cancellation_reason' => Appointment::CANCELLATION_REASON_PATIENT_REQUEST,
         ]);
         
         // Payment with amount_paid
@@ -187,6 +193,112 @@ class RefundCalculationServiceTest extends TestCase
         
         $result2 = $this->service->calculateRefundAmount($appointment, $payment2);
         $this->assertEquals(1500.00, $result2['original_amount']);
+    }
+
+    public function test_full_refund_for_clinic_cancellation()
+    {
+        $service = Service::factory()->create([
+            'price' => 2000.00,
+            'cancellation_fee' => 400.00,
+        ]);
+        
+        // Appointment past deadline, but clinic_cancellation should get full refund
+        $appointment = Appointment::factory()->create([
+            'service_id' => $service->id,
+            'date' => Carbon::today()->format('Y-m-d'), // Past deadline
+            'cancellation_reason' => Appointment::CANCELLATION_REASON_CLINIC_CANCELLATION,
+        ]);
+        
+        $payment = Payment::factory()->create([
+            'appointment_id' => $appointment->id,
+            'amount_due' => 2000.00,
+            'amount_paid' => 2000.00,
+        ]);
+        
+        $result = $this->service->calculateRefundAmount($appointment, $payment);
+        
+        $this->assertEquals(2000.00, $result['original_amount']);
+        $this->assertEquals(0.00, $result['cancellation_fee']); // No fee for clinic cancellation
+        $this->assertEquals(2000.00, $result['refund_amount']);
+    }
+
+    public function test_full_refund_for_medical_contraindication()
+    {
+        $service = Service::factory()->create([
+            'price' => 1500.00,
+            'cancellation_fee' => 300.00,
+        ]);
+        
+        // Appointment past deadline, but medical_contraindication should get full refund
+        $appointment = Appointment::factory()->create([
+            'service_id' => $service->id,
+            'date' => Carbon::today()->format('Y-m-d'), // Past deadline
+            'cancellation_reason' => Appointment::CANCELLATION_REASON_MEDICAL_CONTRAINDICATION,
+        ]);
+        
+        $payment = Payment::factory()->create([
+            'appointment_id' => $appointment->id,
+            'amount_due' => 1500.00,
+            'amount_paid' => 1500.00,
+        ]);
+        
+        $result = $this->service->calculateRefundAmount($appointment, $payment);
+        
+        $this->assertEquals(1500.00, $result['original_amount']);
+        $this->assertEquals(0.00, $result['cancellation_fee']); // No fee for medical contraindication
+        $this->assertEquals(1500.00, $result['refund_amount']);
+    }
+
+    public function test_clinic_cancellation_overrides_deadline()
+    {
+        $service = Service::factory()->create([
+            'price' => 1000.00,
+        ]);
+        
+        // Appointment today (past deadline), but clinic_cancellation should override
+        $appointment = Appointment::factory()->create([
+            'service_id' => $service->id,
+            'date' => Carbon::today()->format('Y-m-d'), // Past deadline
+            'cancellation_reason' => Appointment::CANCELLATION_REASON_CLINIC_CANCELLATION,
+        ]);
+        
+        $payment = Payment::factory()->create([
+            'appointment_id' => $appointment->id,
+            'amount_due' => 1000.00,
+            'amount_paid' => 1000.00,
+        ]);
+        
+        $result = $this->service->calculateRefundAmount($appointment, $payment);
+        
+        // Should be full refund despite being past deadline
+        $this->assertEquals(0.00, $result['cancellation_fee']);
+        $this->assertEquals(1000.00, $result['refund_amount']);
+    }
+
+    public function test_medical_contraindication_overrides_deadline()
+    {
+        $service = Service::factory()->create([
+            'price' => 2000.00,
+        ]);
+        
+        // Appointment today (past deadline), but medical_contraindication should override
+        $appointment = Appointment::factory()->create([
+            'service_id' => $service->id,
+            'date' => Carbon::today()->format('Y-m-d'), // Past deadline
+            'cancellation_reason' => Appointment::CANCELLATION_REASON_MEDICAL_CONTRAINDICATION,
+        ]);
+        
+        $payment = Payment::factory()->create([
+            'appointment_id' => $appointment->id,
+            'amount_due' => 2000.00,
+            'amount_paid' => 2000.00,
+        ]);
+        
+        $result = $this->service->calculateRefundAmount($appointment, $payment);
+        
+        // Should be full refund despite being past deadline
+        $this->assertEquals(0.00, $result['cancellation_fee']);
+        $this->assertEquals(2000.00, $result['refund_amount']);
     }
 }
 

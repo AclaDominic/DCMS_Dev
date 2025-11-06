@@ -22,6 +22,7 @@ return new class extends Migration
             $table->text('reason')->nullable();
             $table->enum('status', ['pending', 'approved', 'rejected', 'processed'])->default('pending');
             $table->timestamp('requested_at');
+            $table->timestamp('deadline_at')->nullable()->comment('7 business days from requested_at (excluding clinic closed days)');
             $table->timestamp('approved_at')->nullable();
             $table->timestamp('processed_at')->nullable();
             $table->text('admin_notes')->nullable();

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../api/api';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -6,6 +6,84 @@ import AuthLayout from '../layouts/AuthLayout';
 import toast, { Toaster } from 'react-hot-toast';
 import logo from "../pages/logo.png"; // ✅ Use the same logo as login
 import "./register.css"; 
+
+// Default fallback policy content
+const defaultPolicy = {
+  privacy_policy: `**Data Protection Act Compliance**
+
+Kreative Dental Clinic is committed to protecting your privacy and personal information in accordance with the Data Protection Act. We collect, use, store, and process your personal data only for the purpose of providing dental services and managing your patient records.
+
+**Information We Collect:**
+
+- Personal identification information (name, email, contact number)
+- Medical and dental history
+- Appointment records and treatment information
+- Billing and payment information
+- Device and usage information when you access our online services
+
+**How We Use Your Information:**
+
+- To provide and improve our dental services
+- To schedule and manage appointments
+- To communicate with you about your treatment and appointments
+- To maintain your medical records as required by law
+- To process payments and billing
+- To send important updates and notifications
+
+**Data Security:**
+
+We implement appropriate technical and organizational measures to protect your personal information against unauthorized access, alteration, disclosure, or destruction. Your data is stored securely and access is restricted to authorized personnel only.
+
+**Your Rights:**
+
+- Right to access your personal information
+- Right to rectification of inaccurate data
+- Right to erasure (in certain circumstances)
+- Right to data portability
+- Right to object to processing
+- Right to withdraw consent
+
+**Data Retention:**
+
+We retain your personal information for as long as necessary to provide our services and as required by applicable laws and regulations. Medical records are typically retained for a minimum period as mandated by law.`,
+  terms_conditions: `**Acceptance of Terms:**
+
+By creating an account and using our services, you agree to comply with and be bound by these Terms and Conditions. If you do not agree with any part of these terms, please do not use our services.
+
+**Account Responsibilities:**
+
+- You are responsible for maintaining the confidentiality of your account credentials
+- You must provide accurate and complete information
+- You must notify us immediately of any unauthorized use of your account
+- You are responsible for all activities that occur under your account
+
+**Appointment Policies:**
+
+- Appointments should be made in advance through the system
+- Cancellations should be made at least 24 hours in advance
+- Late arrivals may result in rescheduling of your appointment
+- Missed appointments without proper notice may incur a fee
+
+**Medical Information:**
+
+The information provided in this system is for your convenience only. It is not a substitute for professional medical advice, diagnosis, or treatment. Always consult with qualified dental professionals for proper diagnosis and treatment.
+
+**Service Availability:**
+
+We reserve the right to modify, suspend, or discontinue any aspect of the service at any time. We do not guarantee uninterrupted or error-free access to our systems.
+
+**Limitation of Liability:**
+
+To the fullest extent permitted by law, Kreative Dental Clinic shall not be liable for any indirect, incidental, special, consequential, or punitive damages resulting from your use of our services.
+
+**Changes to Terms:**
+
+We reserve the right to modify these Terms and Conditions at any time. Continued use of our services after changes constitutes acceptance of the modified terms.`,
+  contact_email: 'kreativedent@gmail.com',
+  contact_phone: '0927 759 2845',
+  effective_date: new Date().toISOString().split('T')[0]
+};
+
 function Register() {
   const [form, setForm] = useState({
     name: '',
@@ -20,8 +98,82 @@ function Register() {
   const [loading, setLoading] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
+  const [policyContent, setPolicyContent] = useState(defaultPolicy);
+  const [policyLoading, setPolicyLoading] = useState(false);
 
   const navigate = useNavigate();
+
+  // Fetch policy content when modal opens
+  useEffect(() => {
+    if (showPrivacyModal) {
+      fetchPolicy();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showPrivacyModal]);
+
+  const fetchPolicy = async () => {
+    setPolicyLoading(true);
+    try {
+      const { data } = await api.get('/api/policy', { skip401Handler: true });
+      setPolicyContent({
+        privacy_policy: data.privacy_policy || defaultPolicy.privacy_policy,
+        terms_conditions: data.terms_conditions || defaultPolicy.terms_conditions,
+        contact_email: data.contact_email || defaultPolicy.contact_email,
+        contact_phone: data.contact_phone || defaultPolicy.contact_phone,
+        effective_date: data.effective_date || defaultPolicy.effective_date,
+      });
+    } catch (err) {
+      console.error('Failed to fetch policy, using default', err);
+      // Keep default policy content
+    } finally {
+      setPolicyLoading(false);
+    }
+  };
+
+  const formatPolicyText = (text) => {
+    if (!text) return '';
+    // Convert markdown-style formatting to HTML
+    const lines = text.split('\n');
+    const elements = [];
+    let inList = false;
+    let listItems = [];
+
+    lines.forEach((line, idx) => {
+      if (line.startsWith('**') && line.endsWith('**')) {
+        if (inList) {
+          elements.push(<ul key={`ul-${idx}`}>{listItems}</ul>);
+          listItems = [];
+          inList = false;
+        }
+        elements.push(<p key={idx}><strong>{line.replace(/\*\*/g, '')}</strong></p>);
+      } else if (line.startsWith('- ')) {
+        if (!inList) {
+          inList = true;
+        }
+        listItems.push(<li key={`li-${idx}`}>{line.substring(2)}</li>);
+      } else if (line.trim() === '') {
+        if (inList) {
+          elements.push(<ul key={`ul-${idx}`}>{listItems}</ul>);
+          listItems = [];
+          inList = false;
+        }
+        elements.push(<br key={idx} />);
+      } else {
+        if (inList) {
+          elements.push(<ul key={`ul-${idx}`}>{listItems}</ul>);
+          listItems = [];
+          inList = false;
+        }
+        elements.push(<p key={idx}>{line}</p>);
+      }
+    });
+
+    if (inList && listItems.length > 0) {
+      elements.push(<ul key="ul-final">{listItems}</ul>);
+    }
+
+    return elements;
+  };
 
   const validate = () => {
     const newErrors = {};
@@ -285,122 +437,54 @@ function Register() {
                 ></button>
               </div>
               <div className="modal-body">
-                <h6>Privacy Policy</h6>
-                <p><strong>Data Protection Act Compliance</strong></p>
-                <p>
-                  Kreative Dental Clinic is committed to protecting your privacy and personal information in accordance 
-                  with the Data Protection Act. We collect, use, store, and process your personal data only for the 
-                  purpose of providing dental services and managing your patient records.
-                </p>
+                {policyLoading ? (
+                  <div className="text-center py-4">
+                    <div className="spinner-border" role="status">
+                      <span className="visually-hidden">Loading...</span>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <h6>Privacy Policy</h6>
+                    <div className="policy-content">
+                      {formatPolicyText(policyContent.privacy_policy)}
+                    </div>
 
-                <p><strong>Information We Collect:</strong></p>
-                <ul>
-                  <li>Personal identification information (name, email, contact number)</li>
-                  <li>Medical and dental history</li>
-                  <li>Appointment records and treatment information</li>
-                  <li>Billing and payment information</li>
-                  <li>Device and usage information when you access our online services</li>
-                </ul>
+                    <hr />
 
-                <p><strong>How We Use Your Information:</strong></p>
-                <ul>
-                  <li>To provide and improve our dental services</li>
-                  <li>To schedule and manage appointments</li>
-                  <li>To communicate with you about your treatment and appointments</li>
-                  <li>To maintain your medical records as required by law</li>
-                  <li>To process payments and billing</li>
-                  <li>To send important updates and notifications</li>
-                </ul>
+                    <h6>Terms and Conditions</h6>
+                    <div className="policy-content">
+                      {formatPolicyText(policyContent.terms_conditions)}
+                    </div>
 
-                <p><strong>Data Security:</strong></p>
-                <p>
-                  We implement appropriate technical and organizational measures to protect your personal information 
-                  against unauthorized access, alteration, disclosure, or destruction. Your data is stored securely 
-                  and access is restricted to authorized personnel only.
-                </p>
+                    <hr />
 
-                <p><strong>Your Rights:</strong></p>
-                <ul>
-                  <li>Right to access your personal information</li>
-                  <li>Right to rectification of inaccurate data</li>
-                  <li>Right to erasure (in certain circumstances)</li>
-                  <li>Right to data portability</li>
-                  <li>Right to object to processing</li>
-                  <li>Right to withdraw consent</li>
-                </ul>
+                    <p><strong>Contact Information:</strong></p>
+                    <p>
+                      If you have any questions about this Privacy Policy or Terms and Conditions, please contact us at:
+                    </p>
+                    <p>
+                      Kreative Dental Clinic<br />
+                      Email: {policyContent.contact_email}<br />
+                      Phone: {policyContent.contact_phone}
+                    </p>
 
-                <p><strong>Data Retention:</strong></p>
-                <p>
-                  We retain your personal information for as long as necessary to provide our services and as required 
-                  by applicable laws and regulations. Medical records are typically retained for a minimum period as 
-                  mandated by law.
-                </p>
-
-                <hr />
-
-                <h6>Terms and Conditions</h6>
-                <p><strong>Acceptance of Terms:</strong></p>
-                <p>
-                  By creating an account and using our services, you agree to comply with and be bound by these 
-                  Terms and Conditions. If you do not agree with any part of these terms, please do not use our services.
-                </p>
-
-                <p><strong>Account Responsibilities:</strong></p>
-                <ul>
-                  <li>You are responsible for maintaining the confidentiality of your account credentials</li>
-                  <li>You must provide accurate and complete information</li>
-                  <li>You must notify us immediately of any unauthorized use of your account</li>
-                  <li>You are responsible for all activities that occur under your account</li>
-                </ul>
-
-                <p><strong>Appointment Policies:</strong></p>
-                <ul>
-                  <li>Appointments should be made in advance through the system</li>
-                  <li>Cancellations should be made at least 24 hours in advance</li>
-                  <li>Late arrivals may result in rescheduling of your appointment</li>
-                  <li>Missed appointments without proper notice may incur a fee</li>
-                </ul>
-
-                <p><strong>Medical Information:</strong></p>
-                <p>
-                  The information provided in this system is for your convenience only. It is not a substitute for 
-                  professional medical advice, diagnosis, or treatment. Always consult with qualified dental professionals 
-                  for proper diagnosis and treatment.
-                </p>
-
-                <p><strong>Service Availability:</strong></p>
-                <p>
-                  We reserve the right to modify, suspend, or discontinue any aspect of the service at any time. 
-                  We do not guarantee uninterrupted or error-free access to our systems.
-                </p>
-
-                <p><strong>Limitation of Liability:</strong></p>
-                <p>
-                  To the fullest extent permitted by law, Kreative Dental Clinic shall not be liable for any indirect, 
-                  incidental, special, consequential, or punitive damages resulting from your use of our services.
-                </p>
-
-                <p><strong>Changes to Terms:</strong></p>
-                <p>
-                  We reserve the right to modify these Terms and Conditions at any time. Continued use of our services 
-                  after changes constitutes acceptance of the modified terms.
-                </p>
-
-                <hr />
-
-                <p><strong>Contact Information:</strong></p>
-                <p>
-                  If you have any questions about this Privacy Policy or Terms and Conditions, please contact us at:
-                </p>
-                <p>
-                  Kreative Dental Clinic<br />
-                  Email: kreativedent@gmail.com<br />
-                  Phone: 0927 759 2845
-                </p>
-
-                <p className="text-muted small mt-4">
-                  <strong>Effective Date:</strong> {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
-                </p>
+                    <p className="text-muted small mt-4">
+                      <strong>Effective Date:</strong>{' '}
+                      {policyContent.effective_date
+                        ? new Date(policyContent.effective_date).toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric',
+                          })
+                        : new Date().toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric',
+                          })}
+                    </p>
+                  </>
+                )}
               </div>
               <div className="modal-footer">
                 <button

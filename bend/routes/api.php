@@ -38,6 +38,7 @@ use App\Http\Controllers\Admin\PaymentRecordController;
 use App\Http\Controllers\Admin\QueuedEmailsController;
 use App\Http\Controllers\Admin\RefundRequestController;
 use App\Http\Controllers\Admin\RefundSettingsController;
+use App\Http\Controllers\Admin\PolicySettingsController;
 use App\Http\Controllers\API\ReportController;
 use App\Http\Controllers\API\GoalController;
 use App\Http\Controllers\API\DentistUserController;
@@ -116,6 +117,12 @@ Route::middleware(['auth:sanctum', 'check.account.status', AdminOnly::class])->g
     Route::prefix('admin/refund-settings')->group(function () {
         Route::get('/', [RefundSettingsController::class, 'show']);
         Route::patch('/', [RefundSettingsController::class, 'update']);
+    });
+
+    // Policy settings
+    Route::prefix('admin/policy-settings')->group(function () {
+        Route::get('/', [PolicySettingsController::class, 'show']);
+        Route::put('/', [PolicySettingsController::class, 'update']);
     });
 
     // Service management
@@ -419,6 +426,7 @@ Route::middleware(['auth:sanctum', 'check.account.status', EnsureDeviceIsApprove
 // ------------------------
 Route::get('/public/services', [ServiceController::class, 'publicIndex']);
 Route::get('/public/services/{service}/discounts', [ServiceDiscountController::class, 'publicIndex']);
+Route::get('/policy', [PolicySettingsController::class, 'publicShow']);
 
 // ------------------------
 // Public service routes (read-only)

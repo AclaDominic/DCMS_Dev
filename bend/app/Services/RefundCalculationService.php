@@ -42,9 +42,18 @@ class RefundCalculationService
         
         $cancellationFee = 0;
         
-        // If cancelled AFTER deadline (now is past the deadline), apply cancellation fee
-        // If cancelled BEFORE deadline (now is before the deadline), no fee
-        if ($now->greaterThanOrEqualTo($deadlineDateTime)) {
+        // Policy 4.1: Refunds are only applicable for services not rendered due to clinic cancellation or medical contraindication
+        // If cancellation reason is clinic_cancellation or medical_contraindication, no cancellation fee
+        $isEligibleForFullRefund = in_array($appointment->cancellation_reason, [
+            Appointment::CANCELLATION_REASON_CLINIC_CANCELLATION,
+            Appointment::CANCELLATION_REASON_MEDICAL_CONTRAINDICATION
+        ]);
+        
+        if ($isEligibleForFullRefund) {
+            // No cancellation fee for clinic cancellation or medical contraindication
+            $cancellationFee = 0;
+        } elseif ($now->greaterThanOrEqualTo($deadlineDateTime)) {
+            // If cancelled AFTER deadline (now is past the deadline), apply cancellation fee
             // Get cancellation fee from service if available
             if ($appointment->service && $appointment->service->cancellation_fee) {
                 $cancellationFee = (float) $appointment->service->cancellation_fee;
@@ -53,6 +62,7 @@ class RefundCalculationService
                 $cancellationFee = $originalAmount * 0.20;
             }
         }
+        // If cancelled BEFORE deadline, no fee (cancellationFee remains 0)
         
         $refundAmount = max(0, $originalAmount - $cancellationFee);
         

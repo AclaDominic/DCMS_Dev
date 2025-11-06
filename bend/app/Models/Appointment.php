@@ -11,6 +11,14 @@ class Appointment extends Model
 {
     use HasFactory;
 
+    // Cancellation reason constants
+    public const CANCELLATION_REASON_PATIENT_REQUEST = 'patient_request';
+    public const CANCELLATION_REASON_ADMIN_CANCELLATION = 'admin_cancellation';
+    public const CANCELLATION_REASON_HEALTH_SAFETY_CONCERN = 'health_safety_concern';
+    public const CANCELLATION_REASON_CLINIC_CANCELLATION = 'clinic_cancellation';
+    public const CANCELLATION_REASON_MEDICAL_CONTRAINDICATION = 'medical_contraindication';
+    public const CANCELLATION_REASON_OTHER = 'other';
+
     protected $fillable = [
         'patient_id',
         'service_id',
@@ -26,6 +34,8 @@ class Appointment extends Model
         'receipt_sent_at',
         'receipt_sent_to',
         'is_seeded',
+        'cancellation_reason',
+        'treatment_adjustment_notes',
     ];
 
     public function patient()

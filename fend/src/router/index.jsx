@@ -41,6 +41,7 @@ import PaymentRecords from "../pages/Admin/PaymentRecords";
 import AdminPatientUserBindingPage from "../pages/Admin/PatientUserBindingPage";
 import RefundRequestManager from "../pages/Admin/RefundRequestManager";
 import RefundSettings from "../pages/Admin/RefundSettings";
+import PolicySettings from "../pages/Admin/PolicySettings";
 const DentistScheduleManager = lazy(() =>
   import("../pages/Admin/DentistScheduleManager")
 ); // Lazy load dentist schedule manager
@@ -150,6 +151,8 @@ export default function AppRouter() {
           {/* Refund Management */}
           <Route path="refund-requests" element={<RefundRequestManager />} />
           <Route path="refund-settings" element={<RefundSettings />} />
+          {/* Policy Settings */}
+          <Route path="policy-settings" element={<PolicySettings />} />
           {/* Add more admin routes as needed */}
         </Route>
 
