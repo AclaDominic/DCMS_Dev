@@ -123,6 +123,8 @@ Route::middleware(['auth:sanctum', 'check.account.status', AdminOnly::class])->g
     Route::prefix('admin/policy-settings')->group(function () {
         Route::get('/', [PolicySettingsController::class, 'show']);
         Route::put('/', [PolicySettingsController::class, 'update']);
+        Route::get('/history', [PolicySettingsController::class, 'history']);
+        Route::get('/history/{id}', [PolicySettingsController::class, 'showHistory']);
     });
 
     // Service management
