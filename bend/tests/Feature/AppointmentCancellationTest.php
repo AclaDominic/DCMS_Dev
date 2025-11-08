@@ -47,9 +47,13 @@ class AppointmentCancellationTest extends TestCase
         $admin = User::factory()->create([
             'role' => 'admin',
             'status' => 'activated',
+            'email' => 'admin@gmail.com',
         ]);
         
-        $patientUser = User::factory()->create(['role' => 'patient']);
+        $patientUser = User::factory()->create([
+            'role' => 'patient',
+            'email' => 'juan.patient@gmail.com',
+        ]);
         $patient = Patient::factory()->create(['user_id' => $patientUser->id]);
         
         $service = Service::factory()->create(['price' => 1500.00]);
@@ -79,6 +83,7 @@ class AppointmentCancellationTest extends TestCase
         $staff = User::factory()->create([
             'role' => 'staff',
             'status' => 'activated',
+            'email' => 'staff@gmail.com',
         ]);
         
         // Create approved device for staff (required by EnsureDeviceIsApproved middleware)
@@ -91,7 +96,10 @@ class AppointmentCancellationTest extends TestCase
             'updated_at' => now(),
         ]);
         
-        $patientUser = User::factory()->create(['role' => 'patient']);
+        $patientUser = User::factory()->create([
+            'role' => 'patient',
+            'email' => 'juan.patient@gmail.com',
+        ]);
         $patient = Patient::factory()->create(['user_id' => $patientUser->id]);
         
         $service = Service::factory()->create(['price' => 1500.00]);
@@ -117,6 +125,7 @@ class AppointmentCancellationTest extends TestCase
         $staff = User::factory()->create([
             'role' => 'staff',
             'status' => 'activated',
+            'email' => 'staff@gmail.com',
         ]);
         
         // Create approved device for staff (required by EnsureDeviceIsApproved middleware)
@@ -129,7 +138,10 @@ class AppointmentCancellationTest extends TestCase
             'updated_at' => now(),
         ]);
         
-        $patientUser = User::factory()->create(['role' => 'patient']);
+        $patientUser = User::factory()->create([
+            'role' => 'patient',
+            'email' => 'juan.patient@gmail.com',
+        ]);
         $patient = Patient::factory()->create(['user_id' => $patientUser->id]);
         
         $service = Service::factory()->create(['price' => 1500.00]);
@@ -160,7 +172,10 @@ class AppointmentCancellationTest extends TestCase
             'status' => 'activated',
         ]);
         
-        $patientUser = User::factory()->create(['role' => 'patient']);
+        $patientUser = User::factory()->create([
+            'role' => 'patient',
+            'email' => 'juan.patient@gmail.com',
+        ]);
         $patient = Patient::factory()->create(['user_id' => $patientUser->id]);
         
         $service = Service::factory()->create(['price' => 1500.00]);
@@ -185,7 +200,10 @@ class AppointmentCancellationTest extends TestCase
             'status' => 'activated',
         ]);
         
-        $patientUser = User::factory()->create(['role' => 'patient']);
+        $patientUser = User::factory()->create([
+            'role' => 'patient',
+            'email' => 'juan.patient@gmail.com',
+        ]);
         $patient = Patient::factory()->create(['user_id' => $patientUser->id]);
         
         $service = Service::factory()->create(['price' => 1500.00]);
@@ -224,7 +242,10 @@ class AppointmentCancellationTest extends TestCase
             'status' => 'activated',
         ]);
         
-        $patientUser = User::factory()->create(['role' => 'patient']);
+        $patientUser = User::factory()->create([
+            'role' => 'patient',
+            'email' => 'juan.patient@gmail.com',
+        ]);
         $patient = Patient::factory()->create(['user_id' => $patientUser->id]);
         
         $service = Service::factory()->create(['price' => 1500.00]);

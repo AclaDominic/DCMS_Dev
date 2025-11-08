@@ -26,7 +26,7 @@ return new class extends Migration {
 
             // Method & status
             $table->enum('method', ['maya', 'cash', 'hmo'])->default('maya');
-            $table->enum('status', ['unpaid', 'awaiting_payment', 'paid', 'cancelled', 'failed'])
+            $table->enum('status', ['unpaid', 'awaiting_payment', 'paid', 'cancelled', 'failed','refunded'])
                 ->default('unpaid');
 
             // Human-friendly internal reference for audit/tracing (not the Maya one)

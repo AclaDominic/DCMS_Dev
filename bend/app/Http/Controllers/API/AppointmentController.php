@@ -17,11 +17,9 @@ use App\Services\ClinicDateResolverService;
 use App\Services\NotificationService as SystemNotificationService;
 use App\Services\PatientManagerService;
 use App\Services\SystemLogService;
-use App\Services\RefundCalculationService;
+use App\Services\AppointmentCancellationService;
 use App\Helpers\IpHelper;
 use App\Models\PatientManager;
-use App\Models\RefundRequest;
-use App\Models\RefundSetting;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
@@ -498,115 +496,23 @@ class AppointmentController extends Controller
             return response()->json(['message' => 'This appointment cannot be canceled. Only pending appointments or approved appointments can be canceled.'], 422);
         }
 
-        // Store original payment status before changing it
-        $wasPaid = $appointment->payment_status === 'paid';
-        
-        $appointment->status = 'cancelled';
-        $appointment->notes = $reason;
-        $appointment->canceled_at = now();
-        $appointment->cancellation_reason = $validated['cancellation_reason'] ?? $defaultReason;
-        $appointment->treatment_adjustment_notes = $validated['treatment_adjustment_notes'] ?? null;
-        
-        // Update payment status to unpaid for cancelled appointments (only if not paid)
-        if (!$wasPaid) {
-            $appointment->payment_status = 'unpaid';
-        }
-        
-        $appointment->save();
+        /** @var AppointmentCancellationService $cancellationService */
+        $cancellationService = app(AppointmentCancellationService::class);
 
-        // Handle Maya payment refund request creation
-        $refundRequestCreated = false;
-        if ($appointment->payment_method === 'maya' && $wasPaid) {
-            $mayaPayment = Payment::where('appointment_id', $appointment->id)
-                ->where('method', 'maya')
-                ->where('status', 'paid')
-                ->first();
-            
-            if ($mayaPayment) {
-                // Calculate refund amount
-                $refundService = new RefundCalculationService();
-                $refundData = $refundService->calculateRefundAmount($appointment, $mayaPayment);
-                $settings = RefundSetting::getSettings();
-                
-                // Create refund request if refund amount > 0 OR if zero refund requests are enabled
-                if ($refundData['refund_amount'] > 0 || $settings->create_zero_refund_request) {
-                    $refundRequest = RefundRequest::create([
-                        'patient_id' => $appointment->patient_id,
-                        'appointment_id' => $appointment->id,
-                        'payment_id' => $mayaPayment->id,
-                        'original_amount' => $refundData['original_amount'],
-                        'cancellation_fee' => $refundData['cancellation_fee'],
-                        'refund_amount' => $refundData['refund_amount'],
-                        'reason' => $reason,
-                        'status' => RefundRequest::STATUS_PENDING,
-                        'requested_at' => now(),
-                    ]);
-
-                    $refundRequestCreated = true;
-
-                    // Log refund request creation
-                    SystemLogService::logRefund(
-                        'created',
-                        $refundRequest->id,
-                        'Refund request created for appointment #' . $appointment->id . ' (' . $reason . ')',
-                        [
-                            'refund_request_id' => $refundRequest->id,
-                            'appointment_id' => $appointment->id,
-                            'payment_id' => $mayaPayment->id,
-                            'patient_id' => $appointment->patient_id,
-                            'original_amount' => $refundData['original_amount'],
-                            'cancellation_fee' => $refundData['cancellation_fee'],
-                            'refund_amount' => $refundData['refund_amount'],
-                            'reason' => $reason,
-                            'cancelled_by' => $isAdmin ? 'admin' : 'patient',
-                            'cancelled_by_user_id' => Auth::id(),
-                        ]
-                    );
-                }
-            }
-        } else {
-            // Cancel any existing unpaid/awaiting Maya payments for this appointment
-            if ($appointment->payment_method === 'maya') {
-                $mayaPayments = Payment::where('appointment_id', $appointment->id)
-                    ->where('method', 'maya')
-                    ->whereIn('status', ['unpaid', 'awaiting_payment'])
-                    ->get();
-                
-                foreach ($mayaPayments as $payment) {
-                    $payment->update([
-                        'status' => 'cancelled',
-                        'cancelled_at' => now(),
-                    ]);
-                }
-            }
-        }
-
-        // Notify staff about appointment cancellation
-        SystemNotificationService::notifyAppointmentStatusChange($appointment, 'cancelled');
-
-        // Log cancellation
-        $logType = $isAdmin ? 'canceled_by_admin' : 'canceled_by_patient';
-        $logMessage = $isAdmin 
-            ? 'Admin ' . $user->name . ' canceled appointment #' . $appointment->id
-            : 'Patient canceled their appointment #' . $appointment->id;
-        
-        SystemLogService::logAppointment(
-            $logType,
-            $appointment->id,
-            $logMessage,
-            [
-                'appointment_id' => $appointment->id,
-                'patient_id' => $appointment->patient_id,
-                'service_id' => $appointment->service_id,
-                'date' => $appointment->date,
-                'time_slot' => $appointment->time_slot,
-                'cancelled_by' => $isAdmin ? 'admin' : 'patient',
-            ]
-        );
+        $result = $cancellationService->cancel($appointment, [
+            'reason' => $reason,
+            'requested_cancellation_reason' => $validated['cancellation_reason'] ?? null,
+            'default_cancellation_reason' => $defaultReason,
+            'treatment_adjustment_notes' => $validated['treatment_adjustment_notes'] ?? null,
+            'actor_role' => $isAdmin ? 'admin' : 'patient',
+            'actor_id' => $user->id ?? null,
+            'actor_name' => $user->name ?? null,
+            'notify' => true,
+        ]);
 
         return response()->json([
             'message' => 'Appointment canceled.',
-            'refund_request_created' => $refundRequestCreated,
+            'refund_request_created' => $result['refund_request_created'],
         ]);
     }
 

@@ -5,10 +5,14 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\RefundRequest;
 use App\Models\Payment;
+use App\Models\Appointment;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Services\SystemLogService;
 use App\Services\ReceiptService;
+use App\Services\RefundCommunicationService;
+use Illuminate\Support\Facades\Validator;
+use Carbon\Carbon;
 
 class RefundRequestController extends Controller
 {
@@ -23,7 +27,7 @@ class RefundRequestController extends Controller
      */
     public function index(Request $request)
     {
-        $query = RefundRequest::with(['patient.user', 'appointment', 'payment', 'processedBy']);
+        $query = RefundRequest::with(['patient.user', 'appointment', 'payment', 'processedBy', 'deadlineExtendedBy']);
 
         // Filter by status if provided
         if ($request->has('status') && $request->status !== 'all') {
@@ -208,10 +212,20 @@ class RefundRequestController extends Controller
         ]);
 
         // Update payment status to refunded if payment exists
+        $payment = null;
         if ($refundRequest->payment_id) {
             $payment = Payment::find($refundRequest->payment_id);
             if ($payment) {
                 $payment->markRefunded(Auth::id());
+            }
+        }
+
+        if ($refundRequest->appointment_id) {
+            $appointment = Appointment::find($refundRequest->appointment_id);
+            if ($appointment) {
+                $appointment->forceFill([
+                    'payment_status' => Payment::STATUS_REFUNDED,
+                ])->save();
             }
         }
 
@@ -243,9 +257,70 @@ class RefundRequestController extends Controller
             ]);
         }
 
+        RefundCommunicationService::sendReadyForPickup($refundRequest->fresh());
+
         return response()->json([
             'message' => 'Refund request marked as processed.',
-            'refund_request' => $refundRequest->load(['patient.user', 'appointment', 'payment', 'processedBy']),
+            'refund_request' => $refundRequest->refresh()->load(['patient.user', 'appointment', 'payment', 'processedBy', 'deadlineExtendedBy']),
+        ]);
+    }
+
+    public function extendDeadline(Request $request, $id)
+    {
+        $refundRequest = RefundRequest::with(['patient.user'])->findOrFail($id);
+
+        if (!in_array($refundRequest->status, [
+            RefundRequest::STATUS_PENDING,
+            RefundRequest::STATUS_APPROVED,
+            RefundRequest::STATUS_PROCESSED,
+        ])) {
+            return response()->json([
+                'message' => 'Only pending, approved, or processed refunds can have their deadlines extended.'
+            ], 422);
+        }
+
+        $validated = Validator::make($request->all(), [
+            'new_deadline' => ['required', 'date_format:Y-m-d'],
+            'reason' => ['required', 'string', 'max:1000'],
+        ])->validate();
+
+        $newDeadline = Carbon::createFromFormat('Y-m-d', $validated['new_deadline'])->endOfDay();
+        $minimumDeadline = $refundRequest->minimumExtendDeadline();
+
+        if ($newDeadline->lt($minimumDeadline)) {
+            return response()->json([
+                'message' => 'New deadline must be at least 7 business days from the refund request creation.',
+                'minimum_deadline' => $minimumDeadline->toDateString(),
+            ], 422);
+        }
+
+        if ($refundRequest->deadline_at && $newDeadline->lte($refundRequest->deadline_at)) {
+            return response()->json([
+                'message' => 'New deadline must be after the current deadline.',
+            ], 422);
+        }
+
+        $oldDeadline = $refundRequest->deadline_at ? $refundRequest->deadline_at->copy() : $minimumDeadline;
+
+        $refundRequest->update([
+            'deadline_at' => $newDeadline,
+            'deadline_extended_at' => now(),
+            'deadline_extended_by' => Auth::id(),
+            'deadline_extension_reason' => $validated['reason'],
+            'pickup_reminder_sent_at' => null,
+        ]);
+
+        RefundCommunicationService::sendDeadlineExtended(
+            $refundRequest->fresh(),
+            $oldDeadline,
+            $newDeadline,
+            $validated['reason'],
+            Auth::user()
+        );
+
+        return response()->json([
+            'message' => 'Refund deadline extended.',
+            'refund_request' => $refundRequest->refresh()->load(['patient.user', 'appointment', 'payment', 'processedBy', 'deadlineExtendedBy']),
         ]);
     }
 }

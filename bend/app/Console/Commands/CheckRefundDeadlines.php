@@ -5,8 +5,8 @@ namespace App\Console\Commands;
 use Carbon\Carbon;
 use App\Models\RefundRequest;
 use App\Services\SystemLogService;
+use App\Services\RefundCommunicationService;
 use Illuminate\Console\Command;
-use App\Services\NotificationService as SystemNotificationService;
 
 class CheckRefundDeadlines extends Command
 {
@@ -54,6 +54,24 @@ class CheckRefundDeadlines extends Command
             // Check if approaching (within 2 days)
             elseif ($deadline->lte($approachingThreshold) && $deadline->isAfter($now)) {
                 $approachingRefunds[] = $refund;
+            }
+        }
+
+        // Send pickup reminders for processed refunds approaching deadline
+        $processedForReminders = RefundRequest::where('status', RefundRequest::STATUS_PROCESSED)
+            ->whereNotNull('deadline_at')
+            ->whereNotNull('pickup_notified_at')
+            ->whereNull('pickup_reminder_sent_at')
+            ->with(['patient.user', 'appointment'])
+            ->get();
+
+        foreach ($processedForReminders as $refund) {
+            $deadline = Carbon::parse($refund->deadline_at)->startOfDay();
+            $daysRemaining = $now->copy()->startOfDay()->diffInDays($deadline, false);
+
+            if ($deadline->gt($now) && $daysRemaining === 2) {
+                RefundCommunicationService::sendPickupReminder($refund);
+                $this->info("Sent pickup reminder for refund request #{$refund->id} (deadline in 2 days)");
             }
         }
 

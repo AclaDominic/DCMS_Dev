@@ -9,9 +9,14 @@ export default function RefundRequestManager() {
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [showProcessModal, setShowProcessModal] = useState(false);
+  const [showExtendModal, setShowExtendModal] = useState(false);
   const [adminNotes, setAdminNotes] = useState("");
   const [processing, setProcessing] = useState(false);
   const [actionLoading, setActionLoading] = useState(null);
+  const [extendDate, setExtendDate] = useState("");
+  const [extendReason, setExtendReason] = useState("");
+  const [extendSaving, setExtendSaving] = useState(false);
+  const [extendError, setExtendError] = useState("");
 
   const loadRefundRequests = async () => {
     setLoading(true);
@@ -94,6 +99,42 @@ export default function RefundRequestManager() {
     setSelectedRequest(request);
     setAdminNotes(request.admin_notes || "");
     setShowProcessModal(true);
+  };
+
+  const openExtend = (request) => {
+    setSelectedRequest(request);
+    const fallbackDate = request?.deadline_at
+      ? new Date(request.deadline_at).toISOString().slice(0, 10)
+      : request?.minimum_extend_deadline_date;
+    setExtendDate(fallbackDate || request?.minimum_extend_deadline_date || "");
+    setExtendReason(request?.deadline_extension_reason || "");
+    setExtendError("");
+    setShowExtendModal(true);
+  };
+
+  const handleExtendDeadline = async () => {
+    if (!selectedRequest) return;
+    if (!extendDate || !extendReason.trim()) {
+      setExtendError("New deadline and reason are required.");
+      return;
+    }
+    setExtendSaving(true);
+    setExtendError("");
+    try {
+      await api.post(`/api/admin/refund-requests/${selectedRequest.id}/extend-deadline`, {
+        new_deadline: extendDate,
+        reason: extendReason,
+      });
+      await loadRefundRequests();
+      setShowExtendModal(false);
+      setSelectedRequest(null);
+      setExtendDate("");
+      setExtendReason("");
+    } catch (e) {
+      setExtendError(e?.response?.data?.message || "Failed to extend deadline. Please try again.");
+    } finally {
+      setExtendSaving(false);
+    }
   };
 
   const getStatusBadge = (status) => {
@@ -372,6 +413,15 @@ export default function RefundRequestManager() {
                                 <i className="bi bi-check2-circle"></i>
                               </button>
                             )}
+                            {["pending", "approved", "processed"].includes(request.status) && (
+                              <button
+                                className="btn btn-sm btn-outline-primary"
+                                onClick={() => openExtend(request)}
+                                title="Extend Deadline"
+                              >
+                                <i className="bi bi-calendar-plus"></i>
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -460,6 +510,48 @@ export default function RefundRequestManager() {
                         <span className="text-muted">No deadline set</span>
                       )}
                     </div>
+                    <div className="row mb-3">
+                      <div className="col-md-6">
+                        <strong>Initial Pickup Notice Sent:</strong>
+                        <br />
+                        {selectedRequest.pickup_notified_at ? formatDate(selectedRequest.pickup_notified_at) : "—"}
+                      </div>
+                      <div className="col-md-6">
+                        <strong>Reminder Sent:</strong>
+                        <br />
+                        {selectedRequest.pickup_reminder_sent_at ? formatDate(selectedRequest.pickup_reminder_sent_at) : "—"}
+                      </div>
+                    </div>
+                    <div className="row mb-3">
+                      <div className="col-md-6">
+                        <strong>Minimum Extend Deadline:</strong>
+                        <br />
+                        {selectedRequest.minimum_extend_deadline_date
+                          ? new Date(selectedRequest.minimum_extend_deadline_date).toLocaleDateString("en-US", {
+                              year: "numeric",
+                              month: "short",
+                              day: "numeric",
+                            })
+                          : "—"}
+                      </div>
+                      <div className="col-md-6">
+                        <strong>Last Extension:</strong>
+                        <br />
+                        {selectedRequest.deadline_extended_at
+                          ? `${formatDate(selectedRequest.deadline_extended_at)} by ${
+                              selectedRequest.deadline_extended_by?.name || "—"
+                            }`
+                          : "—"}
+                      </div>
+                    </div>
+                    {selectedRequest.deadline_extension_reason && (
+                      <div className="mb-3">
+                        <strong>Extension Reason:</strong>
+                        <p className="border rounded p-2 bg-light mb-0">
+                          {selectedRequest.deadline_extension_reason}
+                        </p>
+                      </div>
+                    )}
                   </div>
                   <div className="row mb-3">
                     <div className="col-md-6">
@@ -667,6 +759,131 @@ export default function RefundRequestManager() {
                       <>
                         <i className="bi bi-check2-circle me-2"></i>
                         Mark as Processed
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Extend Deadline Modal */}
+        {showExtendModal && selectedRequest && (
+          <div
+            className="modal d-block"
+            tabIndex="-1"
+            style={{
+              backgroundColor: "rgba(0,0,0,0.5)",
+              position: "fixed",
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              zIndex: 1050,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: "1rem",
+            }}
+          >
+            <div className="modal-dialog">
+              <div className="modal-content">
+                <div className="modal-header bg-info text-white">
+                  <h5 className="modal-title">
+                    Extend Deadline for Refund #{selectedRequest.id}
+                  </h5>
+                  <button
+                    type="button"
+                    className="btn-close btn-close-white"
+                    onClick={() => {
+                      setShowExtendModal(false);
+                      setSelectedRequest(null);
+                      setExtendDate("");
+                      setExtendReason("");
+                      setExtendError("");
+                    }}
+                  ></button>
+                </div>
+                <div className="modal-body">
+                  <p>
+                    Minimum allowed deadline:&nbsp;
+                    <strong>
+                      {selectedRequest.minimum_extend_deadline_date
+                        ? new Date(
+                            selectedRequest.minimum_extend_deadline_date
+                          ).toLocaleDateString("en-US", {
+                            year: "numeric",
+                            month: "short",
+                            day: "numeric",
+                          })
+                        : "N/A"}
+                    </strong>
+                  </p>
+                  <div className="mb-3">
+                    <label className="form-label">
+                      <strong>New Deadline</strong>
+                    </label>
+                    <input
+                      type="date"
+                      className="form-control"
+                      min={selectedRequest.minimum_extend_deadline_date || ""}
+                      value={extendDate}
+                      onChange={(e) => setExtendDate(e.target.value)}
+                    />
+                  </div>
+                  <div className="mb-3">
+                    <label className="form-label">
+                      <strong>Reason for Extension</strong>
+                    </label>
+                    <textarea
+                      className="form-control"
+                      rows="3"
+                      value={extendReason}
+                      onChange={(e) => setExtendReason(e.target.value)}
+                      placeholder="Explain why the deadline is being extended..."
+                    />
+                  </div>
+                  {extendError && (
+                    <div className="alert alert-danger py-2">{extendError}</div>
+                  )}
+                  <div className="alert alert-warning">
+                    A notification and email will be sent to the patient after
+                    extending the deadline.
+                  </div>
+                </div>
+                <div className="modal-footer">
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => {
+                      setShowExtendModal(false);
+                      setSelectedRequest(null);
+                      setExtendDate("");
+                      setExtendReason("");
+                      setExtendError("");
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-info text-white"
+                    onClick={handleExtendDeadline}
+                    disabled={extendSaving}
+                  >
+                    {extendSaving ? (
+                      <>
+                        <span
+                          className="spinner-border spinner-border-sm me-2"
+                          role="status"
+                        ></span>
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <i className="bi bi-save me-2"></i>
+                        Save New Deadline
                       </>
                     )}
                   </button>

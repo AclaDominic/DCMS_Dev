@@ -243,6 +243,7 @@ Route::middleware(['auth:sanctum', 'check.account.status', AdminOrStaff::class])
         Route::post('/{id}/approve', [RefundRequestController::class, 'approve']);
         Route::post('/{id}/reject', [RefundRequestController::class, 'reject']);
         Route::post('/{id}/process', [RefundRequestController::class, 'process']);
+        Route::post('/{id}/extend-deadline', [RefundRequestController::class, 'extendDeadline']);
     });
 });
 
@@ -309,7 +310,10 @@ Route::middleware(['auth:sanctum', 'check.account.status'])->group(function () {
     // Patient's own appointments
     Route::get('/user-appointments', [AppointmentController::class, 'userAppointments']);
     Route::get('/user-visit-history', [AppointmentController::class, 'userVisitHistory']);
-
+    Route::prefix('refunds')->group(function () {
+        Route::get('/pending-claims', [\App\Http\Controllers\API\PatientRefundController::class, 'pendingClaims']);
+        Route::post('/{id}/confirm', [\App\Http\Controllers\API\PatientRefundController::class, 'confirm']);
+    });
 
 
     // Receipt generation

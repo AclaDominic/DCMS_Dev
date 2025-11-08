@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
 use App\Models\ClinicWeeklySchedule;
 use App\Services\ClinicDateResolverService;
+use App\Services\AppointmentCancellationService;
 
 class ClinicCalendarController extends Controller
 {
@@ -284,24 +285,39 @@ class ClinicCalendarController extends Controller
             }
 
             $affectedCount = 0;
+            $refundRequestCount = 0;
 
             // --- NEW: auto-reject affected appointments on closed day ---
             if ($data['closed']) {
-                $reason = "Auto-rejected due to clinic closure {$d}" . ($data['message'] ? " — {$data['message']}" : "");
+                $reason = "Auto-cancelled due to clinic closure {$d}" . ($data['message'] ? " — {$data['message']}" : "");
 
-                // Bulk update: set status to 'rejected' and append reason to notes
-                // (updates only pending/approved on the closed date)
-                $affectedCount = DB::update(
-                    "UPDATE appointments
-                 SET status='rejected',
-                     notes = CASE
-                               WHEN notes IS NULL OR notes = '' THEN ?
-                               ELSE CONCAT(notes, ' | ', ?)
-                             END,
-                     updated_at=?
-                 WHERE date = ? AND status IN ('pending','approved')",
-                    [$reason, $reason, now(), $d]
-                );
+                /** @var AppointmentCancellationService $cancellationService */
+                $cancellationService = app(AppointmentCancellationService::class);
+                $actor = $req->user();
+                $actorRole = in_array(optional($actor)->role, ['admin', 'staff']) ? 'admin' : 'system';
+
+                $appointments = Appointment::whereDate('date', $d)
+                    ->whereIn('status', ['pending', 'approved'])
+                    ->get();
+
+                foreach ($appointments as $appointment) {
+                    $result = $cancellationService->cancel($appointment, [
+                        'reason' => $reason,
+                        'requested_cancellation_reason' => Appointment::CANCELLATION_REASON_CLINIC_CANCELLATION,
+                        'default_cancellation_reason' => Appointment::CANCELLATION_REASON_CLINIC_CANCELLATION,
+                        'treatment_adjustment_notes' => $data['message'] ?? null,
+                        'actor_role' => $actorRole,
+                        'actor_id' => optional($actor)->id,
+                        'actor_name' => optional($actor)->name,
+                        'notify' => true,
+                    ]);
+
+                    if ($result['refund_request_created']) {
+                        $refundRequestCount++;
+                    }
+                }
+
+                $affectedCount = $appointments->count();
 
                 // --- Notifications block (kept as you had) ---
 
@@ -325,7 +341,7 @@ class ClinicCalendarController extends Controller
                 $patientUserIds = DB::table('appointments as a')
                     ->join('patients as p', 'p.id', '=', 'a.patient_id')
                     ->whereDate('a.date', $d)
-                    ->whereIn('a.status', ['pending', 'approved', 'rejected']) // include just-rejected to ensure they still get the alert
+                    ->whereIn('a.status', ['pending', 'approved', 'cancelled', 'rejected']) // include impacted appointments
                     ->whereNotNull('p.user_id')
                     ->pluck('p.user_id')->unique()->values();
 
@@ -355,7 +371,8 @@ class ClinicCalendarController extends Controller
 
             return response()->json([
                 'message' => 'Clinic closure updated.',
-                'auto_rejected' => $affectedCount, // how many appts were auto-rejected
+                'auto_rejected' => $affectedCount, // legacy key, now counts auto-cancelled appointments
+                'refund_requests_created' => $refundRequestCount,
             ]);
         });
     }

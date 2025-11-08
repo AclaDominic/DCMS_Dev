@@ -13,6 +13,7 @@ use App\Models\ClinicWeeklySchedule;
 use App\Services\RefundCalculationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
+use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 use Carbon\Carbon;
 
@@ -41,6 +42,8 @@ class RefundFlowTest extends TestCase
                 'open_time' => '08:00',
                 'close_time' => '17:00',
             ]);
+
+        Mail::fake();
         }
     }
 
@@ -61,9 +64,13 @@ class RefundFlowTest extends TestCase
         $admin = User::factory()->create([
             'role' => 'admin',
             'status' => 'activated',
+            'email' => 'admin@gmail.com',
         ]);
         
-        $patientUser = User::factory()->create(['role' => 'patient']);
+        $patientUser = User::factory()->create([
+            'role' => 'patient',
+            'email' => 'juan.patient@gmail.com',
+        ]);
         $patient = Patient::factory()->create(['user_id' => $patientUser->id]);
         
         $service = Service::factory()->create(['price' => 1500.00]);
@@ -141,7 +148,10 @@ class RefundFlowTest extends TestCase
      */
     public function test_patient_cancellation_within_deadline_full_refund()
     {
-        $patientUser = User::factory()->create(['role' => 'patient']);
+        $patientUser = User::factory()->create([
+            'role' => 'patient',
+            'email' => 'juan.patient@gmail.com',
+        ]);
         $patient = Patient::factory()->create(['user_id' => $patientUser->id]);
         
         $service = Service::factory()->create(['price' => 2000.00]);
@@ -188,7 +198,10 @@ class RefundFlowTest extends TestCase
      */
     public function test_patient_cancellation_after_deadline_partial_refund()
     {
-        $patientUser = User::factory()->create(['role' => 'patient']);
+        $patientUser = User::factory()->create([
+            'role' => 'patient',
+            'email' => 'juan.patient@gmail.com',
+        ]);
         $patient = Patient::factory()->create(['user_id' => $patientUser->id]);
         
         $service = Service::factory()->create([
@@ -232,6 +245,7 @@ class RefundFlowTest extends TestCase
         $admin = User::factory()->create([
             'role' => 'admin',
             'status' => 'activated',
+            'email' => 'admin@gmail.com',
         ]);
         
         $approveResponse = $this->actingAs($admin)->postJson("/api/admin/refund-requests/{$refundRequest->id}/approve");
@@ -255,9 +269,13 @@ class RefundFlowTest extends TestCase
         $admin = User::factory()->create([
             'role' => 'admin',
             'status' => 'activated',
+            'email' => 'admin@gmail.com',
         ]);
         
-        $patientUser = User::factory()->create(['role' => 'patient']);
+        $patientUser = User::factory()->create([
+            'role' => 'patient',
+            'email' => 'juan.patient@gmail.com',
+        ]);
         $patient = Patient::factory()->create(['user_id' => $patientUser->id]);
         
         $service = Service::factory()->create([
@@ -299,6 +317,72 @@ class RefundFlowTest extends TestCase
         $this->assertEquals(2000.00, $refundRequest->refund_amount);
         
         $this->assertNotNull($refundRequest->deadline_at);
+    }
+
+    public function test_clinic_closure_creates_refund_request_for_paid_maya_appointments(): void
+    {
+        $admin = User::factory()->create([
+            'role' => 'admin',
+            'status' => 'activated',
+            'email' => 'admin@gmail.com',
+        ]);
+
+        $patientUser = User::factory()->create([
+            'role' => 'patient',
+            'email' => 'juan.patient@gmail.com',
+        ]);
+        $patient = Patient::factory()->create(['user_id' => $patientUser->id]);
+
+        $service = Service::factory()->create(['price' => 1800.00]);
+
+        $closureDate = Carbon::now()->addDays(3)->toDateString();
+
+        $appointment = Appointment::factory()->create([
+            'patient_id' => $patient->id,
+            'service_id' => $service->id,
+            'date' => $closureDate,
+            'time_slot' => '09:00-09:30',
+            'status' => 'approved',
+            'payment_method' => 'maya',
+            'payment_status' => Payment::STATUS_PAID,
+        ]);
+
+        Payment::factory()->create([
+            'appointment_id' => $appointment->id,
+            'method' => 'maya',
+            'status' => Payment::STATUS_PAID,
+            'amount_due' => 1800.00,
+            'amount_paid' => 1800.00,
+            'paid_at' => now(),
+        ]);
+
+        $response = $this->actingAs($admin)->putJson("/api/clinic-calendar/{$closureDate}/closure", [
+            'closed' => true,
+            'message' => 'Typhoon signal level 3',
+        ]);
+
+        $response->assertStatus(200);
+        $response->assertJson([
+            'message' => 'Clinic closure updated.',
+            'auto_rejected' => 1,
+            'refund_requests_created' => 1,
+        ]);
+
+        $appointment->refresh();
+
+        $this->assertEquals('cancelled', $appointment->status);
+        $this->assertEquals(Appointment::CANCELLATION_REASON_CLINIC_CANCELLATION, $appointment->cancellation_reason);
+        $this->assertStringContainsString('Auto-cancelled due to clinic closure', $appointment->notes);
+        $this->assertEquals(Payment::STATUS_PAID, $appointment->payment_status);
+
+        $refundRequest = RefundRequest::where('appointment_id', $appointment->id)->first();
+
+        $this->assertNotNull($refundRequest);
+        $this->assertEquals(1800.00, $refundRequest->original_amount);
+        $this->assertEquals(0.00, $refundRequest->cancellation_fee);
+        $this->assertEquals(1800.00, $refundRequest->refund_amount);
+        $this->assertEquals('Auto-cancelled due to clinic closure ' . $closureDate . ' — Typhoon signal level 3', $refundRequest->reason);
+        $this->assertEquals(RefundRequest::STATUS_PENDING, $refundRequest->status);
     }
 }
 

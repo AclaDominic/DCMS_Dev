@@ -25,7 +25,7 @@ return new class extends Migration {
             $table->string('reference_code')->unique()->nullable();
 
             // states
-            $table->enum('status', ['pending', 'approved', 'rejected', 'cancelled', 'completed', 'no_show'])
+            $table->enum('status', ['pending', 'approved', 'rejected', 'cancelled', 'completed', 'no_show', 'refunded'])
                   ->default('pending');
             $table->enum('payment_method', ['cash', 'maya', 'hmo'])
                   ->default('cash');

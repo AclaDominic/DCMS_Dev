@@ -14,10 +14,15 @@ function PatientHomepage() {
   const [canceling, setCanceling] = useState(null); // appointment_id being cancelled
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [selectedAppointmentId, setSelectedAppointmentId] = useState(null);
+  const [pendingRefunds, setPendingRefunds] = useState([]);
+  const [showRefundModal, setShowRefundModal] = useState(false);
+  const [selectedRefund, setSelectedRefund] = useState(null);
+  const [confirmingRefund, setConfirmingRefund] = useState(null);
 
   useEffect(() => {
     fetchUserData();
     fetchRecentAppointments();
+    fetchPendingRefunds();
   }, []);
 
   const fetchUserData = async () => {
@@ -42,6 +47,23 @@ function PatientHomepage() {
     }
   };
 
+  const fetchPendingRefunds = async () => {
+    try {
+      const res = await api.get("/api/refunds/pending-claims");
+      setPendingRefunds(res.data?.data || []);
+    } catch (err) {
+      console.error("Failed to fetch pending refunds", err);
+    }
+  };
+
+  const nextRefund = pendingRefunds.length
+    ? [...pendingRefunds].sort((a, b) => {
+        if (!a.deadline_at) return 1;
+        if (!b.deadline_at) return -1;
+        return new Date(a.deadline_at) - new Date(b.deadline_at);
+      })[0]
+    : null;
+
   const getGreeting = () => {
     const hour = new Date().getHours();
     if (hour < 12) return "Good Morning";
@@ -65,6 +87,7 @@ function PatientHomepage() {
       paid: "success",
       awaiting_payment: "warning",
       failed: "danger",
+      refunded: "info",
     };
     return statusMap[status] || "secondary";
   };
@@ -162,6 +185,55 @@ function PatientHomepage() {
     }
   };
 
+  const openRefundModal = (refund) => {
+    setSelectedRefund(refund);
+    setShowRefundModal(true);
+  };
+
+  const handleConfirmRefund = async () => {
+    if (!selectedRefund || confirmingRefund) return;
+
+    try {
+      setConfirmingRefund(selectedRefund.id);
+      await api.get("/sanctum/csrf-cookie");
+      await api.post(`/api/refunds/${selectedRefund.id}/confirm`);
+
+      toast.success("Thanks! We've marked your refund as claimed.", {
+        style: {
+          background: '#28a745',
+          color: '#fff',
+          borderRadius: '8px',
+          padding: '16px',
+          fontSize: '16px',
+        },
+        duration: 4000,
+      });
+
+      await fetchPendingRefunds();
+
+      setPendingRefunds((prev) =>
+        prev.filter((refund) => refund.id !== selectedRefund.id)
+      );
+      setShowRefundModal(false);
+      setSelectedRefund(null);
+    } catch (err) {
+      console.error("Confirm refund failed", err);
+      const serverMsg =
+        err.response?.data?.message ||
+        "Unable to confirm refund right now. Please try again.";
+      toast.error(serverMsg, {
+        style: {
+          background: '#dc3545',
+          color: '#fff',
+          borderRadius: '8px',
+          padding: '16px',
+        },
+      });
+    } finally {
+      setConfirmingRefund(null);
+    }
+  };
+
   return (
     <div className="container-fluid py-4">
       <Toaster position="top-center" />
@@ -178,6 +250,19 @@ function PatientHomepage() {
         cancelText="No, Keep It"
         variant="danger"
       />
+      <ConfirmationModal
+        show={showRefundModal}
+        onConfirm={handleConfirmRefund}
+        onCancel={() => {
+          setShowRefundModal(false);
+          setSelectedRefund(null);
+        }}
+        title="Confirm Refund Received"
+        message="This action cannot be undone. Please confirm only if you have already received your refund."
+        confirmText={confirmingRefund ? "Confirming..." : "Yes, I picked it up"}
+        cancelText="Not yet"
+        variant="primary"
+      />
       {/* Welcome Section */}
       <div className="row mb-4">
         <div className="col-12">
@@ -192,6 +277,38 @@ function PatientHomepage() {
                     Welcome to your dental care dashboard. Manage your appointments, 
                     view your profile, and stay updated with your dental health journey.
                   </p>
+                  {nextRefund && (
+                    <div className="alert alert-warning bg-white text-dark mt-3 mb-0 shadow-sm border-0">
+                      <div className="d-flex align-items-start gap-3">
+                        <i className="bi bi-cash-coin fs-3 text-warning"></i>
+                        <div>
+                          <strong>Refund waiting for pickup!</strong>
+                          <div>
+                            Please visit the clinic to claim ₱
+                            {Number(nextRefund.refund_amount).toLocaleString("en-US", {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })}{" "}
+                            on or before{" "}
+                            {nextRefund.formatted_deadline ||
+                              (nextRefund.deadline_at
+                                ? new Date(nextRefund.deadline_at).toLocaleDateString("en-US", {
+                                    year: "numeric",
+                                    month: "short",
+                                    day: "numeric",
+                                  })
+                                : "N/A")}
+                            . Tap the “Refunded” button below once you've picked it up so we can update our records.
+                          </div>
+                          {nextRefund.service_name && (
+                            <small className="text-muted">
+                              Service: {nextRefund.service_name}
+                            </small>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <div className="col-md-4 text-md-end">
                   <div className="d-flex flex-column align-items-md-end">
@@ -314,7 +431,12 @@ function PatientHomepage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {recentAppointments.map((appointment) => (
+                      {recentAppointments.map((appointment) => {
+                        const refundForAppointment = pendingRefunds.find(
+                          (refund) => refund.appointment_id === appointment.id
+                        );
+
+                        return (
                         <tr key={appointment.id}>
                           <td>
                             <div>
@@ -360,6 +482,28 @@ function PatientHomepage() {
                                   )}
                                 </button>
                               )}
+
+                              {appointment.payment_method === "maya" &&
+                                appointment.payment_status === "refunded" &&
+                                refundForAppointment && (
+                                  <button
+                                    className="btn btn-sm btn-outline-info"
+                                    onClick={() => openRefundModal(refundForAppointment)}
+                                    disabled={confirmingRefund === refundForAppointment.id}
+                                  >
+                                    {confirmingRefund === refundForAppointment.id ? (
+                                      <>
+                                        <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                                        Saving...
+                                      </>
+                                    ) : (
+                                      <>
+                                        <i className="bi bi-check2-circle me-1"></i>
+                                        Refunded
+                                      </>
+                                    )}
+                                  </button>
+                                )}
                               
                               {/* Show cancel button for pending or (approved + unpaid) appointments */}
                               {(appointment.status === "pending" || 
@@ -386,7 +530,8 @@ function PatientHomepage() {
                             </div>
                           </td>
                         </tr>
-                      ))}
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>

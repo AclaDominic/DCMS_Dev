@@ -32,6 +32,12 @@ class RefundRequest extends Model
         'processed_at',
         'admin_notes',
         'processed_by',
+        'pickup_notified_at',
+        'pickup_reminder_sent_at',
+        'deadline_extended_at',
+        'deadline_extended_by',
+        'deadline_extension_reason',
+        'patient_confirmed_at',
     ];
 
     protected $casts = [
@@ -42,6 +48,14 @@ class RefundRequest extends Model
         'deadline_at' => 'datetime',
         'approved_at' => 'datetime',
         'processed_at' => 'datetime',
+        'pickup_notified_at' => 'datetime',
+        'pickup_reminder_sent_at' => 'datetime',
+        'deadline_extended_at' => 'datetime',
+        'patient_confirmed_at' => 'datetime',
+    ];
+
+    protected $appends = [
+        'minimum_extend_deadline_date',
     ];
 
     /**
@@ -80,6 +94,11 @@ class RefundRequest extends Model
     public function processedBy()
     {
         return $this->belongsTo(User::class, 'processed_by');
+    }
+
+    public function deadlineExtendedBy()
+    {
+        return $this->belongsTo(User::class, 'deadline_extended_by');
     }
 
     // Query scopes
@@ -182,5 +201,31 @@ class RefundRequest extends Model
         $deadline = $this->deadline_at->copy()->startOfDay();
         
         return $now->diffInDays($deadline, false); // false = return signed difference
+    }
+
+    /**
+     * Get the minimum permissible deadline (inclusive) when extending.
+     */
+    public function minimumExtendDeadline(): Carbon
+    {
+        $base = $this->requested_at ?? now();
+        return static::calculateBusinessDaysDeadline($base, 7);
+    }
+
+    public function getMinimumExtendDeadlineDateAttribute(): string
+    {
+        return $this->minimumExtendDeadline()->toDateString();
+    }
+
+    public function markPatientConfirmed(): void
+    {
+        $this->forceFill([
+            'patient_confirmed_at' => now(),
+        ])->save();
+    }
+
+    public function isPatientConfirmed(): bool
+    {
+        return $this->patient_confirmed_at !== null;
     }
 }
