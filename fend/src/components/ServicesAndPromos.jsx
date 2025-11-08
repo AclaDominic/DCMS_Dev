@@ -84,6 +84,8 @@ const carouselStyles = `
   }
 `;
 
+const isPerTeethFlag = (value) => value === true || value === 1 || value === "1";
+
 export default function ServicesAndPromos() {
   const [services, setServices] = useState([]);
   const [promos, setPromos] = useState([]);
@@ -197,9 +199,9 @@ export default function ServicesAndPromos() {
     return true;
   };
 
-  const formatPrice = (price, isPerTeeth = false) => {
+  const formatPrice = (price, perTeethHint = false) => {
     const formatted = `₱${Number(price).toFixed(2)}`;
-    return isPerTeeth ? `${formatted} per tooth` : formatted;
+    return isPerTeethFlag(perTeethHint) ? `${formatted} per tooth` : formatted;
   };
 
   const formatDate = (dateString) => {
@@ -344,6 +346,7 @@ export default function ServicesAndPromos() {
               <div className="carousel-inner">
                 {getAllActivePromos().map((promo, index) => {
                   const discountPercentage = calculateDiscountPercentage(promo.service.price, promo.discounted_price);
+                  const promoPerTeeth = isPerTeethFlag(promo.service.per_teeth_service);
                   return (
                     <div 
                       key={promo.id} 
@@ -378,10 +381,10 @@ export default function ServicesAndPromos() {
                                     <div className="d-flex align-items-center gap-4 mb-3">
                                       <div>
                                         <span className="h3 text-success fw-bold mb-0">
-                                          {formatPrice(promo.discounted_price, promo.service.per_teeth_service)}
+                                          {formatPrice(promo.discounted_price, promoPerTeeth)}
                                         </span>
                                         <span className="text-decoration-line-through text-muted ms-2">
-                                          {formatPrice(promo.service.price, promo.service.per_teeth_service)}
+                                          {formatPrice(promo.service.price, promoPerTeeth)}
                                         </span>
                                       </div>
                                       <div className="text-muted">
@@ -478,6 +481,7 @@ export default function ServicesAndPromos() {
           {Array.isArray(services) && services.map((service) => {
             const priceInfo = getCurrentPrice(service);
             const bookable = isBookable(service);
+            const perTeeth = isPerTeethFlag(service.per_teeth_service);
             
             return (
               <div key={service.id} className="col-lg-4 col-md-6">
@@ -517,10 +521,10 @@ export default function ServicesAndPromos() {
                         <div>
                           <div className="d-flex align-items-center gap-2">
                             <span className="h4 text-success fw-bold mb-0">
-                              {formatPrice(priceInfo.price, service.per_teeth_service)}
+                              {formatPrice(priceInfo.price, perTeeth)}
                             </span>
                             <span className="text-decoration-line-through text-muted">
-                              {formatPrice(priceInfo.originalPrice, service.per_teeth_service)}
+                              {formatPrice(priceInfo.originalPrice, perTeeth)}
                             </span>
                             <span className="badge bg-danger">
                               <i className="bi bi-percent me-1"></i>
@@ -534,9 +538,9 @@ export default function ServicesAndPromos() {
                       ) : (
                         <div>
                           <div className="h4 text-primary fw-bold mb-0">
-                            {formatPrice(priceInfo.price, service.per_teeth_service)}
+                            {formatPrice(priceInfo.price, perTeeth)}
                           </div>
-                          {service.per_teeth_service && (
+                          {perTeeth && (
                             <small className="text-info">
                               <i className="bi bi-info-circle me-1"></i>
                               Total cost depends on number of teeth treated

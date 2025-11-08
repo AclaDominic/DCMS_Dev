@@ -20,6 +20,10 @@ function sevenDaysOutStr() {
   return d.toISOString().slice(0, 10);
 }
 
+function isPerTeethFlag(value) {
+  return value === true || value === 1 || value === "1";
+}
+
 function BookAppointment() {
   const navigate = useNavigate();
 
@@ -42,6 +46,7 @@ function BookAppointment() {
   const [patientHmoId, setPatientHmoId] = useState(null);
   const [loadingPatientId, setLoadingPatientId] = useState(false);
   const [warningStatus, setWarningStatus] = useState(null);
+  const isPerTeethService = isPerTeethFlag(selectedService?.per_teeth_service);
 
   // try to get the logged-in patient's id and check warning status
   useEffect(() => {
@@ -166,7 +171,7 @@ function BookAppointment() {
       if (paymentMethod === "hmo") {
         payload.patient_hmo_id = patientHmoId;
       }
-      if (selectedService.per_teeth_service && teethCount) {
+      if (isPerTeethService && teethCount) {
         payload.teeth_count = parseInt(teethCount);
       }
 
@@ -276,9 +281,9 @@ function BookAppointment() {
                           <span className="fs-5">{selectedService.name}</span><br/>
                           <span className="text-success fw-semibold">
                             ₱{Number(selectedService.price || selectedService.promo_price).toLocaleString()}
-                            {selectedService.per_teeth_service ? ' per tooth' : ''}
+                            {isPerTeethService ? " per tooth" : ""}
                           </span>
-                          {selectedService.per_teeth_service && (
+                          {isPerTeethService && (
                             <div className="mt-2">
                               <small className="text-info">
                                 <i className="bi bi-info-circle me-1"></i>
@@ -304,7 +309,7 @@ function BookAppointment() {
               {selectedService && (
                 <div className="mt-5">
                   {/* Consultation Recommendation for Per-Teeth Services */}
-                  {selectedService.per_teeth_service && (
+                  {isPerTeethService && (
                     <div className="alert alert-info border-0 shadow-sm mb-4" role="alert">
                       <div className="d-flex align-items-start">
                         <i className="bi bi-lightbulb me-3 fs-4 text-info"></i>
@@ -369,7 +374,7 @@ function BookAppointment() {
                         </div>
 
                         {/* Teeth Count Input for Per-Teeth Services */}
-                        {selectedService.per_teeth_service && (
+                        {isPerTeethService && (
                           <div className="mb-4">
                             <label className="form-label fw-semibold fs-6 mb-3">
                               <i className="bi bi-tooth me-2 text-primary"></i>

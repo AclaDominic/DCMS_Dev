@@ -258,7 +258,7 @@ export default function AdminMonthlyReport() {
     if (!byService.length) return null;
     const total = byService.reduce((sum, srow) => sum + srow.count, 0);
     const top = byService.reduce((a, b) => (a.count > b.count ? a : b));
-    const topShare = total ? (top.count / total) * 100 : 0;
+    const topShare = total ? (top.count / total) * 100 : null;
     const topWalkin = top.walkin > top.appointment;
     return { 
       topService: top.label, 
@@ -356,12 +356,16 @@ export default function AdminMonthlyReport() {
 
       // Insight for By Service
       if (serviceSummary) {
+        const topShareSnippet =
+          serviceSummary.topShare != null
+            ? `, ${serviceSummary.topShare.toFixed(0)}% of total`
+            : "";
+
         autoTable(doc, {
           startY: (doc.lastAutoTable?.finalY || 100) + 8,
           head: [["Insight"]],
           body: [[
-            `Most patients came for ${serviceSummary.topService} (${serviceSummary.topCount} visits, ` +
-            `${serviceSummary.topShare.toFixed(0)}% of total). ` +
+            `Most patients came for ${serviceSummary.topService} (${serviceSummary.topCount} visits${topShareSnippet}). ` +
             `Most were booked by ${serviceSummary.topWalkin ? 'walk-in' : 'appointment'}.`,
           ]],
           theme: "plain",
@@ -431,16 +435,22 @@ export default function AdminMonthlyReport() {
           const appointmentCount = service.appointment || 0;
           
           // Calculate percentages
-          const walkinPercentage = totalCount > 0 ? ((walkinCount / totalCount) * 100).toFixed(1) : 0;
-          const appointmentPercentage = totalCount > 0 ? ((appointmentCount / totalCount) * 100).toFixed(1) : 0;
+          const walkinPercentage =
+            totalCount > 0
+              ? Number(((walkinCount / totalCount) * 100).toFixed(1))
+              : null;
+          const appointmentPercentage =
+            totalCount > 0
+              ? Number(((appointmentCount / totalCount) * 100).toFixed(1))
+              : null;
           
           serviceSheet.addRow([
             service.label,
             totalCount,
             walkinCount,
             appointmentCount,
-            parseFloat(walkinPercentage),
-            parseFloat(appointmentPercentage)
+            walkinPercentage,
+            appointmentPercentage
           ]);
         });
         
@@ -693,7 +703,9 @@ export default function AdminMonthlyReport() {
                     <div className="mt-3 p-3 bg-light rounded" style={{ borderRadius: '12px' }}>
                       <small className="text-muted">
                         <i className="bi bi-info-circle me-1"></i>
-                        Most patients came for {serviceSummary.topService} ({serviceSummary.topCount} visits, {serviceSummary.topShare.toFixed(0)}% of total). Most were booked by {serviceSummary.topWalkin ? 'walk-in' : 'appointment'}.
+                        Most patients came for {serviceSummary.topService} ({serviceSummary.topCount} visits
+                        {serviceSummary.topShare != null ? `, ${serviceSummary.topShare.toFixed(0)}% of total` : ""}
+                        ). Most were booked by {serviceSummary.topWalkin ? 'walk-in' : 'appointment'}.
                       </small>
                     </div>
                   )}
