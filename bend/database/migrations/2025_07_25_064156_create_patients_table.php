@@ -25,6 +25,9 @@ return new class extends Migration {
             $table->boolean('is_linked')->default(false); // ✅ used for linking logic
             $table->boolean('flag_manual_review')->default(false); // ⚠️ if matching fails
 
+            $table->foreignId('policy_history_id')->nullable()->index();
+            $table->timestamp('policy_accepted_at')->nullable();
+
             $table->timestamps();
         });
     }

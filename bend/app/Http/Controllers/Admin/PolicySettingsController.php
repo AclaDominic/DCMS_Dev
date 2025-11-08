@@ -31,6 +31,7 @@ class PolicySettingsController extends Controller
             'effective_date' => AppSetting::get('policy.effective_date', now()->format('Y-m-d')),
             'contact_email' => AppSetting::get('policy.contact_email', 'kreativedent@gmail.com'),
             'contact_phone' => AppSetting::get('policy.contact_phone', '0927 759 2845'),
+            'active_history_id' => AppSetting::get('policy.active_history_id'),
         ]);
     }
 
@@ -46,6 +47,7 @@ class PolicySettingsController extends Controller
             'effective_date' => AppSetting::get('policy.effective_date', now()->format('Y-m-d')),
             'contact_email' => AppSetting::get('policy.contact_email', 'kreativedent@gmail.com'),
             'contact_phone' => AppSetting::get('policy.contact_phone', '0927 759 2845'),
+            'active_history_id' => AppSetting::get('policy.active_history_id'),
         ]);
     }
 
@@ -110,7 +112,7 @@ class PolicySettingsController extends Controller
         }
 
         // Save history with the new policy values (what became active)
-        PolicyHistory::create([
+        $history = PolicyHistory::create([
             'privacy_policy' => $privacyPolicy,
             'terms_conditions' => $termsConditions,
             'effective_date' => $effectiveDate,
@@ -118,6 +120,8 @@ class PolicySettingsController extends Controller
             'contact_phone' => $contactPhone,
             'created_by' => Auth::id(),
         ]);
+
+        AppSetting::set('policy.active_history_id', $history->id);
 
         // Send notification to all users about policy update
         $this->notifyPolicyUpdate($effectiveDate, Auth::id());

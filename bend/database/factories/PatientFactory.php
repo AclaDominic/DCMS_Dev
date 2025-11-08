@@ -30,6 +30,8 @@ class PatientFactory extends Factory
             'address' => $this->faker->optional()->address(),
             'is_linked' => false,
             'flag_manual_review' => false,
+            'policy_history_id' => null,
+            'policy_accepted_at' => null,
         ];
     }
 }

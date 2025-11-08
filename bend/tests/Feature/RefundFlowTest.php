@@ -137,6 +137,15 @@ class RefundFlowTest extends TestCase
         $this->assertEquals(RefundRequest::STATUS_PROCESSED, $refundRequest->status);
         $this->assertNotNull($refundRequest->processed_at);
         $this->assertEquals($admin->id, $refundRequest->processed_by);
+
+        $completeResponse = $this->actingAs($admin)->postJson("/api/admin/refund-requests/{$refundRequest->id}/complete", [
+            'admin_notes' => 'Patient confirmed receipt',
+        ]);
+
+        $completeResponse->assertStatus(200);
+        $refundRequest->refresh();
+        $this->assertEquals(RefundRequest::STATUS_COMPLETED, $refundRequest->status);
+        $this->assertNotNull($refundRequest->completed_at);
         
         $payment->refresh();
         $this->assertEquals(Payment::STATUS_REFUNDED, $payment->status);

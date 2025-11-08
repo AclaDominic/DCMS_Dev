@@ -25,6 +25,13 @@ return new class extends Migration
             $table->index('effective_date');
             $table->index('created_at');
         });
+
+        Schema::table('patients', function (Blueprint $table) {
+            $table->foreign('policy_history_id')
+                ->references('id')
+                ->on('policy_history')
+                ->nullOnDelete();
+        });
     }
 
     /**
@@ -32,6 +39,10 @@ return new class extends Migration
      */
     public function down(): void
     {
+        Schema::table('patients', function (Blueprint $table) {
+            $table->dropForeign(['policy_history_id']);
+        });
+
         Schema::dropIfExists('policy_history');
     }
 };

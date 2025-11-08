@@ -4,8 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use App\Models\User;
-use App\Models\PatientHmo;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Log;
 
 class Patient extends Model
@@ -26,6 +25,8 @@ class Patient extends Model
         'recent_ip_addresses',
         'last_login_at',
         'last_login_ip',
+        'policy_history_id',
+        'policy_accepted_at',
     ];
 
     protected $casts = [
@@ -34,6 +35,7 @@ class Patient extends Model
         'flag_manual_review' => 'boolean',
         'recent_ip_addresses' => 'array',
         'last_login_at' => 'datetime',
+        'policy_accepted_at' => 'datetime',
     ];
 
     public function user()
@@ -49,6 +51,11 @@ class Patient extends Model
     public function patientManager()
     {
         return $this->hasOne(PatientManager::class);
+    }
+
+    public function acceptedPolicy(): BelongsTo
+    {
+        return $this->belongsTo(PolicyHistory::class, 'policy_history_id');
     }
 
     public function appointments()

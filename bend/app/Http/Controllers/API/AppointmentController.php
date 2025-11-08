@@ -8,8 +8,11 @@ use App\Models\Service;
 use App\Models\SystemLog;
 use App\Models\Appointment;
 use App\Models\Payment;
+use App\Models\AppSetting;
+use App\Models\PolicyHistory;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\Rule;
 use App\Helpers\NotificationService;
 use App\Http\Controllers\Controller;
@@ -92,6 +95,10 @@ class AppointmentController extends Controller
         return response()->json([
             'message' => 'Your account is not yet linked to a patient record. Please contact the clinic.',
         ], 422);
+    }
+
+    if ($response = $this->ensurePolicyAccepted($patient)) {
+        return $response;
     }
 
     // Check if patient is blocked from booking appointments
@@ -693,6 +700,27 @@ class AppointmentController extends Controller
         return Carbon::createFromFormat(strlen($time) === 8 ? 'H:i:s' : 'H:i', $time)->format('H:i');
     }
 
+    private function ensurePolicyAccepted(Patient $patient): ?JsonResponse
+    {
+        $activePolicyId = AppSetting::get('policy.active_history_id');
+        if (!$activePolicyId) {
+            return null;
+        }
+
+        if ((int) $patient->policy_history_id === (int) $activePolicyId) {
+            return null;
+        }
+
+        $policy = PolicyHistory::find($activePolicyId);
+
+        return response()->json([
+            'message' => "Please review and accept the updated Terms & Privacy Policy before continuing.",
+            'policy_acceptance_required' => true,
+            'policy_history_id' => $policy?->id ?? (int) $activePolicyId,
+            'policy_effective_date' => $policy?->effective_date?->format('Y-m-d'),
+        ], 409);
+    }
+
     /**
      * Check per-block capacity for a given service, date (Y-m-d) and start time (H:i or H:i:s).
      * Returns [ 'ok' => bool, 'full_at' => 'HH:MM' ]
@@ -880,6 +908,10 @@ class AppointmentController extends Controller
 
         if (!$appointment) {
             return response()->json(['message' => 'Appointment not found.'], 404);
+        }
+
+        if ($response = $this->ensurePolicyAccepted($user->patient)) {
+            return $response;
         }
 
         // Check eligibility: only paid Maya appointments can be rescheduled

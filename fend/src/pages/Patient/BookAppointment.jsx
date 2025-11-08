@@ -4,6 +4,7 @@ import api from "../../api/api";
 import LoadingSpinner from "../../components/LoadingSpinner";
 import HmoPicker from "../../components/HmoPicker";
 import ServiceSelectionModal from "../../components/ServiceSelectionModal";
+import { usePolicyConsent } from "../../context/PolicyConsentContext";
 // date helpers
 function todayStr() {
   const d = new Date();
@@ -26,6 +27,11 @@ function isPerTeethFlag(value) {
 
 function BookAppointment() {
   const navigate = useNavigate();
+  const {
+    needsAcceptance: policyNeedsAcceptance,
+    reopenModal: openPolicyModal,
+    loading: policyLoading,
+  } = usePolicyConsent();
 
   const [selectedDate, setSelectedDate] = useState("");
   const [services, setServices] = useState([]);
@@ -76,6 +82,12 @@ function BookAppointment() {
     return () => (mounted = false);
   }, []);
 
+  useEffect(() => {
+    if (!policyNeedsAcceptance) {
+      setBookingMessage("");
+    }
+  }, [policyNeedsAcceptance]);
+
   const fetchServices = async (date) => {
     setLoading(true);
     setError("");
@@ -103,6 +115,10 @@ function BookAppointment() {
   };
 
   const handleDateChange = (e) => {
+    if (policyNeedsAcceptance) {
+      setBookingMessage("Please accept the updated Terms & Privacy Policy before booking an appointment.");
+      return;
+    }
     const date = e.target.value;
     setSelectedDate(date);
     setServices([]);
@@ -143,6 +159,10 @@ function BookAppointment() {
   };
 
   const handleBookingSubmit = async () => {
+    if (policyNeedsAcceptance) {
+      setBookingMessage("Please accept the updated Terms & Privacy Policy before booking an appointment.");
+      return;
+    }
     // Prevent multiple submissions
     if (bookingInProgress) {
       return;
@@ -211,6 +231,24 @@ function BookAppointment() {
             <p className="mb-0 opacity-75">Schedule your dental visit with ease</p>
           </div>
           <div className="card-body p-5">
+              {policyNeedsAcceptance && (
+                <div className="alert alert-warning d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-3">
+                  <div>
+                    <strong>Action required:</strong> Please review and accept the updated Terms & Privacy Policy before booking a new appointment.
+                  </div>
+                  <div className="d-flex align-items-center gap-2">
+                    <button
+                      type="button"
+                      className="btn btn-outline-primary btn-sm"
+                      onClick={openPolicyModal}
+                      disabled={policyLoading}
+                    >
+                      <i className="bi bi-shield-lock me-1"></i>
+                      Review Policy
+                    </button>
+                  </div>
+                </div>
+              )}
               <div className="mb-4">
                 <label className="form-label fw-semibold fs-5 mb-3">
                   <i className="bi bi-calendar3 me-2 text-primary"></i>
@@ -223,6 +261,7 @@ function BookAppointment() {
                   onChange={handleDateChange}
                   min={tomorrowStr()}
                   max={sevenDaysOutStr()}
+                  disabled={policyNeedsAcceptance}
                   style={{ fontSize: '1.1rem' }}
                 />
                 <div className="form-text mt-2">
@@ -251,7 +290,7 @@ function BookAppointment() {
                     <button 
                       className="btn btn-primary btn-lg px-5 py-3"
                       onClick={() => setShowServiceModal(true)}
-                      disabled={loading}
+                    disabled={loading || policyNeedsAcceptance}
                       style={{ fontSize: '1.1rem', borderRadius: '10px' }}
                     >
                       {loading ? (
@@ -358,6 +397,7 @@ function BookAppointment() {
                             className="form-select form-select-lg border-2"
                             value={selectedSlot}
                             onChange={(e) => setSelectedSlot(e.target.value)}
+                            disabled={policyNeedsAcceptance}
                             style={{ fontSize: '1.1rem' }}
                           >
                             <option value="">-- Select Time Slot --</option>
@@ -388,6 +428,7 @@ function BookAppointment() {
                               onChange={(e) => setTeethCount(e.target.value)}
                               min="1"
                               max="32"
+                              disabled={policyNeedsAcceptance}
                               style={{ fontSize: '1.1rem' }}
                             />
                             <div className="form-text mt-2">
@@ -411,6 +452,7 @@ function BookAppointment() {
                             className="form-select form-select-lg border-2" 
                             value={paymentMethod} 
                             onChange={handlePaymentChange}
+                            disabled={policyNeedsAcceptance}
                             style={{ fontSize: '1.1rem' }}
                           >
                             <option value="cash" disabled={warningStatus?.under_warning}>
@@ -448,6 +490,7 @@ function BookAppointment() {
                                 patientId={myPatientId}
                                 value={patientHmoId}
                                 onChange={setPatientHmoId}
+                                disabled={policyNeedsAcceptance}
                                 required
                               />
                             ) : (
@@ -464,7 +507,7 @@ function BookAppointment() {
                           <button 
                             className="btn btn-success btn-lg py-3" 
                             onClick={handleBookingSubmit}
-                            disabled={bookingInProgress}
+                            disabled={bookingInProgress || policyNeedsAcceptance}
                             style={{ fontSize: '1.2rem', borderRadius: '10px' }}
                           >
                             {bookingInProgress ? (

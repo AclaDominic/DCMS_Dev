@@ -16,6 +16,7 @@ class RefundRequest extends Model
     public const STATUS_APPROVED = 'approved';
     public const STATUS_REJECTED = 'rejected';
     public const STATUS_PROCESSED = 'processed';
+    public const STATUS_COMPLETED = 'completed';
 
     protected $fillable = [
         'patient_id',
@@ -30,6 +31,7 @@ class RefundRequest extends Model
         'deadline_at',
         'approved_at',
         'processed_at',
+        'completed_at',
         'admin_notes',
         'processed_by',
         'pickup_notified_at',
@@ -48,6 +50,7 @@ class RefundRequest extends Model
         'deadline_at' => 'datetime',
         'approved_at' => 'datetime',
         'processed_at' => 'datetime',
+        'completed_at' => 'datetime',
         'pickup_notified_at' => 'datetime',
         'pickup_reminder_sent_at' => 'datetime',
         'deadline_extended_at' => 'datetime',
@@ -120,6 +123,11 @@ class RefundRequest extends Model
     public function scopeProcessed($query)
     {
         return $query->where('status', self::STATUS_PROCESSED);
+    }
+
+    public function scopeCompleted($query)
+    {
+        return $query->where('status', self::STATUS_COMPLETED);
     }
 
     /**

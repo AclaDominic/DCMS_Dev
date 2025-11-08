@@ -46,6 +46,7 @@ use App\Http\Controllers\API\DentistPasswordController;
 use App\Http\Controllers\API\ReceiptController;
 use App\Http\Middleware\DentistAuthMiddleware;
 use App\Http\Middleware\DentistPasswordChangeMiddleware;
+use App\Http\Controllers\API\PolicyConsentController;
 
 // ------------------------
 // Public auth routes
@@ -244,6 +245,7 @@ Route::middleware(['auth:sanctum', 'check.account.status', AdminOrStaff::class])
         Route::post('/{id}/reject', [RefundRequestController::class, 'reject']);
         Route::post('/{id}/process', [RefundRequestController::class, 'process']);
         Route::post('/{id}/extend-deadline', [RefundRequestController::class, 'extendDeadline']);
+        Route::post('/{id}/complete', [RefundRequestController::class, 'complete']);
     });
 });
 
@@ -251,6 +253,9 @@ Route::middleware(['auth:sanctum', 'check.account.status', AdminOrStaff::class])
 // Authenticated routes (any logged-in user)
 // ------------------------
 Route::middleware(['auth:sanctum', 'check.account.status'])->group(function () {
+    Route::get('/policy/consent', [PolicyConsentController::class, 'show']);
+    Route::post('/policy/consent/accept', [PolicyConsentController::class, 'accept']);
+
     // User profile endpoint
     Route::get('/user', function (Request $request) {
         $user = $request->user()->load('patient');

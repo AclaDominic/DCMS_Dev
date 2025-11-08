@@ -7,6 +7,7 @@ import "./index.css";
 
 import { AuthProvider } from "./hooks/useAuth";
 import { NotificationsProvider } from "./context/NotificationsContext";
+import { PolicyConsentProvider } from "./context/PolicyConsentContext";
 import ErrorBoundary from "./components/ErrorBoundary";
 import App from "./App.jsx";
 
@@ -20,9 +21,11 @@ if (!rootElement) {
     <StrictMode>
       <ErrorBoundary>
         <AuthProvider>
-          <NotificationsProvider>
-            <App />
-          </NotificationsProvider>
+          <PolicyConsentProvider>
+            <NotificationsProvider>
+              <App />
+            </NotificationsProvider>
+          </PolicyConsentProvider>
         </AuthProvider>
       </ErrorBoundary>
     </StrictMode>

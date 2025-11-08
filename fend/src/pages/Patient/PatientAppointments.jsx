@@ -645,6 +645,7 @@ function PatientAppointments() {
                                         a.refund_request.status === "pending" ? "bg-warning text-dark" :
                                         a.refund_request.status === "approved" ? "bg-info" :
                                         a.refund_request.status === "processed" ? "bg-success" :
+                                        a.refund_request.status === "completed" ? "bg-primary" :
                                         a.refund_request.status === "rejected" ? "bg-danger" : "bg-secondary"
                                       }`}>
                                         Refund: {a.refund_request.status}

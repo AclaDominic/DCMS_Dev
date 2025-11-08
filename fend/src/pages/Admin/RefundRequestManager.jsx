@@ -89,6 +89,26 @@ export default function RefundRequestManager() {
     }
   };
 
+  const handleComplete = async (id) => {
+    if (!window.confirm("Mark this refund request as completed?")) {
+      return;
+    }
+    setActionLoading(id);
+    try {
+      await api.post(`/api/admin/refund-requests/${id}/complete`, {
+        admin_notes: adminNotes,
+      });
+      await loadRefundRequests();
+      setAdminNotes("");
+      setSelectedRequest(null);
+      setShowDetailsModal(false);
+    } catch (e) {
+      alert(e?.response?.data?.message || "Failed to mark refund request as completed.");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const openDetails = (request) => {
     setSelectedRequest(request);
     setAdminNotes(request.admin_notes || "");
@@ -143,6 +163,7 @@ export default function RefundRequestManager() {
       approved: "info",
       rejected: "danger",
       processed: "success",
+      completed: "primary",
     };
     return badges[status] || "secondary";
   };
@@ -212,6 +233,7 @@ export default function RefundRequestManager() {
     approved: refundRequests.filter((r) => r.status === "approved").length,
     rejected: refundRequests.filter((r) => r.status === "rejected").length,
     processed: refundRequests.filter((r) => r.status === "processed").length,
+    completed: refundRequests.filter((r) => r.status === "completed").length,
   };
 
   return (
@@ -249,6 +271,7 @@ export default function RefundRequestManager() {
                 { key: "approved", label: "Approved", icon: "check-circle" },
                 { key: "rejected", label: "Rejected", icon: "x-circle" },
                 { key: "processed", label: "Processed", icon: "check2" },
+                { key: "completed", label: "Completed", icon: "check2-circle" },
               ].map((tab) => (
                 <button
                   key={tab.key}
@@ -413,6 +436,23 @@ export default function RefundRequestManager() {
                                 <i className="bi bi-check2-circle"></i>
                               </button>
                             )}
+                            {request.status === "processed" && (
+                              <button
+                                className="btn btn-sm btn-success"
+                                onClick={() => handleComplete(request.id)}
+                                disabled={actionLoading === request.id}
+                                title="Mark as Completed"
+                              >
+                                {actionLoading === request.id ? (
+                                  <span
+                                    className="spinner-border spinner-border-sm"
+                                    role="status"
+                                  ></span>
+                                ) : (
+                                  <i className="bi bi-flag"></i>
+                                )}
+                              </button>
+                            )}
                             {["pending", "approved", "processed"].includes(request.status) && (
                               <button
                                 className="btn btn-sm btn-outline-primary"
@@ -544,6 +584,18 @@ export default function RefundRequestManager() {
                           : "—"}
                       </div>
                     </div>
+                  <div className="row mb-3">
+                    <div className="col-md-6">
+                      <strong>Processed At:</strong>
+                      <br />
+                      {selectedRequest.processed_at ? formatDate(selectedRequest.processed_at) : "—"}
+                    </div>
+                    <div className="col-md-6">
+                      <strong>Completed At:</strong>
+                      <br />
+                      {selectedRequest.completed_at ? formatDate(selectedRequest.completed_at) : "—"}
+                    </div>
+                  </div>
                     {selectedRequest.deadline_extension_reason && (
                       <div className="mb-3">
                         <strong>Extension Reason:</strong>
@@ -605,7 +657,8 @@ export default function RefundRequestManager() {
                     </div>
                   )}
                   {(selectedRequest.status === "pending" ||
-                    selectedRequest.status === "approved") && (
+                    selectedRequest.status === "approved" ||
+                    selectedRequest.status === "processed") && (
                     <div className="mb-3">
                       <label className="form-label">
                         <strong>Admin Notes:</strong>
@@ -665,6 +718,29 @@ export default function RefundRequestManager() {
                         Reject
                       </button>
                     </>
+                  )}
+                  {selectedRequest.status === "processed" && (
+                    <button
+                      type="button"
+                      className="btn btn-success"
+                      onClick={() => handleComplete(selectedRequest.id)}
+                      disabled={actionLoading === selectedRequest.id}
+                    >
+                      {actionLoading === selectedRequest.id ? (
+                        <>
+                          <span
+                            className="spinner-border spinner-border-sm me-2"
+                            role="status"
+                          ></span>
+                          Completing...
+                        </>
+                      ) : (
+                        <>
+                          <i className="bi bi-flag me-2"></i>
+                          Mark as Completed
+                        </>
+                      )}
+                    </button>
                   )}
                 </div>
               </div>

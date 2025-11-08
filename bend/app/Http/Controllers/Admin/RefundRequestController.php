@@ -265,6 +265,52 @@ class RefundRequestController extends Controller
         ]);
     }
 
+    /**
+     * Mark refund as completed (patient confirmed pickup)
+     */
+    public function complete(Request $request, $id)
+    {
+        $refundRequest = RefundRequest::findOrFail($id);
+
+        if ($refundRequest->status !== RefundRequest::STATUS_PROCESSED) {
+            return response()->json([
+                'message' => 'Only processed refund requests can be marked as completed.'
+            ], 422);
+        }
+
+        $validated = $request->validate([
+            'admin_notes' => 'nullable|string|max:1000',
+        ]);
+
+        $refundRequest->update([
+            'status' => RefundRequest::STATUS_COMPLETED,
+            'completed_at' => now(),
+            'admin_notes' => $validated['admin_notes'] ?? $refundRequest->admin_notes,
+        ]);
+
+        SystemLogService::logRefund(
+            'completed',
+            $refundRequest->id,
+            'Refund request #' . $refundRequest->id . ' marked as completed by ' . Auth::user()->name,
+            [
+                'refund_request_id' => $refundRequest->id,
+                'appointment_id' => $refundRequest->appointment_id,
+                'payment_id' => $refundRequest->payment_id,
+                'patient_id' => $refundRequest->patient_id,
+                'refund_amount' => $refundRequest->refund_amount,
+                'completed_by' => Auth::id(),
+                'completed_by_name' => Auth::user()->name,
+                'completed_by_role' => Auth::user()->role,
+                'admin_notes' => $refundRequest->admin_notes,
+            ]
+        );
+
+        return response()->json([
+            'message' => 'Refund request marked as completed.',
+            'refund_request' => $refundRequest->refresh()->load(['patient.user', 'appointment', 'payment', 'processedBy', 'deadlineExtendedBy']),
+        ]);
+    }
+
     public function extendDeadline(Request $request, $id)
     {
         $refundRequest = RefundRequest::with(['patient.user'])->findOrFail($id);
