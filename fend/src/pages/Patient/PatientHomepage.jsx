@@ -4,11 +4,11 @@ import api from "../../api/api";
 import LoadingSpinner from "../../components/LoadingSpinner";
 import ConfirmationModal from "../../components/ConfirmationModal";
 import toast, { Toaster } from "react-hot-toast";
+import { useAuth } from "../../hooks/useAuth";
 
 function PatientHomepage() {
-  const [user, setUser] = useState(null);
+  const { user: authUser, authLoading } = useAuth();
   const [recentAppointments, setRecentAppointments] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [appointmentsLoading, setAppointmentsLoading] = useState(true);
   const [paying, setPaying] = useState(null); // appointment_id being processed
   const [canceling, setCanceling] = useState(null); // appointment_id being cancelled
@@ -19,29 +19,37 @@ function PatientHomepage() {
   const [selectedRefund, setSelectedRefund] = useState(null);
   const [confirmingRefund, setConfirmingRefund] = useState(null);
 
+  const isVerified = !!authUser?.email_verified_at;
+
   useEffect(() => {
-    fetchUserData();
+    if (authLoading) {
+      return;
+    }
+
+    if (!authUser || !isVerified) {
+      setRecentAppointments([]);
+      setPendingRefunds([]);
+      setAppointmentsLoading(false);
+      return;
+    }
+
+    setAppointmentsLoading(true);
     fetchRecentAppointments();
     fetchPendingRefunds();
-  }, []);
+  }, [authLoading, isVerified]);
 
-  const fetchUserData = async () => {
-    try {
-      const res = await api.get("/api/user");
-      setUser(res.data);
-    } catch (err) {
-      console.error("Failed to fetch user info", err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  if (authLoading) {
+    return <LoadingSpinner message="Loading dashboard..." />;
+  }
 
   const fetchRecentAppointments = async () => {
     try {
       const res = await api.get("/api/user-appointments?page=1&limit=3");
       setRecentAppointments(res.data.data || []);
     } catch (err) {
-      console.error("Failed to fetch appointments", err);
+      if (err.response?.status !== 403) {
+        console.error("Failed to fetch appointments", err);
+      }
     } finally {
       setAppointmentsLoading(false);
     }
@@ -52,7 +60,9 @@ function PatientHomepage() {
       const res = await api.get("/api/refunds/pending-claims");
       setPendingRefunds(res.data?.data || []);
     } catch (err) {
-      console.error("Failed to fetch pending refunds", err);
+      if (err.response?.status !== 403) {
+        console.error("Failed to fetch pending refunds", err);
+      }
     }
   };
 
@@ -237,6 +247,15 @@ function PatientHomepage() {
   return (
     <div className="container-fluid py-4">
       <Toaster position="top-center" />
+      {authUser && !isVerified && (
+        <div className="alert alert-warning d-flex align-items-center gap-2 mb-4" role="alert">
+          <i className="bi bi-exclamation-triangle-fill fs-4"></i>
+          <div>
+            Please verify your email address to unlock full access. A verification modal is displayed
+            with options to resend or update your email.
+          </div>
+        </div>
+      )}
       <ConfirmationModal
         show={showCancelModal}
         onConfirm={handleCancelAppointment}
@@ -271,7 +290,7 @@ function PatientHomepage() {
               <div className="row align-items-center">
                 <div className="col-md-8">
                   <h1 className="h3 mb-2">
-                    {getGreeting()}, {user?.name?.split(' ')[0] || 'Patient'}! 👋
+                    {getGreeting()}, {authUser?.name?.split(' ')[0] || 'Patient'}! 👋
                   </h1>
                   <p className="mb-0 opacity-75">
                     Welcome to your dental care dashboard. Manage your appointments, 

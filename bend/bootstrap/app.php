@@ -33,6 +33,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // Add account status check middleware to authenticated API routes
         $middleware->alias([
             'check.account.status' => \App\Http\Middleware\CheckAccountStatus::class,
+            'patient.verified' => \App\Http\Middleware\EnsurePatientEmailIsVerified::class,
         ]);
 
         // // Enable Sanctum for API authentication

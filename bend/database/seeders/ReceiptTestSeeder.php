@@ -91,6 +91,20 @@ class ReceiptTestSeeder extends Seeder
             ]);
         }
 
+        // Mark users with seeded paid appointments as verified
+        $usersToVerify = $insertedAppointments
+            ->load('patient.user')
+            ->map(function ($appointment) {
+                return optional(optional($appointment->patient)->user)->id;
+            })
+            ->filter()
+            ->unique()
+            ->all();
+
+        if (! empty($usersToVerify)) {
+            User::whereIn('id', $usersToVerify)->update(['email_verified_at' => now()]);
+        }
+
         $this->command->info('Created ' . count($appointments) . ' test appointments with ' . count($insertedAppointments) . ' corresponding Payment records for receipt testing.');
         $this->command->info('These appointments are marked as seeded and will not send emails.');
         $this->command->info('You can test receipt generation by clicking "View Receipt" in PatientAppointments.');

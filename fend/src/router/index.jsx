@@ -19,6 +19,8 @@ import ForgotPassword from "../pages/ForgotPassword";
 import ResetPassword from "../pages/ResetPassword";
 import VerifyEmail from "../pages/VerifyEmail";
 import VerifySuccess from "../pages/VerifySuccess";
+import VerifyEmailRedirect from "../pages/VerifyEmailRedirect";
+import NotFound from "../pages/NotFound";
 
 // Admin layout and pages
 import AdminLayout from "../layouts/AdminLayout";
@@ -100,6 +102,7 @@ export default function AppRouter() {
         <Route path="/password-reset/:token" element={<ResetPassword />} />
         <Route path="/verify-email" element={<VerifyEmail />} />
         <Route path="/verify-success" element={<VerifySuccess />} />
+        <Route path="/verify-email/:id/:hash" element={<VerifyEmailRedirect />} />
         <Route path="/notifications" element={<NotificationsPage />} />
 
         {/* Admin Routes */}
@@ -238,7 +241,7 @@ export default function AppRouter() {
         <Route path="/pay/failure" element={<PayFailure />} />
         <Route path="/pay/cancel" element={<PayCancel />} />
         {/* Catch-all for 404 */}
-        <Route path="*" element={<div>404 Not Found</div>} />
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>
   );

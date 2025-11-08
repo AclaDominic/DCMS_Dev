@@ -3,29 +3,41 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use Illuminate\Auth\Events\Verified;
-use Illuminate\Foundation\Auth\EmailVerificationRequest;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\URL;
 
 class VerifyEmailController extends Controller
 {
     /**
      * Mark the authenticated user's email address as verified.
      */
-    public function __invoke(EmailVerificationRequest $request): RedirectResponse
+    public function __invoke(Request $request, int $id, string $hash): RedirectResponse
     {
-        if ($request->user()->hasVerifiedEmail()) {
-            return redirect()->intended(
-                config('app.frontend_url').'/verify-success'
-            );
+        $redirectBase = rtrim(config('app.frontend_url'), '/');
+
+        if (! URL::hasValidSignature($request)) {
+            return redirect()->to("{$redirectBase}/verify-email?status=invalid-signature");
         }
 
-        if ($request->user()->markEmailAsVerified()) {
-            event(new Verified($request->user()));
+        $user = User::find($id);
+
+        if (! $user) {
+            return redirect()->to("{$redirectBase}/verify-email?status=user-not-found");
         }
 
-        return redirect()->intended(
-            config('app.frontend_url').'/verify-success'
-        );
+        if (! hash_equals($hash, sha1($user->getEmailForVerification()))) {
+            return redirect()->to("{$redirectBase}/verify-email?status=invalid-hash");
+        }
+
+        if (! $user->hasVerifiedEmail()) {
+            if ($user->markEmailAsVerified()) {
+                event(new Verified($user));
+            }
+        }
+
+        return redirect()->to("{$redirectBase}/verify-success");
     }
 }

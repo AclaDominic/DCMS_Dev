@@ -23,6 +23,7 @@ use App\Http\Controllers\Admin\StaffAccountController;
 use App\Http\Controllers\API\ClinicCalendarController;
 use App\Http\Controllers\Staff\PatientVisitController;
 use App\Http\Controllers\API\AppointmentSlotController;
+use App\Http\Controllers\API\PatientEmailVerificationController;
 
 use App\Http\Controllers\API\DentistScheduleController;
 use App\Http\Controllers\API\ServiceDiscountController;
@@ -272,6 +273,7 @@ Route::middleware(['auth:sanctum', 'check.account.status'])->group(function () {
             'id' => $user->id,
             'name' => $user->name,
             'email' => $user->email,
+            'email_verified_at' => $user->email_verified_at,
             'contact_number' => $user->contact_number,
             'role' => $user->role,
             'status' => $user->status,
@@ -280,6 +282,10 @@ Route::middleware(['auth:sanctum', 'check.account.status'])->group(function () {
             'warning_status' => $warningStatus,
         ]);
     });
+
+    // Allow patients to resend or update verification email even if not yet verified
+    Route::post('/patient/verification/resend', [PatientEmailVerificationController::class, 'resend'])
+        ->middleware('throttle:6,1');
 
     // Staff device status
     Route::get('/device-status', [DeviceStatusController::class, 'check']);
@@ -291,79 +297,81 @@ Route::middleware(['auth:sanctum', 'check.account.status'])->group(function () {
     Route::get('/me/closure-impacts', [ClinicCalendarController::class, 'myClosureImpacts']);
 
     // Appointment (patient side)
-    Route::prefix('appointment')->group(function () {
-        Route::get('/available-services', [AppointmentServiceController::class, 'availableServices']);
-        Route::get('/check-blocked-status', [AppointmentController::class, 'checkBlockedStatus']);
-        Route::get('/debug-auth', [AppointmentController::class, 'debugAuth']); // Debug endpoint
-        Route::post('/', [AppointmentController::class, 'store']);
-        Route::get('/available-slots', [AppointmentSlotController::class, 'get']);
-        Route::post('/{id}/cancel', [AppointmentController::class, 'cancel']);
-        Route::post('/{id}/reschedule', [AppointmentController::class, 'reschedule']);
-        Route::get('/resolve/{code}', [AppointmentController::class, 'resolveReferenceCode']);
+    Route::middleware('patient.verified')->group(function () {
+        Route::prefix('appointment')->group(function () {
+            Route::get('/available-services', [AppointmentServiceController::class, 'availableServices']);
+            Route::get('/check-blocked-status', [AppointmentController::class, 'checkBlockedStatus']);
+            Route::get('/debug-auth', [AppointmentController::class, 'debugAuth']); // Debug endpoint
+            Route::post('/', [AppointmentController::class, 'store']);
+            Route::get('/available-slots', [AppointmentSlotController::class, 'get']);
+            Route::post('/{id}/cancel', [AppointmentController::class, 'cancel']);
+            Route::post('/{id}/reschedule', [AppointmentController::class, 'reschedule']);
+            Route::get('/resolve/{code}', [AppointmentController::class, 'resolveReferenceCode']);
+        });
+
+
+        // HMO verification and notification by staff/admin (per appointment)
+        Route::post('/appointments/{id}/hmo/reveal', [AppointmentController::class, 'revealHmo']);
+        Route::post('/appointments/{id}/hmo/notify', [AppointmentController::class, 'notifyHmoCoverage']);
+
+        Route::get('/patients', [PatientController::class, 'index']);
+
+        // Patient linking
+        Route::post('/patients/link-self', [PatientController::class, 'linkSelf']);
+
+        // Patient's own appointments
+        Route::get('/user-appointments', [AppointmentController::class, 'userAppointments']);
+        Route::get('/user-visit-history', [AppointmentController::class, 'userVisitHistory']);
+        Route::prefix('refunds')->group(function () {
+            Route::get('/pending-claims', [\App\Http\Controllers\API\PatientRefundController::class, 'pendingClaims']);
+            Route::post('/{id}/confirm', [\App\Http\Controllers\API\PatientRefundController::class, 'confirm']);
+        });
+
+
+        // Receipt generation
+        Route::prefix('receipts')->group(function () {
+            Route::get('/appointment/{appointmentId}', [ReceiptController::class, 'generateAppointmentReceipt']);
+            Route::get('/visit/{visitId}', [ReceiptController::class, 'generateVisitReceipt']);
+            Route::post('/appointment/{appointmentId}/email', [ReceiptController::class, 'sendReceiptEmail']);
+            Route::post('/visit/{visitId}/email', [ReceiptController::class, 'sendVisitReceiptEmail']);
+        });
+
+        // Notifications
+        Route::get('/notifications', [NotificationController::class, 'index']);
+        Route::get('/notifications/unread-count', [NotificationController::class, 'unreadCount']);
+        Route::post('/notifications/mark-all-read', [NotificationController::class, 'markAllRead']);
+        Route::get('/notifications/mine', [NotificationController::class, 'mine'])->middleware('throttle:30,1');
+
+        Route::prefix('inventory')->group(function () {
+
+            Route::get('/items', [InventoryItemController::class, 'index']);
+            Route::post('/items', [InventoryItemController::class, 'store']);
+
+            Route::post('/receive', [InventoryController::class, 'receive']);
+            Route::post('/consume', [InventoryController::class, 'consume']);
+
+            Route::get('/settings', [InventorySettingsController::class, 'show']);
+
+            Route::put('/items/{item}', [InventoryItemController::class, 'update']);
+            Route::delete('/items/{item}', [InventoryItemController::class, 'destroy']);
+            Route::get('/items/{item}/batches', [InventoryController::class, 'batches']);
+            Route::get('/suppliers', [InventoryController::class, 'suppliers']);
+            Route::post('/suppliers', [InventoryController::class, 'storeSupplier']);
+        });
+
+        // Create payment (user must be logged in)
+        Route::post('/maya/payments', [MayaController::class, 'createPayment']);
+
+        // If you prefer status behind auth, keep it here instead of public:
+        Route::get('/maya/payments/{paymentId}/status', [MayaController::class, 'status']);
+        Route::post('/maya/payments/{paymentId}/refund', [MayaController::class, 'refund']);
+
+        // HMO
+        Route::get('/patients/{patient}/hmos', [PatientHmoController::class, 'index'])->name('hmos.index');
+        Route::post('/patients/{patient}/hmos', [PatientHmoController::class, 'store'])->name('hmos.store');
+        Route::put('/patients/{patient}/hmos/{hmo}', [PatientHmoController::class, 'update'])->name('hmos.update');
+        Route::delete('/patients/{patient}/hmos/{hmo}', [PatientHmoController::class, 'destroy'])->name('hmos.destroy');
     });
-
-
-    // HMO verification and notification by staff/admin (per appointment)
-    Route::post('/appointments/{id}/hmo/reveal', [AppointmentController::class, 'revealHmo']);
-    Route::post('/appointments/{id}/hmo/notify', [AppointmentController::class, 'notifyHmoCoverage']);
-
-    Route::get('/patients', [PatientController::class, 'index']);
-
-    // Patient linking
-    Route::post('/patients/link-self', [PatientController::class, 'linkSelf']);
-
-    // Patient's own appointments
-    Route::get('/user-appointments', [AppointmentController::class, 'userAppointments']);
-    Route::get('/user-visit-history', [AppointmentController::class, 'userVisitHistory']);
-    Route::prefix('refunds')->group(function () {
-        Route::get('/pending-claims', [\App\Http\Controllers\API\PatientRefundController::class, 'pendingClaims']);
-        Route::post('/{id}/confirm', [\App\Http\Controllers\API\PatientRefundController::class, 'confirm']);
-    });
-
-
-    // Receipt generation
-    Route::prefix('receipts')->group(function () {
-        Route::get('/appointment/{appointmentId}', [ReceiptController::class, 'generateAppointmentReceipt']);
-        Route::get('/visit/{visitId}', [ReceiptController::class, 'generateVisitReceipt']);
-        Route::post('/appointment/{appointmentId}/email', [ReceiptController::class, 'sendReceiptEmail']);
-        Route::post('/visit/{visitId}/email', [ReceiptController::class, 'sendVisitReceiptEmail']);
-    });
-
-    // Notifications
-    Route::get('/notifications', [NotificationController::class, 'index']);
-    Route::get('/notifications/unread-count', [NotificationController::class, 'unreadCount']);
-    Route::post('/notifications/mark-all-read', [NotificationController::class, 'markAllRead']);
-    Route::get('/notifications/mine', [NotificationController::class, 'mine'])->middleware('throttle:30,1');
-
-    Route::prefix('inventory')->group(function () {
-
-        Route::get('/items', [InventoryItemController::class, 'index']);
-        Route::post('/items', [InventoryItemController::class, 'store']);
-
-        Route::post('/receive', [InventoryController::class, 'receive']);
-        Route::post('/consume', [InventoryController::class, 'consume']);
-
-        Route::get('/settings', [InventorySettingsController::class, 'show']);
-
-        Route::put('/items/{item}', [InventoryItemController::class, 'update']);
-        Route::delete('/items/{item}', [InventoryItemController::class, 'destroy']);
-        Route::get('/items/{item}/batches', [InventoryController::class, 'batches']);
-        Route::get('/suppliers', [InventoryController::class, 'suppliers']);
-        Route::post('/suppliers', [InventoryController::class, 'storeSupplier']);
-    });
-
-    // Create payment (user must be logged in)
-    Route::post('/maya/payments', [MayaController::class, 'createPayment']);
-
-    // If you prefer status behind auth, keep it here instead of public:
-    Route::get('/maya/payments/{paymentId}/status', [MayaController::class, 'status']);
-    Route::post('/maya/payments/{paymentId}/refund', [MayaController::class, 'refund']);
-
-    // HMO
-    Route::get('/patients/{patient}/hmos', [PatientHmoController::class, 'index'])->name('hmos.index');
-    Route::post('/patients/{patient}/hmos', [PatientHmoController::class, 'store'])->name('hmos.store');
-    Route::put('/patients/{patient}/hmos/{hmo}', [PatientHmoController::class, 'update'])->name('hmos.update');
-    Route::delete('/patients/{patient}/hmos/{hmo}', [PatientHmoController::class, 'destroy'])->name('hmos.destroy');
 
     // Dentist email verification routes removed - no longer needed
 });

@@ -4,6 +4,8 @@ import { useAuth } from "../hooks/useAuth";
 import PatientNavbar from "../components/PatientNavbar";
 import { usePolicyConsent } from "../context/PolicyConsentContext";
 import "./PatientLayout.css";
+import PatientEmailVerificationModal from "../components/PatientEmailVerificationModal";
+import { Toaster } from "react-hot-toast";
 
 function PatientLayout() {
   const location = useLocation();
@@ -33,8 +35,12 @@ function PatientLayout() {
   // Check if current route is the homepage
   const isHomepage = location.pathname === "/patient" || location.pathname === "/patient/";
   
+  const requiresVerification =
+    user && user.role === "patient" && !user.email_verified_at;
+
   return (
     <div className="d-flex flex-column min-vh-100 bg-light patient-layout">
+      <Toaster position="top-center" />
       <PatientNavbar />
       
       {isHomepage ? (
@@ -173,6 +179,7 @@ function PatientLayout() {
         </div>
       )}
       {shouldShowModal && <div className="modal-backdrop fade show"></div>}
+      <PatientEmailVerificationModal show={requiresVerification} />
     </div>
   );
 }
