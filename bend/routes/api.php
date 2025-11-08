@@ -52,16 +52,16 @@ use App\Http\Controllers\API\PolicyConsentController;
 // ------------------------
 // Public auth routes
 // ------------------------
-Route::post('/register', [RegisteredUserController::class, 'store']);
-Route::post('/login', [AuthenticatedSessionController::class, 'store']);
+Route::post('/register', [RegisteredUserController::class, 'store'])->middleware('throttle:3,10');
+Route::post('/login', [AuthenticatedSessionController::class, 'store'])->middleware('throttle:10,1');
 Route::post('/logout', [AuthenticatedSessionController::class, 'destroy']);
 
-Route::post('/forgot-password', [PasswordResetLinkController::class, 'store']);
+Route::post('/forgot-password', [PasswordResetLinkController::class, 'store'])->middleware('throttle:3,60');
 Route::post('/reset-password', [NewPasswordController::class, 'store']);
 
 // Send password reset link for authenticated users
 Route::post('/send-password-reset', [PasswordResetLinkController::class, 'sendForAuthenticatedUser'])
-    ->middleware('auth:sanctum');
+    ->middleware(['auth:sanctum', 'throttle:3,60']);
 
 // ------------------------
 // Authenticated user profile (moved inside authenticated routes group)
@@ -285,7 +285,7 @@ Route::middleware(['auth:sanctum', 'check.account.status'])->group(function () {
 
     // Allow patients to resend or update verification email even if not yet verified
     Route::post('/patient/verification/resend', [PatientEmailVerificationController::class, 'resend'])
-        ->middleware('throttle:6,1');
+        ->middleware('throttle:2,10');
 
     // Staff device status
     Route::get('/device-status', [DeviceStatusController::class, 'check']);
@@ -337,8 +337,8 @@ Route::middleware(['auth:sanctum', 'check.account.status'])->group(function () {
         });
 
         // Notifications
-        Route::get('/notifications', [NotificationController::class, 'index']);
-        Route::get('/notifications/unread-count', [NotificationController::class, 'unreadCount']);
+        Route::get('/notifications', [NotificationController::class, 'index'])->middleware('throttle:30,1');
+        Route::get('/notifications/unread-count', [NotificationController::class, 'unreadCount'])->middleware('throttle:30,1');
         Route::post('/notifications/mark-all-read', [NotificationController::class, 'markAllRead']);
         Route::get('/notifications/mine', [NotificationController::class, 'mine'])->middleware('throttle:30,1');
 
