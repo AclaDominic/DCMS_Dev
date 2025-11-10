@@ -61,6 +61,28 @@ function VisitTrackerManager() {
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [creatingAppointment, setCreatingAppointment] = useState(false);
   const [selectedServiceDetails, setSelectedServiceDetails] = useState(null);
+  const normalizeService = (service) => {
+    if (!service || typeof service !== 'object') return service;
+
+    const booleanKeys = [
+      'per_teeth_service',
+      'per_tooth_service',
+      'requires_teeth_count',
+    ];
+
+    const normalizedService = { ...service };
+    booleanKeys.forEach((key) => {
+      if (key in normalizedService) {
+        normalizedService[key] = Boolean(normalizedService[key]);
+      }
+    });
+
+    return normalizedService;
+  };
+
+  const normalizeServicesList = (services) =>
+    Array.isArray(services) ? services.map(normalizeService) : [];
+
   const [availableDentists, setAvailableDentists] = useState([]);
   const [loadingDentists, setLoadingDentists] = useState(false);
 
@@ -241,9 +263,8 @@ function VisitTrackerManager() {
       const res = await api.get(
         `/api/appointment/available-services?date=${today}`
       );
-      setAvailableServices(
-        Array.isArray(res.data) ? res.data : res.data.data || []
-      );
+      const servicesData = Array.isArray(res.data) ? res.data : res.data.data || [];
+      setAvailableServices(normalizeServicesList(servicesData));
     } catch (err) {
       alert("Failed to load services.");
     }
@@ -353,9 +374,8 @@ function VisitTrackerManager() {
         const res = await api.get(
           `/api/appointment/available-services?date=${date}`
         );
-        setAvailableServices(
-          Array.isArray(res.data) ? res.data : res.data.data || []
-        );
+        const servicesData = Array.isArray(res.data) ? res.data : res.data.data || [];
+        setAvailableServices(normalizeServicesList(servicesData));
       } catch (err) {
         console.error("Failed to load services for new date:", err);
         setAvailableServices([]);
@@ -368,7 +388,7 @@ function VisitTrackerManager() {
 
   const handleServiceChange = async (serviceId) => {
     const service = availableServices.find(s => s.id == serviceId);
-    setSelectedServiceDetails(service);
+    setSelectedServiceDetails(service ? normalizeService(service) : null);
     setAppointmentForm(prev => ({ ...prev, service_id: serviceId, start_time: '', teeth_count: '' }));
     setAvailableSlots([]);
     
