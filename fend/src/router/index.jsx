@@ -55,12 +55,12 @@ import StaffProfile from "../pages/Staff/StaffProfile";
 // Lazy load appointment-related components for code splitting
 const StaffAppointmentManager = lazy(() => import("../pages/Staff/StaffAppointmentManager"));
 const AppointmentFinder = lazy(() => import("../pages/Staff/AppointmentFinder"));
+const VisitTrackerManager = lazy(() => import("../components/Staff/VisitTrackerManager"));
 import AdminAppointmentManager from "../pages/Admin/AdminAppointmentManager"; // Admin appointment management
 import AppointmentReminders from "../pages/Staff/AppointmentReminders";
 import ConsumeStockPage from "../pages/Staff/ConsumeStockPage";
 import StaffPaymentRecords from "../pages/Staff/PaymentRecords";
 import StaffPatientUserBindingPage from "../pages/Staff/PatientUserBindingPage";
-import VisitTrackerManager from "../components/Staff/VisitTrackerManager";
 
 // Patient layout and pages
 import PatientLayout from "../layouts/PatientLayout";
@@ -189,7 +189,14 @@ export default function AppRouter() {
           {/* Patient-User Binding */}
           <Route path="patient-binding" element={<StaffPatientUserBindingPage />} />
           {/* Patient Visit Tracker */}
-          <Route path="visit-tracker" element={<VisitTrackerManager />} />
+          <Route
+            path="visit-tracker"
+            element={
+              <Suspense fallback={<div>Loading visit tracker...</div>}>
+                <VisitTrackerManager />
+              </Suspense>
+            }
+          />
           <Route
             path="inventory"
             element={

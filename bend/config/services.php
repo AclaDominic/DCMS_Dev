@@ -28,6 +28,13 @@ return [
         'key' => env('RESEND_KEY'),
     ],
 
+    'mailtrap-sdk' => [
+        'host' => env('MAILTRAP_HOST', env('MAILTRAP_SANDBOX', false) ? 'sandbox.api.mailtrap.io' : 'send.api.mailtrap.io'),
+        'apiKey' => env('MAILTRAP_API_KEY'),
+        'inboxId' => env('MAILTRAP_INBOX_ID'),
+        'sandbox' => (bool) env('MAILTRAP_SANDBOX', false),
+    ],
+
     'slack' => [
         'notifications' => [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),

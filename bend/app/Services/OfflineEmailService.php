@@ -128,15 +128,20 @@ class OfflineEmailService
     public static function isEmailServiceAvailable(): bool
     {
         try {
-            // Simple connectivity test - try to resolve mail host
+            $defaultMailer = config('mail.default');
+
+            if ($defaultMailer === 'mailtrap-sdk') {
+                return !empty(config('services.mailtrap-sdk.apiKey'));
+            }
+
+            // Simple connectivity test - try to resolve mail host for SMTP
             $mailHost = config('mail.mailers.smtp.host');
             if ($mailHost && $mailHost !== '127.0.0.1') {
                 return gethostbyname($mailHost) !== $mailHost;
             }
-            
+
             // For local development or log driver, consider it available
             return true;
-            
         } catch (\Exception $e) {
             return false;
         }
