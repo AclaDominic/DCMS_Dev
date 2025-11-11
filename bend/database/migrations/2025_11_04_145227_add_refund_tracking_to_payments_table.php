@@ -17,8 +17,10 @@ return new class extends Migration
             $table->foreignId('refunded_by')->nullable()->after('refunded_at')->constrained('users')->nullOnDelete();
         });
 
-        // Update enum to include 'refunded' status
+        // Update enum to include 'refunded' status when supported (skip on SQLite)
+        if (Schema::getConnection()->getDriverName() !== 'sqlite') {
         DB::statement("ALTER TABLE payments MODIFY COLUMN status ENUM('unpaid', 'awaiting_payment', 'paid', 'cancelled', 'failed', 'refunded') DEFAULT 'unpaid'");
+        }
     }
 
     /**
@@ -31,7 +33,9 @@ return new class extends Migration
             $table->dropColumn(['refunded_at', 'refunded_by']);
         });
 
-        // Revert enum
+        // Revert enum when supported (skip on SQLite)
+        if (Schema::getConnection()->getDriverName() !== 'sqlite') {
         DB::statement("ALTER TABLE payments MODIFY COLUMN status ENUM('unpaid', 'awaiting_payment', 'paid', 'cancelled', 'failed') DEFAULT 'unpaid'");
+        }
     }
 };

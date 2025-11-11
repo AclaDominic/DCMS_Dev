@@ -522,7 +522,7 @@ class PatientVisitController extends Controller
         }
 
         $validated = $request->validate([
-            'stock_items' => ['required', 'array'],
+            'stock_items' => ['nullable', 'array'],
             'stock_items.*.item_id' => ['required', 'exists:inventory_items,id'],
             'stock_items.*.quantity' => ['required', 'numeric', 'min:0.001'],
             'stock_items.*.notes' => ['nullable', 'string'],
@@ -551,9 +551,20 @@ class PatientVisitController extends Controller
         }
 
         $userId = $request->user()->id;
-        return DB::transaction(function () use ($visit, $validated, $userId) {
+        $stockItems = $validated['stock_items'] ?? [];
+        $billableItems = $validated['billable_items'] ?? [];
+
+        if (!is_array($stockItems)) {
+            $stockItems = [];
+        }
+
+        if (!is_array($billableItems)) {
+            $billableItems = [];
+        }
+
+        return DB::transaction(function () use ($visit, $validated, $userId, $stockItems, $billableItems) {
             // 1. Consume stock items and update batch quantities
-            foreach ($validated['stock_items'] as $item) {
+            foreach ($stockItems as $item) {
                 $inventoryItem = InventoryItem::with([
                     'batches' => function ($q) {
                         $q->where('qty_on_hand', '>', 0)
@@ -624,8 +635,8 @@ class PatientVisitController extends Controller
             }
 
             // 3. Handle billable items (additional charges)
-            if (!empty($validated['billable_items'])) {
-                foreach ($validated['billable_items'] as $item) {
+            if (!empty($billableItems)) {
+                foreach ($billableItems as $item) {
                     $inventoryItem = InventoryItem::findOrFail($item['item_id']);
                     
                     // Verify the item is sellable
@@ -664,8 +675,8 @@ class PatientVisitController extends Controller
             
             // Calculate additional charges total
             $additionalChargesTotal = 0;
-            if (!empty($validated['billable_items'])) {
-                foreach ($validated['billable_items'] as $item) {
+            if (!empty($billableItems)) {
+                foreach ($billableItems as $item) {
                     $additionalChargesTotal += ((float) $item['quantity'] * (float) $item['unit_price']);
                 }
             }

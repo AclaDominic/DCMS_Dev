@@ -117,14 +117,13 @@ class VisitCompletionIntegrationTest extends TestCase
         $this->assertEquals('completed', $visit->status);
         $this->assertNotNull($visit->end_time);
 
-        // Verify visit notes were created
-        $this->assertDatabaseHas('visit_notes', [
-            'patient_visit_id' => $visit->id,
-            'dentist_notes' => 'Patient completed cleaning successfully. No complications.',
-            'findings' => 'Minor plaque buildup found and removed.',
-            'treatment_plan' => 'Continue regular 6-month cleanings.',
-            'teeth_treated' => '1,2,3,4,5,6',
-        ]);
+        // Verify visit notes were created with decrypted values
+        $note = $visit->visitNotes;
+        $this->assertNotNull($note);
+        $this->assertEquals('Patient completed cleaning successfully. No complications.', $note->dentist_notes_encrypted);
+        $this->assertEquals('Minor plaque buildup found and removed.', $note->findings_encrypted);
+        $this->assertEquals('Continue regular 6-month cleanings.', $note->treatment_plan_encrypted);
+        $this->assertEquals('1,2,3,4,5,6', $note->teeth_treated);
 
         // Verify the Maya payment remains unchanged (no new payment created)
         $payments = Payment::where('patient_visit_id', $visit->id)->get();

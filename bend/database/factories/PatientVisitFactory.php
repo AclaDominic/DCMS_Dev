@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Models\DentistSchedule;
 use App\Models\Patient;
 use App\Models\PatientVisit;
 use App\Models\Service;
@@ -24,11 +25,13 @@ class PatientVisitFactory extends Factory
         return [
             'patient_id' => Patient::factory(),
             'service_id' => Service::factory(),
+            'dentist_schedule_id' => DentistSchedule::factory(),
             'visit_date' => $this->faker->date(),
             'start_time' => $this->faker->dateTime(),
             'end_time' => null,
             'status' => 'pending',
             'visit_code' => $this->faker->unique()->regexify('[A-Z0-9]{6}'),
+            'visit_code_sent_at' => $this->faker->dateTime(),
             'consultation_started_at' => null,
         ];
     }

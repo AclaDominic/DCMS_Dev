@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class InventoryItem extends Model
 {
+    use HasFactory;
+
     protected $fillable = [
         'name',
         'sku_code',
@@ -21,6 +24,7 @@ class InventoryItem extends Model
         'is_active',
         'created_by',
         'notes',
+        'total_on_hand',
     ];
 
     protected $casts = [
@@ -43,6 +47,19 @@ class InventoryItem extends Model
     }
 
     // Helpers
+
+    protected ?float $factoryTotalOnHand = null;
+
+    public function setTotalOnHandAttribute($value): void
+    {
+        $this->factoryTotalOnHand = is_null($value) ? null : (float) $value;
+    }
+
+    public function getFactoryTotalOnHand(): ?float
+    {
+        return $this->factoryTotalOnHand;
+    }
+
     public function isDrug(): bool
     {
         return $this->type === 'drug';
