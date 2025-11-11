@@ -2,10 +2,12 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Log;
+use App\Services\PreferredDentistService;
+use Carbon\Carbon;
 
 class Patient extends Model
 {
@@ -183,6 +185,22 @@ class Patient extends Model
     public function getLastLoginIp()
     {
         return $this->last_login_ip;
+    }
+
+    /**
+     * Resolve the patient's most recently associated dentist schedule.
+     */
+    public function preferredDentistSchedule(?Carbon $referenceDate = null): ?DentistSchedule
+    {
+        /** @var PreferredDentistService $service */
+        $service = app(PreferredDentistService::class);
+
+        return $service->resolveForPatient($this->id, $referenceDate);
+    }
+
+    public function preferredDentistScheduleId(?Carbon $referenceDate = null): ?int
+    {
+        return $this->preferredDentistSchedule($referenceDate)?->id;
     }
 
     protected static function boot()

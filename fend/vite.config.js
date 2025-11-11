@@ -100,6 +100,10 @@ export default defineConfig({
         ws: false,        // important: don't WS proxy to Laravel API
       }
     }
+  },
+  test: {
+    environment: 'jsdom',
+    setupFiles: './src/setupTests.js',
   }
 
   //0000000000000000

@@ -83,7 +83,11 @@ class ClinicDateResolverService
         }
 
         // ── 3) Dentist capacity for this date
-        $dentistCount = DentistSchedule::countForDate($d);
+        $activeDentists = DentistSchedule::activeOnDate($d)
+            ->select('id', 'dentist_code', 'dentist_name')
+            ->orderBy('dentist_code')
+            ->get();
+        $dentistCount = $activeDentists->count();
 
         // ── 4) Per-date cap override (reserve room for walk-ins)
         $overrideCap = $cal->max_per_block_override ?? null;
@@ -96,6 +100,15 @@ class ClinicDateResolverService
             'dentist_count' => (int) $dentistCount,
             'calendar_max_per_block' => is_null($overrideCap) ? null : (int) $overrideCap,
             'effective_capacity' => max(0, (int) $effective),
+            'dentists' => $activeDentists->map(function ($dentist) {
+                return [
+                    'id' => $dentist->id,
+                    'code' => $dentist->dentist_code,
+                    'name' => $dentist->dentist_name,
+                ];
+            })->values()->all(),
+            'active_dentist_ids' => $activeDentists->pluck('id')->all(),
+            'capacity_override' => is_null($overrideCap) ? null : (int) $overrideCap,
         ];
     }
 

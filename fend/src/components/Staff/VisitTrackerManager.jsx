@@ -1,3 +1,4 @@
+/* global bootstrap */
 import { useEffect, useState } from "react";
 import api from "../../api/api";
 import VisitCompletionModal from "./VisitCompletionModal";
@@ -56,6 +57,7 @@ function VisitTrackerManager() {
     patient_hmo_id: '',
     teeth_count: '',
     linkToExisting: false,
+    honor_preferred_dentist: true,
   });
   const [availableSlots, setAvailableSlots] = useState([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
@@ -80,11 +82,45 @@ function VisitTrackerManager() {
     return normalizedService;
   };
 
+  const toHighlightDateStrings = (input) => {
+    if (!Array.isArray(input)) return [];
+    return input
+      .map((item) => {
+        if (typeof item === 'string') return item;
+        if (item && typeof item.date === 'string') {
+          if (
+            Object.prototype.hasOwnProperty.call(item, 'preferred_dentist_present') &&
+            item.preferred_dentist_present === false
+          ) {
+            return null;
+          }
+          return item.date;
+        }
+        return null;
+      })
+      .filter(Boolean);
+  };
+
   const normalizeServicesList = (services) =>
     Array.isArray(services) ? services.map(normalizeService) : [];
 
   const [availableDentists, setAvailableDentists] = useState([]);
   const [loadingDentists, setLoadingDentists] = useState(false);
+  const [preferredDentistInfo, setPreferredDentistInfo] = useState(null);
+  const [highlightInfo, setHighlightInfo] = useState({
+    dates: [],
+    present: false,
+  });
+  const [slotMetadataStaff, setSlotMetadataStaff] = useState(null);
+  const dentistScheduledOnSelectedDate =
+    !!(
+      appointmentForm.date &&
+      preferredDentistInfo &&
+      (
+        (Array.isArray(highlightInfo.dates) && highlightInfo.dates.includes(appointmentForm.date)) ||
+        highlightInfo.present === true
+      )
+    );
 
   useEffect(() => {
     fetchVisits();
@@ -189,6 +225,11 @@ function VisitTrackerManager() {
       // Check if service is selected for walk-in patients
       if (!visit.service_id) {
         alert("Please select a service for this patient before finishing the visit. Use the 'Edit' button to assign a service.");
+        return;
+      }
+
+      if (!visit.visit_code_sent_at) {
+        alert("Send the visit code to a dentist before completing the visit.");
         return;
       }
       
@@ -340,10 +381,14 @@ function VisitTrackerManager() {
       patient_hmo_id: '',
       teeth_count: '',
       linkToExisting: false,
+      honor_preferred_dentist: true,
     });
     setSelectedServiceDetails(null);
     setAvailableSlots([]);
     setAvailableDentists([]);
+    setPreferredDentistInfo(null);
+    setHighlightInfo({ dates: [], present: false });
+    setSlotMetadataStaff(null);
     
     // Don't load services initially - wait for date selection
     setAvailableServices([]);
@@ -352,9 +397,17 @@ function VisitTrackerManager() {
   };
 
   const handleDateChange = async (date) => {
-    setAppointmentForm(prev => ({ ...prev, date, start_time: '', service_id: '' }));
+    setAppointmentForm(prev => ({
+      ...prev,
+      date,
+      start_time: '',
+      service_id: '',
+      teeth_count: '',
+      honor_preferred_dentist: false,
+    }));
     setAvailableSlots([]);
     setSelectedServiceDetails(null);
+    setSlotMetadataStaff(null);
     
     // Fetch available dentists for the selected date (optional feature)
     if (date) {
@@ -371,18 +424,64 @@ function VisitTrackerManager() {
       
       // Reload services for the new date
       try {
+        const queryParams = new URLSearchParams({
+          date,
+          with_meta: '1',
+        });
+        if (appointmentForm.linkToExisting && appointmentForm.patient_id) {
+          queryParams.set('patient_id', appointmentForm.patient_id);
+        }
         const res = await api.get(
-          `/api/appointment/available-services?date=${date}`
+          `/api/appointment/available-services?${queryParams.toString()}`
         );
-        const servicesData = Array.isArray(res.data) ? res.data : res.data.data || [];
+        const servicesData = Array.isArray(res.data?.services)
+          ? res.data.services
+          : Array.isArray(res.data)
+          ? res.data
+          : res.data?.data || [];
         setAvailableServices(normalizeServicesList(servicesData));
+
+        const metadata = res.data?.metadata ?? null;
+        if (metadata) {
+          const highlightDates = toHighlightDateStrings(metadata.highlight_dates ?? []);
+          const dentistAvailable =
+            metadata.preferred_dentist_present ?? highlightDates.includes(date);
+          setPreferredDentistInfo(metadata.preferred_dentist ?? null);
+          setHighlightInfo({
+            dates: highlightDates,
+            present: metadata.preferred_dentist_present ?? dentistAvailable,
+          });
+          setAppointmentForm(prev => ({
+            ...prev,
+            honor_preferred_dentist: dentistAvailable,
+          }));
+        } else {
+          setPreferredDentistInfo(null);
+          setHighlightInfo({ dates: [], present: false });
+          setAppointmentForm(prev => ({
+            ...prev,
+            honor_preferred_dentist: false,
+          }));
+        }
       } catch (err) {
         console.error("Failed to load services for new date:", err);
         setAvailableServices([]);
+        setPreferredDentistInfo(null);
+        setHighlightInfo({ dates: [], present: false });
+        setAppointmentForm(prev => ({
+          ...prev,
+          honor_preferred_dentist: false,
+        }));
       }
     } else {
       setAvailableDentists([]);
       setAvailableServices([]);
+      setPreferredDentistInfo(null);
+      setHighlightInfo({ dates: [], present: false });
+      setAppointmentForm(prev => ({
+        ...prev,
+        honor_preferred_dentist: false,
+      }));
     }
   };
 
@@ -391,6 +490,7 @@ function VisitTrackerManager() {
     setSelectedServiceDetails(service ? normalizeService(service) : null);
     setAppointmentForm(prev => ({ ...prev, service_id: serviceId, start_time: '', teeth_count: '' }));
     setAvailableSlots([]);
+    setSlotMetadataStaff(null);
     
     // For per-teeth services, don't fetch slots until teeth count is provided
     if (serviceId && appointmentForm.date && service && !service.per_teeth_service) {
@@ -401,25 +501,47 @@ function VisitTrackerManager() {
   const handleTeethCountChange = async (teethCount) => {
     setAppointmentForm(prev => ({ ...prev, teeth_count: teethCount, start_time: '' }));
     setAvailableSlots([]);
+    setSlotMetadataStaff(null);
     
     if (appointmentForm.date && appointmentForm.service_id && teethCount && teethCount > 0) {
       await fetchAvailableSlots(appointmentForm.date, appointmentForm.service_id, teethCount);
     }
   };
 
-  const fetchAvailableSlots = async (date, serviceId, teethCount = null) => {
+  const handleHonorPreferredDentistToggle = async (value) => {
+    setAppointmentForm(prev => ({ ...prev, honor_preferred_dentist: value, start_time: '' }));
+    setAvailableSlots([]);
+    setSlotMetadataStaff(null);
+
+    if (appointmentForm.date && appointmentForm.service_id) {
+      await fetchAvailableSlots(
+        appointmentForm.date,
+        appointmentForm.service_id,
+        appointmentForm.teeth_count || null,
+        value
+      );
+    }
+  };
+
+  const fetchAvailableSlots = async (date, serviceId, teethCount = null, honorFlag = appointmentForm.honor_preferred_dentist) => {
     setLoadingSlots(true);
     try {
-      const params = { date, service_id: serviceId };
+        const params = { date, service_id: serviceId };
       if (teethCount) {
         params.teeth_count = teethCount;
       }
+      params.honor_preferred_dentist = honorFlag ? 1 : 0;
+        if (appointmentForm.linkToExisting && appointmentForm.patient_id) {
+          params.patient_id = appointmentForm.patient_id;
+        }
       
       const response = await api.get('/api/appointment/available-slots', { params });
       setAvailableSlots(response.data.slots || response.data);
+      setSlotMetadataStaff(response.data.metadata ?? null);
     } catch (err) {
       console.error('Failed to fetch available slots:', err);
       setAvailableSlots([]);
+      setSlotMetadataStaff(null);
     } finally {
       setLoadingSlots(false);
     }
@@ -487,6 +609,7 @@ function VisitTrackerManager() {
         date: appointmentForm.date,
         start_time: appointmentForm.start_time,
         payment_method: appointmentForm.payment_method,
+      honor_preferred_dentist: appointmentForm.honor_preferred_dentist,
       };
 
       if (appointmentForm.linkToExisting) {
@@ -670,6 +793,13 @@ function VisitTrackerManager() {
                 return filteredVisits;
               })()
                 .map((v) => {
+                  const canFinish = Boolean(v.service_id) && Boolean(v.visit_code_sent_at);
+                  const assignedDentistName = v.assigned_dentist?.dentist_name || v.assigned_dentist?.dentist_code || null;
+                  const visitCodeSentAt = v.visit_code_sent_at ? new Date(v.visit_code_sent_at).toLocaleString("en-PH", {
+                    dateStyle: "medium",
+                    timeStyle: "short",
+                  }) : null;
+
                   console.log("Rendering visit:", v.id, "Patient:", v.patient);
                   return (
                   <tr key={v.id}>
@@ -766,17 +896,39 @@ function VisitTrackerManager() {
                               Medical History Required
                             </span>
                           )}
+
+                          <div className="small text-muted w-100">
+                            {assignedDentistName ? (
+                              <>
+                                <i className="bi bi-person-badge me-1"></i>
+                                Assigned dentist: {assignedDentistName}
+                                {visitCodeSentAt && (
+                                  <div>
+                                    <i className="bi bi-clock-history me-1"></i>
+                                    Sent: {visitCodeSentAt}
+                                  </div>
+                                )}
+                              </>
+                            ) : (
+                              <span>
+                                <i className="bi bi-info-circle me-1"></i>
+                                Visit code not yet sent
+                              </span>
+                            )}
+                          </div>
                           
                           <button
                             className={`btn btn-sm ${
-                              v.service_id ? "btn-success" : "btn-outline-secondary"                                                    
+                              canFinish ? "btn-success" : "btn-outline-secondary"
                             }`}
                             onClick={() => handleAction(v.id, "finish")}                                                                
-                            disabled={!v.service_id}
+                            disabled={!canFinish}
                             title={
                               !v.service_id
-                                ? "Please select a service first"   
-                                : "Complete this visit"
+                                ? "Please select a service first"
+                                : !v.visit_code_sent_at
+                                  ? "Send the visit code before completing this visit"
+                                  : "Complete this visit"
                             }
                           >
                             {!v.service_id ? (
@@ -1244,8 +1396,8 @@ function VisitTrackerManager() {
         <SendVisitCodeModal
           visit={sendingVisitCode}
           onClose={() => setSendingVisitCode(null)}
-          onSuccess={(dentist) => {
-            console.log(`Visit code sent to Dr. ${dentist.dentist_name || dentist.dentist_code}`);                                      
+          onSuccess={async () => {
+            await fetchVisits();
           }}
         />
       )}
@@ -1359,28 +1511,31 @@ function VisitTrackerManager() {
                     ) : (
                       <>
                         <div className="mb-3">
-                          <label className="form-label">First Name *</label>
+                          <label className="form-label" htmlFor="staffAppointmentFirstName">First Name *</label>
                           <input
                             className="form-control"
                             value={appointmentForm.first_name}
                             onChange={(e) => setAppointmentForm(prev => ({ ...prev, first_name: e.target.value }))}
+                            id="staffAppointmentFirstName"
                           />
                         </div>
                         <div className="mb-3">
-                          <label className="form-label">Last Name *</label>
+                          <label className="form-label" htmlFor="staffAppointmentLastName">Last Name *</label>
                           <input
                             className="form-control"
                             value={appointmentForm.last_name}
                             onChange={(e) => setAppointmentForm(prev => ({ ...prev, last_name: e.target.value }))}
+                            id="staffAppointmentLastName"
                           />
                         </div>
                         <div className="mb-3">
-                          <label className="form-label">Contact Number *</label>
+                          <label className="form-label" htmlFor="staffAppointmentContact">Contact Number *</label>
                           <input
                             className="form-control"
                             value={appointmentForm.contact_number}
                             onChange={(e) => setAppointmentForm(prev => ({ ...prev, contact_number: e.target.value }))}
                             placeholder="Required for SMS reminders"
+                            id="staffAppointmentContact"
                           />
                           <div className="form-text">
                             <i className="bi bi-phone me-1"></i>
@@ -1426,7 +1581,7 @@ function VisitTrackerManager() {
                     <h6>Appointment Details</h6>
                     
                     <div className="mb-3">
-                      <label className="form-label">Date *</label>
+                      <label className="form-label" htmlFor="staffAppointmentDate">Date *</label>
                       <input
                         type="date"
                         className="form-control"
@@ -1435,6 +1590,7 @@ function VisitTrackerManager() {
                         min={new Date().toISOString().slice(0, 10)}
                         max={new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)}
                         placeholder="Select a date"
+                        id="staffAppointmentDate"
                       />
                       <div className="form-text">
                         <i className="bi bi-info-circle me-1"></i>
@@ -1443,6 +1599,52 @@ function VisitTrackerManager() {
                           "Please select a date first to see available dentists and services"
                         }
                       </div>
+                      {preferredDentistInfo && (
+                        <div className="alert alert-info border-0 shadow-sm mt-3">
+                          <strong>Recent dentist:</strong> {preferredDentistInfo.name || preferredDentistInfo.code}
+                          <div className="small mt-2">
+                            {Array.isArray(highlightInfo.dates) && highlightInfo.dates.length > 0 ? (
+                              <>
+                                Available on:{" "}
+                                <span className="fw-semibold">
+                                  {highlightInfo.dates.join(', ')}
+                                </span>
+                              </>
+                            ) : (
+                              "No upcoming availability recorded."
+                            )}
+                          </div>
+                          {appointmentForm.date && !dentistScheduledOnSelectedDate && (
+                            <div className="small text-muted mt-2">
+                              Your dentist is not scheduled on this selected date.
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="form-check form-switch mb-3">
+                      <input
+                        className="form-check-input"
+                        type="checkbox"
+                        id="staffHonorPreferredDentistSwitch"
+                        checked={appointmentForm.honor_preferred_dentist}
+                        onChange={(e) => handleHonorPreferredDentistToggle(e.target.checked)}
+                        disabled={!preferredDentistInfo || !dentistScheduledOnSelectedDate}
+                      />
+                      <label className="form-check-label" htmlFor="staffHonorPreferredDentistSwitch">
+                        Prefer assigning to recent dentist
+                      </label>
+                      {!preferredDentistInfo && (
+                        <div className="form-text">
+                          No recent dentist found for this patient yet; any dentist can be assigned.
+                        </div>
+                      )}
+                      {preferredDentistInfo && appointmentForm.date && !dentistScheduledOnSelectedDate && (
+                        <div className="form-text text-muted">
+                          Dentist not available on this date.
+                        </div>
+                      )}
                     </div>
 
                     {/* Available Dentists Display - Optional Feature */}
@@ -1484,12 +1686,13 @@ function VisitTrackerManager() {
                     )}
 
                     <div className="mb-3">
-                      <label className="form-label">Service *</label>
+                      <label className="form-label" htmlFor="staffAppointmentService">Service *</label>
                       <select
                         className="form-select"
                         value={appointmentForm.service_id}
                         onChange={(e) => handleServiceChange(e.target.value)}
                         disabled={!appointmentForm.date}
+                        id="staffAppointmentService"
                       >
                         <option value="">{appointmentForm.date ? "Select a service" : "Please select a date first"}</option>
                         {availableServices.map((service) => (
@@ -1723,14 +1926,31 @@ function VisitTrackerManager() {
                     )}
 
                     <div className="mb-3">
-                      <label className="form-label">Time Slot *</label>
+                      <label className="form-label" htmlFor="staffAppointmentTimeSlot">Time Slot *</label>
                       {loadingSlots ? (
                         <div className="text-muted">Loading available slots...</div>
                       ) : availableSlots.length > 0 ? (
+                        <>
+                          {slotMetadataStaff?.preferred_dentist && (
+                            <div className="alert alert-info border-0 shadow-sm mb-2">
+                              <i className="bi bi-person-badge me-2"></i>
+                              {appointmentForm.honor_preferred_dentist
+                                ? "Scheduling with:"
+                                : "Suggested dentist:"}{" "}
+                              {slotMetadataStaff.preferred_dentist.name || slotMetadataStaff.preferred_dentist.code}
+                            </div>
+                          )}
+                          {slotMetadataStaff && slotMetadataStaff.effective_honor_preferred_dentist === false && appointmentForm.honor_preferred_dentist && (
+                            <div className="alert alert-warning border-0 shadow-sm mb-2">
+                              <i className="bi bi-exclamation-triangle me-2"></i>
+                              Preferred dentist is unavailable for the selected slot. Another dentist will be assigned.
+                            </div>
+                          )}
                         <select
                           className="form-select"
                           value={appointmentForm.start_time}
                           onChange={(e) => setAppointmentForm(prev => ({ ...prev, start_time: e.target.value }))}
+                            id="staffAppointmentTimeSlot"
                         >
                           <option value="">Select time slot</option>
                           {availableSlots.map((slot) => (
@@ -1739,6 +1959,7 @@ function VisitTrackerManager() {
                             </option>
                           ))}
                         </select>
+                        </>
                       ) : appointmentForm.service_id && appointmentForm.date ? (
                         <div className="text-muted">
                           {selectedServiceDetails && selectedServiceDetails.per_teeth_service && !appointmentForm.teeth_count ? 

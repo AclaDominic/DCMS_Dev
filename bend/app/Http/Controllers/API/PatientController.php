@@ -4,12 +4,14 @@ namespace App\Http\Controllers\API;
 
 use App\Models\User;
 use App\Models\Patient;
+use App\Models\PatientVisit;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use App\Services\SystemLogService;
 use Carbon\Carbon;
+use App\Services\PreferredDentistService;
 
 class PatientController extends Controller
 {
@@ -126,6 +128,61 @@ class PatientController extends Controller
         );
 
         return response()->json(['message' => 'Patient flagged for review.']);
+    }
+
+    /**
+     * Resolve the patient's most recent dentist (for staff view).
+     */
+    public function preferredDentist(Request $request, $patientId)
+    {
+        $patient = Patient::findOrFail($patientId);
+
+        $referenceDate = null;
+        if ($request->filled('reference_date')) {
+            try {
+                $referenceDate = Carbon::parse($request->query('reference_date'));
+            } catch (\Exception $e) {
+                $referenceDate = null;
+            }
+        }
+
+        /** @var PreferredDentistService $service */
+        $service = app(PreferredDentistService::class);
+        $preferredSchedule = $service->resolveForPatient($patient->id, $referenceDate);
+
+        if (!$preferredSchedule) {
+            return response()->json([
+                'preferred_dentist' => null,
+                'source' => null,
+            ]);
+        }
+
+        $visitQuery = PatientVisit::query()
+            ->where('patient_id', $patient->id)
+            ->where('dentist_schedule_id', $preferredSchedule->id)
+            ->orderByDesc('visit_date')
+            ->orderByDesc('created_at');
+
+        if ($referenceDate) {
+            $visitQuery->whereDate('visit_date', '<=', $referenceDate->toDateString());
+        }
+
+        $recentVisit = $visitQuery->first();
+
+        return response()->json([
+            'preferred_dentist' => [
+                'id' => $preferredSchedule->id,
+                'name' => $preferredSchedule->dentist_name ?? $preferredSchedule->dentist_code,
+                'code' => $preferredSchedule->dentist_code,
+                'email' => $preferredSchedule->email,
+                'employment_type' => $preferredSchedule->employment_type,
+            ],
+            'source' => $recentVisit ? [
+                'type' => 'visit',
+                'visit_id' => $recentVisit->id,
+                'visit_date' => optional($recentVisit->visit_date)->format('Y-m-d'),
+            ] : null,
+        ]);
     }
 
     // 🔍 Search patients by name/contact (for linking modal)

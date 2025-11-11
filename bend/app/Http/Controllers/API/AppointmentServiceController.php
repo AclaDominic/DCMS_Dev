@@ -9,6 +9,10 @@ use App\Models\ClinicCalendar;
 use App\Models\ServiceDiscount;
 use App\Http\Controllers\Controller;
 use App\Models\ClinicWeeklySchedule;
+use App\Models\Patient;
+use App\Services\PreferredDentistService;
+use App\Services\ClinicDateResolverService;
+use Illuminate\Support\Facades\Auth;
 
 class AppointmentServiceController extends Controller
 {
@@ -116,7 +120,72 @@ class AppointmentServiceController extends Controller
             ->concat($promoServices)
             ->values();
 
-        return response()->json($combined);
+        $includeMeta = $request->boolean('with_meta', false);
+
+        if (!$includeMeta) {
+            return response()->json($combined);
+        }
+
+        $effectivePatientId = null;
+        if ($request->filled('patient_id')) {
+            $effectivePatientId = (int) $request->query('patient_id');
+        } elseif (Auth::check()) {
+            $effectivePatientId = optional(Patient::byUser(Auth::id()))?->id;
+        }
+
+        $patient = $effectivePatientId ? Patient::find($effectivePatientId) : null;
+        $preferredDentistData = null;
+        $preferredDentistPresent = false;
+        $highlightDates = [];
+
+        if ($patient) {
+            /** @var PreferredDentistService $preferredDentistService */
+            $preferredDentistService = app(PreferredDentistService::class);
+            $preferredDentist = $preferredDentistService->resolveForPatient($patient->id, $carbonDate);
+
+            if ($preferredDentist) {
+                $preferredDentistData = [
+                    'id' => $preferredDentist->id,
+                    'code' => $preferredDentist->dentist_code,
+                    'name' => $preferredDentist->dentist_name,
+                ];
+
+                /** @var ClinicDateResolverService $dateResolver */
+                $dateResolver = app(ClinicDateResolverService::class);
+                $currentSnap = $dateResolver->resolve($carbonDate);
+                $preferredDentistPresent = in_array(
+                    $preferredDentist->id,
+                    $currentSnap['active_dentist_ids'] ?? [],
+                    true
+                );
+
+                $windowStart = now()->addDay()->startOfDay();
+                $windowEnd = $windowStart->copy()->addDays(6);
+                $cursor = $windowStart->copy();
+
+                while ($cursor->lte($windowEnd)) {
+                    $snap = $dateResolver->resolve($cursor);
+                    $isPresent = in_array(
+                        $preferredDentist->id,
+                        $snap['active_dentist_ids'] ?? [],
+                        true
+                    );
+                    if ($isPresent) {
+                        $highlightDates[] = $cursor->toDateString();
+                    }
+                    $cursor->addDay();
+                }
+            }
+        }
+
+        return response()->json([
+            'services' => $combined,
+            'metadata' => [
+                'preferred_dentist' => $preferredDentistData,
+                'preferred_dentist_present' => $preferredDentistPresent,
+                'highlight_dates' => $highlightDates,
+            ],
+        ]);
     }
 
 

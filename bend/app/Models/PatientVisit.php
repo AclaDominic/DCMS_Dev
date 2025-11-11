@@ -14,6 +14,7 @@ class PatientVisit extends Model
         'patient_id',
         'appointment_id',
         'service_id',
+        'dentist_schedule_id',
         'visit_date',
         'start_time',
         'end_time',
@@ -25,6 +26,7 @@ class PatientVisit extends Model
         'is_seeded',
         'medical_history_status',
         'medical_history_id',
+        'visit_code_sent_at',
     ];
 
     protected $casts = [
@@ -32,6 +34,7 @@ class PatientVisit extends Model
         'start_time' => 'datetime',
         'end_time' => 'datetime',
         'consultation_started_at' => 'datetime',
+        'visit_code_sent_at' => 'datetime',
         'receipt_sent_at' => 'datetime',
     ];
 
@@ -58,6 +61,11 @@ class PatientVisit extends Model
     public function service()
     {
         return $this->belongsTo(Service::class);
+    }
+
+    public function assignedDentist()
+    {
+        return $this->belongsTo(DentistSchedule::class, 'dentist_schedule_id');
     }
 
     public function payments()

@@ -248,6 +248,9 @@ Route::middleware(['auth:sanctum', 'check.account.status', AdminOrStaff::class])
         Route::post('/{id}/extend-deadline', [RefundRequestController::class, 'extendDeadline']);
         Route::post('/{id}/complete', [RefundRequestController::class, 'complete']);
     });
+
+    Route::get('/patients/{patient}/preferred-dentist', [PatientController::class, 'preferredDentist'])
+        ->whereNumber('patient');
 });
 
 // ------------------------

@@ -6,10 +6,6 @@ import HmoPicker from "../../components/HmoPicker";
 import ServiceSelectionModal from "../../components/ServiceSelectionModal";
 import { usePolicyConsent } from "../../context/PolicyConsentContext";
 // date helpers
-function todayStr() {
-  const d = new Date();
-  return d.toISOString().slice(0, 10);
-}
 function tomorrowStr() {
   const d = new Date();
   d.setDate(d.getDate() + 1);
@@ -23,6 +19,27 @@ function sevenDaysOutStr() {
 
 function isPerTeethFlag(value) {
   return value === true || value === 1 || value === "1";
+}
+
+function normalizeHighlightDates(input) {
+  if (!Array.isArray(input)) return [];
+  return input
+    .map((entry) => {
+      if (typeof entry === "string") {
+        return { date: entry, present: true };
+      }
+      if (entry && typeof entry === "object" && typeof entry.date === "string") {
+        return {
+          date: entry.date,
+          present:
+            Object.prototype.hasOwnProperty.call(entry, "preferred_dentist_present")
+              ? Boolean(entry.preferred_dentist_present)
+              : true,
+        };
+      }
+      return null;
+    })
+    .filter(Boolean);
 }
 
 function BookAppointment() {
@@ -46,6 +63,20 @@ function BookAppointment() {
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [bookingMessage, setBookingMessage] = useState("");
   const [teethCount, setTeethCount] = useState("");
+  const [honorPreferredDentist, setHonorPreferredDentist] = useState(true);
+  const [preferredDentist, setPreferredDentist] = useState(null);
+  const [highlightDates, setHighlightDates] = useState([]);
+  const [highlightNote, setHighlightNote] = useState("");
+  const [slotMetadata, setSlotMetadata] = useState(null);
+
+  const preferredDentistAvailableDates = highlightDates
+    .filter((entry) => entry.present !== false)
+    .map((entry) => entry.date);
+  const preferredDentistScheduledForSelectedDate = !!(
+    selectedDate &&
+    preferredDentist &&
+    preferredDentistAvailableDates.includes(selectedDate)
+  );
 
   // NEW: for HMO picker
   const [myPatientId, setMyPatientId] = useState(null);
@@ -92,25 +123,55 @@ function BookAppointment() {
     setLoading(true);
     setError("");
     try {
-      const res = await api.get(`/api/appointment/available-services?date=${date}`);
-      setServices(res.data);
+      const res = await api.get(`/api/appointment/available-services?date=${date}&with_meta=1`);
+      const servicesData = res.data?.services ?? res.data ?? [];
+      setServices(servicesData);
+
+      const metadata = res.data?.metadata ?? null;
+      if (metadata) {
+        setPreferredDentist(metadata.preferred_dentist ?? null);
+        const highlightEntries = normalizeHighlightDates(metadata.highlight_dates ?? []);
+        setHighlightDates(highlightEntries);
+        setHighlightNote(metadata.highlight_note ?? "");
+        const dentistPresent =
+          metadata.preferred_dentist_present ??
+          highlightEntries.some(
+            (entry) => entry.date === date && entry.present !== false
+          );
+        setHonorPreferredDentist(dentistPresent);
+      } else {
+        setPreferredDentist(null);
+        setHighlightDates([]);
+        setHighlightNote("");
+        setHonorPreferredDentist(false);
+      }
     } catch (err) {
       setServices([]);
       setError(err?.response?.data?.message || "Something went wrong.");
+      setPreferredDentist(null);
+      setHighlightDates([]);
+      setHighlightNote("");
+      setHonorPreferredDentist(false);
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchSlots = async (serviceId) => {
+  const fetchSlots = async (serviceId, options = {}) => {
+    const honorFlag =
+      Object.prototype.hasOwnProperty.call(options, "honorPreferredDentist")
+        ? options.honorPreferredDentist
+        : honorPreferredDentist;
     setAvailableSlots([]);
     try {
       const res = await api.get(
-        `/api/appointment/available-slots?date=${selectedDate}&service_id=${serviceId}`
+        `/api/appointment/available-slots?date=${selectedDate}&service_id=${serviceId}&honor_preferred_dentist=${honorFlag ? 1 : 0}`
       );
       setAvailableSlots(res.data.slots);
+      setSlotMetadata(res.data.metadata ?? null);
     } catch {
       setAvailableSlots([]);
+      setSlotMetadata(null);
     }
   };
 
@@ -127,12 +188,28 @@ function BookAppointment() {
     setSelectedSlot("");
     setPaymentMethod("cash");
     setPatientHmoId(null); // reset HMO when date changes
+    setPreferredDentist(null);
+    setHighlightDates([]);
+    setHighlightNote("");
+    setHonorPreferredDentist(false);
+    setSlotMetadata(null);
     setBookingMessage("");
     setTeethCount("");
     setShowServiceModal(false);
     if (date) {
       fetchServices(date);
       setShowServiceModal(true);
+    }
+  };
+
+  const handleHonorPreferredToggle = (value) => {
+    if (!preferredDentistScheduledForSelectedDate) {
+      setHonorPreferredDentist(false);
+      return;
+    }
+    setHonorPreferredDentist(value);
+    if (selectedService) {
+      fetchSlots(selectedService.id, { honorPreferredDentist: value });
     }
   };
 
@@ -187,6 +264,7 @@ function BookAppointment() {
         date: selectedDate,
         start_time: selectedSlot,
         payment_method: paymentMethod,
+        honor_preferred_dentist: honorPreferredDentist,
       };
       if (paymentMethod === "hmo") {
         payload.patient_hmo_id = patientHmoId;
@@ -250,10 +328,28 @@ function BookAppointment() {
                 </div>
               )}
               <div className="mb-4">
-                <label className="form-label fw-semibold fs-5 mb-3">
+            <label className="form-label fw-semibold fs-5 mb-3" htmlFor="patientBookingDate">
                   <i className="bi bi-calendar3 me-2 text-primary"></i>
                   Select a Date
                 </label>
+                {preferredDentist && (
+                  <div className="alert alert-info border-0 shadow-sm mb-3" role="alert">
+                    <strong>Most recent dentist:</strong> {preferredDentist.name ?? preferredDentist.code}
+                    <div className="small mt-2">
+                      {selectedDate
+                        ? preferredDentistScheduledForSelectedDate
+                          ? "Your dentist is scheduled on this date."
+                          : "Your dentist is not scheduled on this date."
+                        : "Choose a date to see when your dentist is scheduled."}
+                    </div>
+                    {preferredDentistAvailableDates.length > 0 && (
+                      <div className="small text-muted mt-2">
+                        Available on: {preferredDentistAvailableDates.join(", ")}
+                      </div>
+                    )}
+                    {highlightNote && <div className="small text-muted mt-2">{highlightNote}</div>}
+                  </div>
+                )}
                 <input
                   type="date"
                   className="form-control form-control-lg border-2"
@@ -262,6 +358,7 @@ function BookAppointment() {
                   min={tomorrowStr()}
                   max={sevenDaysOutStr()}
                   disabled={policyNeedsAcceptance}
+              id="patientBookingDate"
                   style={{ fontSize: '1.1rem' }}
                 />
                 <div className="form-text mt-2">
@@ -316,6 +413,30 @@ function BookAppointment() {
                       <div className="d-flex align-items-center">
                         <i className="bi bi-check-circle me-3 fs-4"></i>
                         <div>
+                              <div className="form-check form-switch mb-2">
+                                <input
+                                  className="form-check-input"
+                                  type="checkbox"
+                                  id="honorPreferredDentistSwitch"
+                                  checked={honorPreferredDentist}
+                                  onChange={(e) => handleHonorPreferredToggle(e.target.checked)}
+                                  disabled={!preferredDentist || !preferredDentistScheduledForSelectedDate}
+                                />
+                                <label className="form-check-label" htmlFor="honorPreferredDentistSwitch">
+                                  Prefer my recent dentist
+                                </label>
+                              </div>
+                              {preferredDentist && (
+                                <small className="text-muted d-block mb-2">
+                                  {preferredDentistScheduledForSelectedDate
+                                    ? `Current setting: ${
+                                        honorPreferredDentist
+                                          ? "Appointments will try to book with your dentist."
+                                          : "Appointments will use any available dentist."
+                                      }`
+                                    : "Dentist not available on the selected date."}
+                                </small>
+                              )}
                           <strong>Service Selected:</strong><br/>
                           <span className="fs-5">{selectedService.name}</span><br/>
                           <span className="text-success fw-semibold">
@@ -389,15 +510,22 @@ function BookAppointment() {
                     {availableSlots.length > 0 && (
                       <>
                         <div className="mb-4">
-                          <label className="form-label fw-semibold fs-6 mb-3">
+                          <label className="form-label fw-semibold fs-6 mb-3" htmlFor="patientTimeSlotSelect">
                             <i className="bi bi-clock me-2 text-primary"></i>
                             Available Time Slots
                           </label>
+                          {slotMetadata && slotMetadata.preferred_dentist && honorPreferredDentist && (
+                            <div className="alert alert-info border-0 shadow-sm">
+                              <i className="bi bi-person-badge me-2"></i>
+                              Scheduled with: {slotMetadata.preferred_dentist.name || slotMetadata.preferred_dentist.code}
+                            </div>
+                          )}
                           <select
                             className="form-select form-select-lg border-2"
                             value={selectedSlot}
                             onChange={(e) => setSelectedSlot(e.target.value)}
                             disabled={policyNeedsAcceptance}
+                            id="patientTimeSlotSelect"
                             style={{ fontSize: '1.1rem' }}
                           >
                             <option value="">-- Select Time Slot --</option>

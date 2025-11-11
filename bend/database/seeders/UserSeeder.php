@@ -35,14 +35,14 @@ class UserSeeder extends Seeder
                 'email' => 'juan.patient@gmail.com',
                 'password' => Hash::make('password'),
                 'role' => 'patient',
-                'email_verified_at' => null,
+                'email_verified_at' => now(),
             ],
             [
                 'name' => 'Maria Patient',
                 'email' => 'maria.patient@gmail.com',
                 'password' => Hash::make('password'),
                 'role' => 'patient',
-                'email_verified_at' => null,
+                'email_verified_at' => now(),
             ],
             [
                 'name' => 'Dr. A',

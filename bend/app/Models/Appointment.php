@@ -36,6 +36,12 @@ class Appointment extends Model
         'is_seeded',
         'cancellation_reason',
         'treatment_adjustment_notes',
+        'dentist_schedule_id',
+        'honor_preferred_dentist',
+    ];
+
+    protected $casts = [
+        'honor_preferred_dentist' => 'boolean',
     ];
 
     public function patient()
@@ -61,6 +67,11 @@ class Appointment extends Model
     public function refundRequest()
     {
         return $this->hasOne(RefundRequest::class);
+    }
+
+    public function dentistSchedule()
+    {
+        return $this->belongsTo(DentistSchedule::class);
     }
 
     // Helper method to calculate total cost for per-teeth services
@@ -183,5 +194,97 @@ class Appointment extends Model
 
         // Check for overlap: first appointment starts before second ends AND first appointment ends after second starts
         return $startTime1->lt($endTime2) && $endTime1->gt($startTime2);
+    }
+
+    /**
+     * Build a map of per-dentist slot usage for a given date.
+     *
+     * @return array<int, array<string, int>> dentist_schedule_id => [ 'HH:MM' => count ]
+     */
+    public static function dentistSlotUsageForDate(string $date, ?int $excludeAppointmentId = null): array
+    {
+        $appointments = self::where('date', $date)
+            ->whereIn('status', ['pending', 'approved', 'completed'])
+            ->whereNotNull('dentist_schedule_id')
+            ->when($excludeAppointmentId, function ($query) use ($excludeAppointmentId) {
+                $query->where('id', '!=', $excludeAppointmentId);
+            })
+            ->get(['dentist_schedule_id', 'time_slot']);
+
+        $usage = [];
+
+        foreach ($appointments as $appointment) {
+            if (!$appointment->time_slot || strpos($appointment->time_slot, '-') === false) {
+                continue;
+            }
+
+            [$startRaw, $endRaw] = explode('-', $appointment->time_slot, 2);
+            try {
+                $cursor = self::carbonFromFlexibleTime(trim($startRaw));
+                $end = self::carbonFromFlexibleTime(trim($endRaw));
+            } catch (\Throwable $e) {
+                continue;
+            }
+
+            while ($cursor->lt($end)) {
+                $key = $cursor->format('H:i');
+                $usage[$appointment->dentist_schedule_id][$key] = ($usage[$appointment->dentist_schedule_id][$key] ?? 0) + 1;
+                $cursor->addMinutes(30);
+            }
+        }
+
+        return $usage;
+    }
+
+    /**
+     * Build global slot usage for a date (all appointments regardless of dentist).
+     *
+     * @param  array<int, string>  $blocks
+     * @return array<string, int>
+     */
+    public static function slotUsageForDate(string $date, array $blocks, ?int $excludeAppointmentId = null): array
+    {
+        $usage = array_fill_keys($blocks, 0);
+
+        $appointments = self::where('date', $date)
+            ->whereIn('status', ['pending', 'approved', 'completed'])
+            ->when($excludeAppointmentId, function ($query) use ($excludeAppointmentId) {
+                $query->where('id', '!=', $excludeAppointmentId);
+            })
+            ->get(['time_slot']);
+
+        foreach ($appointments as $appointment) {
+            if (!$appointment->time_slot || strpos($appointment->time_slot, '-') === false) {
+                continue;
+            }
+
+            [$startRaw, $endRaw] = explode('-', $appointment->time_slot, 2);
+            try {
+                $cursor = self::carbonFromFlexibleTime(trim($startRaw));
+                $end = self::carbonFromFlexibleTime(trim($endRaw));
+            } catch (\Throwable $e) {
+                continue;
+            }
+
+            while ($cursor->lt($end)) {
+                $key = $cursor->format('H:i');
+                if (array_key_exists($key, $usage)) {
+                    $usage[$key] += 1;
+                }
+                $cursor->addMinutes(30);
+            }
+        }
+
+        return $usage;
+    }
+
+    /**
+     * Convert a flexible time string (HH:MM or HH:MM:SS) into a Carbon instance.
+     */
+    protected static function carbonFromFlexibleTime(string $time): \Carbon\Carbon
+    {
+        return (strlen($time) === 8)
+            ? \Carbon\Carbon::createFromFormat('H:i:s', $time)
+            : \Carbon\Carbon::createFromFormat('H:i', $time);
     }
 }

@@ -7,10 +7,232 @@ export default function SendVisitCodeModal({ visit, onClose, onSuccess }) {
   const [selectedDentist, setSelectedDentist] = useState(null);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
+  const [appointments, setAppointments] = useState(null);
+  const [loadingAppointments, setLoadingAppointments] = useState(false);
+  const [preferredDentist, setPreferredDentist] = useState(null);
+  const [loadingPreferredDentist, setLoadingPreferredDentist] = useState(false);
+  const [preferredDentistError, setPreferredDentistError] = useState("");
+  const [appointmentHonorPreferred, setAppointmentHonorPreferred] = useState(null);
+  const [appointmentPreferredDentistName, setAppointmentPreferredDentistName] = useState(null);
+  const [loadingAppointmentPreference, setLoadingAppointmentPreference] = useState(false);
 
   useEffect(() => {
     fetchAvailableDentists();
   }, []);
+
+  const resolveVisitDate = (visitData) => {
+    if (!visitData) return null;
+
+    if (typeof visitData.visit_date === "string" && visitData.visit_date.length >= 10) {
+      return visitData.visit_date.slice(0, 10);
+    }
+
+    if (typeof visitData.start_time === "string" && visitData.start_time.length >= 10) {
+      // Try ISO parse first
+      const isoCandidate = visitData.start_time.includes(" ")
+        ? visitData.start_time.replace(" ", "T")
+        : visitData.start_time;
+      const parsed = new Date(isoCandidate);
+      if (!Number.isNaN(parsed.getTime())) {
+        try {
+          return parsed.toISOString().slice(0, 10);
+        } catch (_) {
+          // fall back to manual parsing
+        }
+      }
+
+      const manual = visitData.start_time.split(" ")[0];
+      if (/^\d{4}-\d{2}-\d{2}$/.test(manual)) {
+        return manual;
+      }
+    }
+
+    return null;
+  };
+
+  useEffect(() => {
+    const fallbackPreferred = visit?.assigned_dentist
+      ? {
+          id: visit.assigned_dentist.id ?? null,
+          name:
+            visit.assigned_dentist.dentist_name ||
+            visit.assigned_dentist.dentist_code ||
+            null,
+          code: visit.assigned_dentist.dentist_code ?? null,
+        }
+      : null;
+
+    const rawVisitDate = resolveVisitDate(visit);
+    const visitDate = rawVisitDate
+      ? (() => {
+          const parsed = new Date(rawVisitDate);
+          if (!Number.isNaN(parsed.getTime())) {
+            try {
+              return parsed.toISOString().slice(0, 10);
+            } catch (_) {
+              /** swallow */
+            }
+          }
+          return rawVisitDate;
+        })()
+      : null;
+    const todayDate = new Date();
+    const todayDateStr = new Date(todayDate.getTime() - todayDate.getTimezoneOffset() * 60000)
+      .toISOString()
+      .slice(0, 10);
+    const metadataDate = visitDate || todayDateStr;
+    const hasPatient = Boolean(visit?.patient?.id);
+
+    if (!hasPatient) {
+      setPreferredDentist(fallbackPreferred);
+      setPreferredDentistError(fallbackPreferred ? "" : "Recent dentist: —");
+      return;
+    }
+
+    const fetchPreferredDentist = async () => {
+      setLoadingPreferredDentist(true);
+      setPreferredDentistError("");
+      try {
+        let resolvedPreferred = null;
+
+        try {
+          const res = await api.get(
+            `/api/patients/${visit.patient.id}/preferred-dentist`,
+            metadataDate
+              ? {
+                  params: {
+                    reference_date: metadataDate,
+                  },
+                }
+              : undefined
+          );
+          resolvedPreferred = res.data?.preferred_dentist ?? null;
+        } catch (apiErr) {
+          console.error("Preferred dentist endpoint failed:", apiErr);
+        }
+
+        if (!resolvedPreferred && metadataDate) {
+          try {
+            const params = new URLSearchParams({
+              date: metadataDate,
+              with_meta: "1",
+              patient_id: String(visit.patient.id),
+            });
+            const metaRes = await api.get(
+              `/api/appointment/available-services?${params.toString()}`
+            );
+            const metadataPreferred = metaRes.data?.metadata?.preferred_dentist ?? null;
+            if (metadataPreferred) {
+              resolvedPreferred = {
+                id: metadataPreferred.id ?? null,
+                name:
+                  metadataPreferred.name ||
+                  metadataPreferred.dentist_name ||
+                  metadataPreferred.code ||
+                  metadataPreferred.dentist_code ||
+                  null,
+                code: metadataPreferred.code || metadataPreferred.dentist_code || null,
+              };
+            }
+          } catch (metaErr) {
+            console.error("Available services metadata lookup failed:", metaErr);
+          }
+        }
+
+        if (!resolvedPreferred && fallbackPreferred) {
+          resolvedPreferred = fallbackPreferred;
+        }
+
+        setPreferredDentist(resolvedPreferred);
+        if (!resolvedPreferred) {
+          setPreferredDentistError("Recent dentist: —");
+        }
+      } catch (err) {
+        console.error("Failed to resolve preferred dentist:", err);
+        if (fallbackPreferred) {
+          setPreferredDentist(fallbackPreferred);
+          setPreferredDentistError("");
+        } else {
+          setPreferredDentist(null);
+          setPreferredDentistError("Recent dentist: —");
+        }
+      } finally {
+        setLoadingPreferredDentist(false);
+      }
+    };
+
+    fetchPreferredDentist();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visit]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const setupAppointmentPreference = async () => {
+      if (!visit?.appointment_id) {
+        setAppointmentHonorPreferred(null);
+        setAppointmentPreferredDentistName(null);
+        return;
+      }
+
+      setLoadingAppointmentPreference(true);
+      try {
+        const appts = await loadAppointments();
+        if (cancelled) return;
+
+        const appointment = appts?.find((appt) => appt.id === visit.appointment_id);
+        if (!appointment) {
+          setAppointmentHonorPreferred(null);
+          setAppointmentPreferredDentistName(null);
+          return;
+        }
+
+        const honorFlag = Boolean(appointment.honor_preferred_dentist);
+        setAppointmentHonorPreferred(honorFlag);
+
+        if (!honorFlag) {
+          setAppointmentPreferredDentistName(null);
+          return;
+        }
+
+        const scheduleId = appointment.dentist_schedule_id;
+        let resolvedName = preferredDentist?.name || preferredDentist?.code || null;
+
+        if (!resolvedName && scheduleId) {
+          const dentistFromList = dentists.find((d) => d.id === scheduleId);
+          if (dentistFromList) {
+            resolvedName = dentistFromList.dentist_name || dentistFromList.dentist_code || null;
+          }
+        }
+
+        if (!resolvedName && visit?.assigned_dentist && scheduleId) {
+          if (visit.assigned_dentist.id === scheduleId) {
+            resolvedName =
+              visit.assigned_dentist.dentist_name || visit.assigned_dentist.dentist_code || null;
+          }
+        }
+
+        setAppointmentPreferredDentistName(resolvedName);
+      } catch (err) {
+        console.error("Failed to determine appointment preference:", err);
+        if (!cancelled) {
+          setAppointmentHonorPreferred(null);
+          setAppointmentPreferredDentistName(null);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadingAppointmentPreference(false);
+        }
+      }
+    };
+
+    setupAppointmentPreference();
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visit?.appointment_id, dentists, preferredDentist]);
 
   const fetchAvailableDentists = async () => {
     setLoading(true);
@@ -43,6 +265,94 @@ export default function SendVisitCodeModal({ visit, onClose, onSuccess }) {
     }
   };
 
+  const loadAppointments = async () => {
+    if (appointments) return appointments;
+
+    setLoadingAppointments(true);
+    try {
+      const res = await api.get('/api/appointments');
+      const data = Array.isArray(res.data) ? res.data : res.data?.data || [];
+      setAppointments(data);
+      return data;
+    } catch (err) {
+      console.error("Failed to load appointments:", err);
+      return [];
+    } finally {
+      setLoadingAppointments(false);
+    }
+  };
+
+  const parseAppointmentStart = (appointment) => {
+    if (!appointment?.date || !appointment?.time_slot) return null;
+    const [start] = appointment.time_slot.split('-');
+    if (!start) return null;
+    const normalized = start.length === 5 ? `${start}:00` : start;
+    const dateTimeString = `${appointment.date}T${normalized}`;
+    const date = new Date(dateTimeString);
+    return isNaN(date.getTime()) ? null : date;
+  };
+
+  const ensureWarnings = async () => {
+    try {
+      const list = await loadAppointments();
+      if (!selectedDentist) return true;
+
+      const now = new Date();
+      const upcomingConflict = list
+        .filter(
+          (appt) =>
+            appt &&
+            appt.dentist_schedule_id === selectedDentist.id &&
+            ['pending', 'approved'].includes(appt.status)
+        )
+        .map((appt) => ({
+          appt,
+          start: parseAppointmentStart(appt),
+        }))
+        .find(({ start }) => {
+          if (!start) return false;
+          const diffMinutes = (start.getTime() - now.getTime()) / 60000;
+          return diffMinutes >= 0 && diffMinutes <= 60;
+        });
+
+      if (upcomingConflict?.start) {
+        const formattedTime = upcomingConflict.start.toLocaleString(undefined, {
+          hour: '2-digit',
+          minute: '2-digit',
+        });
+        const confirmConflict = window.confirm(
+          `Dr. ${selectedDentist.dentist_name || selectedDentist.dentist_code} already has a dentist-specific appointment at ${formattedTime}. Do you still want to send this visit code?`
+        );
+        if (!confirmConflict) {
+          return false;
+        }
+      }
+
+      if (visit?.appointment_id) {
+        const appointment = list.find((appt) => appt.id === visit.appointment_id);
+        if (
+          appointment &&
+          appointment.honor_preferred_dentist &&
+          appointment.dentist_schedule_id &&
+          appointment.dentist_schedule_id !== selectedDentist.id
+        ) {
+          const preferredDentist = dentists.find((d) => d.id === appointment.dentist_schedule_id);
+          const confirmBypass = window.confirm(
+            `This appointment is set to prefer ${preferredDentist?.dentist_name || preferredDentist?.dentist_code || 'another dentist'}. Send the visit code to Dr. ${selectedDentist.dentist_name || selectedDentist.dentist_code} anyway?`
+          );
+          if (!confirmBypass) {
+            return false;
+          }
+        }
+      }
+
+      return true;
+    } catch (err) {
+      console.error("Warning checks failed:", err);
+      return true;
+    }
+  };
+
   const handleSendCode = async () => {
     if (!selectedDentist) {
       setError("Please select a dentist to send the visit code to.");
@@ -52,6 +362,11 @@ export default function SendVisitCodeModal({ visit, onClose, onSuccess }) {
     // Check if dentist has email
     if (!selectedDentist.email) {
       setError("Selected dentist does not have an email address configured.");
+      return;
+    }
+
+    const proceed = await ensureWarnings();
+    if (!proceed) {
       return;
     }
 
@@ -72,7 +387,7 @@ export default function SendVisitCodeModal({ visit, onClose, onSuccess }) {
       alert(`Visit code sent successfully to Dr. ${selectedDentist.dentist_name || selectedDentist.dentist_code}!`);
       
       if (onSuccess) {
-        onSuccess(selectedDentist);
+        onSuccess(response.data, selectedDentist);
       }
       
       onClose();
@@ -163,6 +478,39 @@ export default function SendVisitCodeModal({ visit, onClose, onSuccess }) {
                 <div className="col-md-6 mt-2">
                   <strong>Started:</strong> {new Date(visit.start_time).toLocaleString()}
                 </div>
+                {loadingPreferredDentist ? (
+                  <div className="col-12 mt-2">
+                    <small className="text-muted">
+                      <i className="bi bi-hourglass-split me-1"></i>
+                      Checking recent dentist…
+                    </small>
+                  </div>
+                ) : preferredDentist ? (
+                  <div className="col-md-6 mt-2">
+                    <strong>Recent Dentist:</strong>{" "}
+                    {preferredDentist.name || preferredDentist.code}
+                  </div>
+                ) : null}
+                {loadingAppointmentPreference ? (
+                  <div className="col-12 mt-2">
+                    <small className="text-muted">
+                      <i className="bi bi-hourglass me-1"></i>
+                      Checking appointment preference…
+                    </small>
+                  </div>
+                ) : appointmentHonorPreferred !== null ? (
+                  <div className="col-md-6 mt-2">
+                    <strong>Appointment preference:</strong>{" "}
+                    {appointmentHonorPreferred
+                      ? "Honor recent dentist"
+                      : "Any available dentist"}
+                    {appointmentHonorPreferred && appointmentPreferredDentistName && (
+                      <div className="small text-muted">
+                        Preferred: {appointmentPreferredDentistName}
+                      </div>
+                    )}
+                  </div>
+                ) : null}
               </div>
             </div>
 
@@ -286,7 +634,7 @@ export default function SendVisitCodeModal({ visit, onClose, onSuccess }) {
             <button
               className="btn btn-primary"
               onClick={handleSendCode}
-              disabled={sending || !selectedDentist || dentists.length === 0}
+              disabled={sending || loadingAppointments || !selectedDentist || dentists.length === 0}
             >
               {sending ? (
                 <>

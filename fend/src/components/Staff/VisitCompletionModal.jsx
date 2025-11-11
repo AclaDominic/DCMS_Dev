@@ -156,6 +156,7 @@ export default function VisitCompletionModal({ visit, onClose, onComplete }) {
 
   const totalPaid = visit.payments?.reduce((sum, p) => sum + (Number(p.amount_paid) || 0), 0) || 0;
   const servicePrice = Number(visit.service?.price) || 0;
+  const isPerToothService = Boolean(visit.service?.per_teeth_service);
   const additionalChargesTotal = billableItems.reduce((sum, item) => {
     const unitPrice = Number(item.unit_price) || 0;
     const quantity = Number(item.quantity) || 1;
@@ -292,7 +293,7 @@ export default function VisitCompletionModal({ visit, onClose, onComplete }) {
                                 <div className="col-md-2">
                                   <input
                                     type="number"
-                                    step="0.01"
+                                    step="1"
                                     min="0"
                                     className="form-control"
                                     value={item.quantity}
@@ -519,7 +520,7 @@ export default function VisitCompletionModal({ visit, onClose, onComplete }) {
                                 <small className="text-muted mb-1">Service Price</small>
                                 <div className="fw-semibold text-primary">
                                   ₱{servicePrice.toLocaleString()}
-                                  {visit.service?.per_teeth_service && (
+                                  {isPerToothService && (
                                     <small className="text-info d-block">per tooth</small>
                                   )}
                                 </div>

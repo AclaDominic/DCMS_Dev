@@ -37,7 +37,14 @@ class PatientVisitController extends Controller
         $totalVisits = PatientVisit::count();
         Log::info('🔍 INDEX: Total visits in database: ' . $totalVisits);
         
-        $visits = PatientVisit::with(['patient', 'service', 'visitNotes', 'payments', 'additionalCharges.inventoryItem'])
+        $visits = PatientVisit::with([
+                'patient',
+                'service',
+                'visitNotes',
+                'payments',
+                'additionalCharges.inventoryItem',
+                'assignedDentist',
+            ])
             ->orderBy('created_at', 'desc')
             ->take(50)
             ->get();
@@ -485,6 +492,10 @@ class PatientVisitController extends Controller
             return response()->json(['message' => 'Only pending visits can be processed.'], 422);
         }
 
+        if (!$visit->dentist_schedule_id || !$visit->visit_code_sent_at) {
+            return response()->json(['message' => 'Send the visit code to a dentist before completing the visit.'], 422);
+        }
+
         $visit->update([
             'end_time' => now(),
             'status' => 'completed',
@@ -504,6 +515,10 @@ class PatientVisitController extends Controller
 
         if ($visit->status !== 'pending') {
             return response()->json(['message' => 'Only pending visits can be completed.'], 422);
+        }
+
+        if (!$visit->dentist_schedule_id || !$visit->visit_code_sent_at) {
+            return response()->json(['message' => 'Send the visit code to a dentist before completing the visit.'], 422);
         }
 
         $validated = $request->validate([
@@ -1357,6 +1372,10 @@ class PatientVisitController extends Controller
             'read_at' => null,
         ]);
 
+        $visit->dentist_schedule_id = $dentist->id;
+        $visit->visit_code_sent_at = now();
+        $visit->save();
+
         // Log the action
         SystemLog::create([
             'category' => 'visit',
@@ -1377,10 +1396,13 @@ class PatientVisitController extends Controller
             ],
         ]);
 
+        $visit->refresh()->load('assignedDentist');
+
         return response()->json([
             'message' => 'Visit code sent successfully to dentist.',
             'notification_id' => $notification->id,
             'dentist_name' => $dentist->dentist_name ?? $dentist->dentist_code,
+            'visit' => $visit,
         ]);
     }
 

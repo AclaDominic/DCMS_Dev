@@ -21,6 +21,7 @@ use App\Services\NotificationService as SystemNotificationService;
 use App\Services\PatientManagerService;
 use App\Services\SystemLogService;
 use App\Services\AppointmentCancellationService;
+use App\Services\PreferredDentistService;
 use App\Helpers\IpHelper;
 use App\Models\PatientManager;
 use Illuminate\Support\Facades\Log;
@@ -41,6 +42,7 @@ class AppointmentController extends Controller
         'patient_hmo_id'  => ['nullable', 'integer', 'exists:patient_hmos,id'],
         // NEW: optional, for per-teeth services
         'teeth_count'     => ['nullable', 'integer', 'min:1', 'max:32'],
+        'honor_preferred_dentist' => ['sometimes', 'boolean'],
     ]);
 
     $service  = Service::findOrFail($validated['service_id']);
@@ -68,8 +70,6 @@ class AppointmentController extends Controller
 
     $open = Carbon::parse($snap['open_time']);
     $close = Carbon::parse($snap['close_time']);
-    $cap = (int) $snap['effective_capacity'];
-
     // ensure start is in the 30-min grid and inside hours
     $grid = ClinicDateResolverService::buildBlocks($snap['open_time'], $snap['close_time']);
     if (!in_array($startTime->format('H:i'), $grid, true)) {
@@ -80,13 +80,6 @@ class AppointmentController extends Controller
     $endTime = $startTime->copy()->addMinutes($blocksNeeded * 30);
     if ($startTime->lt($open) || $endTime->gt($close)) {
         return response()->json(['message' => 'Selected time is outside clinic hours.'], 422);
-    }
-
-    // capacity check (pending + approved)
-    $capCheck = $this->checkCapacity($service, $dateStr, $startTime->format('H:i'));
-    if (!$capCheck['ok']) {
-        $fullAt = $capCheck['full_at'] ?? $startTime->format('H:i');
-        return response()->json(['message' => "Time slot starting at {$fullAt} is already full."], 422);
     }
 
     // resolve booking patient by the authenticated user
@@ -127,6 +120,36 @@ class AppointmentController extends Controller
             ], 422);
         }
     }
+
+    $honorPreferredRequested = $request->has('honor_preferred_dentist')
+        ? $request->boolean('honor_preferred_dentist')
+        : true;
+
+    /** @var \App\Models\DentistSchedule|null $preferredDentist */
+    $preferredDentist = null;
+    $preferredDentistId = null;
+    if ($patient) {
+        /** @var PreferredDentistService $preferredDentistService */
+        $preferredDentistService = app(PreferredDentistService::class);
+        $preferredDentist = $preferredDentistService->resolveForPatient($patient->id, $date);
+        $preferredDentistId = $preferredDentist?->id;
+    }
+
+    $capCheck = $this->checkCapacity($service, $dateStr, $startTime->format('H:i'), [
+        'preferred_dentist_id' => $preferredDentistId,
+        'requested_honor_preferred' => $honorPreferredRequested,
+    ]);
+
+    if (!$capCheck['ok']) {
+        $message = $capCheck['message'] ?? null;
+        if (!$message) {
+            $fullAt = $capCheck['full_at'] ?? $startTime->format('H:i');
+            $message = "Time slot starting at {$fullAt} is already full.";
+        }
+        return response()->json(['message' => $message], 422);
+    }
+
+    $assignedDentistId = $capCheck['assigned_dentist_id'] ?? null;
 
     // Check for overlapping appointments for the same patient
     $timeSlot = $this->normalizeTime($startTime) . '-' . $this->normalizeTime($endTime);
@@ -169,6 +192,8 @@ class AppointmentController extends Controller
         'payment_method'  => $validated['payment_method'],
         'payment_status'  => $validated['payment_method'] === 'maya' ? 'awaiting_payment' : 'unpaid',
         'teeth_count'     => $validated['teeth_count'] ?? null, // NEW
+        'dentist_schedule_id' => $assignedDentistId,
+        'honor_preferred_dentist' => $honorPreferredRequested,
     ]);
 
     // Notify staff about the new appointment
@@ -189,7 +214,9 @@ class AppointmentController extends Controller
             'date' => $dateStr,
             'time_slot' => $timeSlot,
             'payment_method' => $validated['payment_method'],
-            'status' => 'pending'
+            'status' => 'pending',
+            'dentist_schedule_id' => $assignedDentistId,
+            'honor_preferred_dentist' => $honorPreferredRequested,
         ]
     );
 
@@ -219,8 +246,14 @@ class AppointmentController extends Controller
             : null;
 
         if ($start) {
-            $capCheck = $this->checkCapacity($appointment->service, $appointment->date, $start, $appointment->id);
+            $capCheck = $this->checkCapacity($appointment->service, $appointment->date, $start, [
+                'exclude_appointment_id' => $appointment->id,
+                'preferred_dentist_id' => $appointment->dentist_schedule_id,
+                'requested_honor_preferred' => $appointment->honor_preferred_dentist,
+                'force_dentist_id' => $appointment->dentist_schedule_id,
+            ]);
             if (!$capCheck['ok']) {
+                $message = $capCheck['message'] ?? 'Cannot approve: slot is fully booked.';
                 SystemLogService::logAppointment(
                     'approve_failed_capacity',
                     $appointment->id,
@@ -231,7 +264,11 @@ class AppointmentController extends Controller
                         'time_slot' => $appointment->time_slot,
                     ]
                 );
-                return response()->json(['message' => 'Cannot approve: slot is fully booked.'], 422);
+                return response()->json(['message' => $message], 422);
+            }
+
+            if (!$appointment->dentist_schedule_id && !empty($capCheck['assigned_dentist_id'])) {
+                $appointment->dentist_schedule_id = $capCheck['assigned_dentist_id'];
             }
         }
 
@@ -721,62 +758,129 @@ class AppointmentController extends Controller
         ], 409);
     }
 
-    /**
-     * Check per-block capacity for a given service, date (Y-m-d) and start time (H:i or H:i:s).
-     * Returns [ 'ok' => bool, 'full_at' => 'HH:MM' ]
-     */
-    private function checkCapacity(Service $service, string $dateStr, string $startRaw, ?int $excludeAppointmentId = null): array
+    private function checkCapacity(Service $service, string $dateStr, string $startRaw, $options = []): array
     {
-        $resolver = app(ClinicDateResolverService::class);
+        if (!is_array($options)) {
+            $options = ['exclude_appointment_id' => $options];
+        }
+
+        $excludeAppointmentId = $options['exclude_appointment_id'] ?? null;
+        $preferredDentistId = $options['preferred_dentist_id'] ?? null;
+        $requestedHonorPreferred = $options['requested_honor_preferred'] ?? true;
+        $forceDentistId = $options['force_dentist_id'] ?? null;
+
         $date = Carbon::createFromFormat('Y-m-d', $dateStr)->startOfDay();
+        $startNormalized = $this->normalizeTime($startRaw);
+        $startTime = Carbon::createFromFormat('H:i', $startNormalized);
+
+        /** @var ClinicDateResolverService $resolver */
+        $resolver = app(ClinicDateResolverService::class);
         $snap = $resolver->resolve($date);
 
-        $grid = ClinicDateResolverService::buildBlocks($snap['open_time'], $snap['close_time']);
-        $cap = (int) $snap['effective_capacity'];
-
-        $startTime = Carbon::createFromFormat('H:i', $this->normalizeTime($startRaw));
-        $blocksNeeded = (int) max(1, ceil(($service->estimated_minutes ?? 30) / 30));
-
-        // build usage map for the date (pending + approved + completed)
-        $slotUsage = array_fill_keys($grid, 0);
-        $appointmentsQuery = Appointment::where('date', $dateStr)
-            ->whereIn('status', ['pending', 'approved', 'completed']);
-        
-        // Exclude the appointment being approved to avoid double-counting
-        if ($excludeAppointmentId) {
-            $appointmentsQuery->where('id', '!=', $excludeAppointmentId);
+        if (!$snap['is_open']) {
+            return [
+                'ok' => false,
+                'reason' => 'closed',
+                'message' => 'Clinic is closed on this date.',
+                'snap' => $snap,
+            ];
         }
-        
-        $appointments = $appointmentsQuery->get(['time_slot']);
 
-        foreach ($appointments as $appt) {
-            if (!$appt->time_slot || strpos($appt->time_slot, '-') === false) continue;
+        $blocks = ClinicDateResolverService::buildBlocks($snap['open_time'], $snap['close_time']);
+        if (!in_array($startNormalized, $blocks, true)) {
+            return [
+                'ok' => false,
+                'reason' => 'invalid_start_time',
+                'message' => 'Invalid start time (not on grid or outside hours).',
+                'snap' => $snap,
+            ];
+        }
 
-            [$aStart, $aEnd] = explode('-', $appt->time_slot, 2);
-            $aStart = $this->normalizeTime(trim($aStart));
-            $aEnd   = $this->normalizeTime(trim($aEnd));
+        $blocksNeeded = (int) max(1, ceil(($service->estimated_minutes ?? 30) / 30));
+        $effectiveCapacity = (int) $snap['effective_capacity'];
 
-            $cur = Carbon::createFromFormat('H:i', $aStart);
-            $end = Carbon::createFromFormat('H:i', $aEnd);
+        $globalUsage = Appointment::slotUsageForDate($dateStr, $blocks, $excludeAppointmentId);
+        $dentistUsage = Appointment::dentistSlotUsageForDate($dateStr, $excludeAppointmentId);
 
-            while ($cur->lt($end)) {
-                $k = $cur->format('H:i');
-                if (isset($slotUsage[$k])) $slotUsage[$k] += 1;
-                $cur->addMinutes(30);
+        // Global capacity check
+        $globalCursor = $startTime->copy();
+        for ($i = 0; $i < $blocksNeeded; $i++) {
+            $blockKey = $globalCursor->format('H:i');
+            if (!array_key_exists($blockKey, $globalUsage) || $globalUsage[$blockKey] >= $effectiveCapacity) {
+                return [
+                    'ok' => false,
+                    'full_at' => $blockKey,
+                    'message' => "Time slot starting at {$blockKey} is already full.",
+                    'snap' => $snap,
+                ];
+            }
+            $globalCursor->addMinutes(30);
+        }
+        $endTime = $globalCursor->copy();
+
+        $activeDentistIds = $snap['active_dentist_ids'] ?? [];
+        $preferredDentistActive = $preferredDentistId && in_array($preferredDentistId, $activeDentistIds, true);
+        $effectiveHonorPreferred = $requestedHonorPreferred && $preferredDentistId && $preferredDentistActive;
+
+        if ($forceDentistId) {
+            $candidateDentistIds = [$forceDentistId];
+            $effectiveHonorPreferred = false;
+        } elseif ($effectiveHonorPreferred) {
+            $candidateDentistIds = [$preferredDentistId];
+        } else {
+            $candidateDentistIds = $activeDentistIds;
+        }
+
+        $assignedDentistId = null;
+        foreach ($candidateDentistIds as $candidateId) {
+            if (!$candidateId) {
+                continue;
+            }
+            if (!in_array($candidateId, $activeDentistIds, true)) {
+                continue;
+            }
+            if ($this->dentistHasCapacity($dentistUsage, $candidateId, $startTime, $blocksNeeded)) {
+                $assignedDentistId = $candidateId;
+                break;
             }
         }
 
-        // per-block capacity check
+        if ($effectiveHonorPreferred && !$assignedDentistId) {
+            return [
+                'ok' => false,
+                'reason' => 'preferred_dentist_conflict',
+                'message' => 'Your preferred dentist is already booked for this time. Please choose another slot.',
+                'snap' => $snap,
+            ];
+        }
+
+        return [
+            'ok' => true,
+            'assigned_dentist_id' => $assignedDentistId,
+            'effective_honor_preferred' => $effectiveHonorPreferred,
+            'requested_honor_preferred' => $requestedHonorPreferred,
+            'snap' => $snap,
+            'full_at' => null,
+            'blocks_needed' => $blocksNeeded,
+            'start_time' => $startTime,
+            'end_time' => $endTime,
+            'global_usage' => $globalUsage,
+            'dentist_usage' => $dentistUsage,
+        ];
+    }
+
+    private function dentistHasCapacity(array $dentistUsage, int $dentistId, Carbon $startTime, int $blocksNeeded): bool
+    {
         $cursor = $startTime->copy();
         for ($i = 0; $i < $blocksNeeded; $i++) {
-            $k = $cursor->format('H:i');
-            if (!array_key_exists($k, $slotUsage) || $slotUsage[$k] >= $cap) {
-                return ['ok' => false, 'full_at' => $k];
+            $blockKey = $cursor->format('H:i');
+            if (($dentistUsage[$dentistId][$blockKey] ?? 0) >= 1) {
+                return false;
             }
             $cursor->addMinutes(30);
         }
 
-        return ['ok' => true];
+        return true;
     }
 
     /**
@@ -927,6 +1031,7 @@ class AppointmentController extends Controller
         $validated = $request->validate([
             'date' => ['required', 'date_format:Y-m-d', 'after:today'],
             'start_time' => ['required', 'regex:/^\d{2}:\d{2}(:\d{2})?$/'],
+            'honor_preferred_dentist' => ['sometimes', 'boolean'],
         ]);
 
         $service = $appointment->service;
@@ -966,11 +1071,33 @@ class AppointmentController extends Controller
             return response()->json(['message' => 'Selected time is outside clinic hours.'], 422);
         }
 
-        // Capacity check (excluding current appointment)
-        $capCheck = $this->checkCapacity($service, $dateStr, $startTime->format('H:i'), $appointment->id);
+        $rescheduleHonorPreferred = $request->has('honor_preferred_dentist')
+            ? $request->boolean('honor_preferred_dentist')
+            : $appointment->honor_preferred_dentist;
+
+        /** @var PreferredDentistService $preferredDentistService */
+        $preferredDentistService = app(PreferredDentistService::class);
+        $preferredDentist = $preferredDentistService->resolveForPatient($appointment->patient_id, $date);
+        $preferredDentistId = $preferredDentist?->id;
+
+        $capCheck = $this->checkCapacity($service, $dateStr, $startTime->format('H:i'), [
+            'exclude_appointment_id' => $appointment->id,
+            'preferred_dentist_id' => $preferredDentistId,
+            'requested_honor_preferred' => $rescheduleHonorPreferred,
+        ]);
+
         if (!$capCheck['ok']) {
-            $fullAt = $capCheck['full_at'] ?? $startTime->format('H:i');
-            return response()->json(['message' => "Time slot starting at {$fullAt} is already full."], 422);
+            $message = $capCheck['message'] ?? null;
+            if (!$message) {
+                $fullAt = $capCheck['full_at'] ?? $startTime->format('H:i');
+                $message = "Time slot starting at {$fullAt} is already full.";
+            }
+            return response()->json(['message' => $message], 422);
+        }
+
+        $assignedDentistId = $capCheck['assigned_dentist_id'] ?? null;
+        if (isset($capCheck['end_time'])) {
+            $endTime = $capCheck['end_time'];
         }
 
         // Check if patient is blocked from booking appointments
@@ -1009,9 +1136,13 @@ class AppointmentController extends Controller
         $oldDate = $appointment->date;
         $oldTimeSlot = $appointment->time_slot;
         
+        $timeSlot = $this->normalizeTime($startTime) . '-' . $this->normalizeTime($endTime);
+
         $appointment->date = $dateStr;
         $appointment->time_slot = $timeSlot;
         $appointment->status = 'pending'; // Reset to pending for staff approval
+        $appointment->dentist_schedule_id = $assignedDentistId;
+        $appointment->honor_preferred_dentist = $rescheduleHonorPreferred;
         $appointment->save();
 
         // Log the reschedule action
@@ -1026,7 +1157,8 @@ class AppointmentController extends Controller
                 'old_date' => $oldDate,
                 'old_time_slot' => $oldTimeSlot,
                 'new_date' => $dateStr,
-                'new_time_slot' => $timeSlot
+                'new_time_slot' => $timeSlot,
+                'dentist_schedule_id' => $assignedDentistId,
             ]
         );
 
@@ -1283,6 +1415,7 @@ class AppointmentController extends Controller
             'payment_method'  => ['required', Rule::in(['cash', 'maya', 'hmo'])],
             'patient_hmo_id'  => ['nullable', 'integer', 'exists:patient_hmos,id'],
             'teeth_count'     => ['nullable', 'integer', 'min:1', 'max:32'],
+            'honor_preferred_dentist' => ['sometimes', 'boolean'],
         ]);
 
         // Determine if we're linking to existing patient or creating new one
@@ -1345,11 +1478,32 @@ class AppointmentController extends Controller
             return response()->json(['message' => 'Selected time is outside clinic hours.'], 422);
         }
 
-        // capacity check (pending + approved)
-        $capCheck = $this->checkCapacity($service, $dateStr, $startTime->format('H:i'));
+        $honorPreferredRequested = $request->has('honor_preferred_dentist')
+            ? $request->boolean('honor_preferred_dentist')
+            : true;
+
+        /** @var PreferredDentistService $preferredDentistService */
+        $preferredDentistService = app(PreferredDentistService::class);
+        $preferredDentist = $preferredDentistService->resolveForPatient($patient->id, $date);
+        $preferredDentistId = $preferredDentist?->id;
+
+        $capCheck = $this->checkCapacity($service, $dateStr, $startTime->format('H:i'), [
+            'preferred_dentist_id' => $preferredDentistId,
+            'requested_honor_preferred' => $honorPreferredRequested,
+        ]);
+
         if (!$capCheck['ok']) {
-            $fullAt = $capCheck['full_at'] ?? $startTime->format('H:i');
-            return response()->json(['message' => "Time slot starting at {$fullAt} is already full."], 422);
+            $message = $capCheck['message'] ?? null;
+            if (!$message) {
+                $fullAt = $capCheck['full_at'] ?? $startTime->format('H:i');
+                $message = "Time slot starting at {$fullAt} is already full.";
+            }
+            return response()->json(['message' => $message], 422);
+        }
+
+        $assignedDentistId = $capCheck['assigned_dentist_id'] ?? null;
+        if (isset($capCheck['end_time'])) {
+            $endTime = $capCheck['end_time'];
         }
 
         // Check for overlapping appointments for the same patient
@@ -1391,6 +1545,8 @@ class AppointmentController extends Controller
             'payment_method'  => $validated['payment_method'],
             'payment_status'  => $validated['payment_method'] === 'maya' ? 'awaiting_payment' : 'unpaid',
             'teeth_count'     => $validated['teeth_count'] ?? null,
+            'dentist_schedule_id' => $assignedDentistId,
+            'honor_preferred_dentist' => $honorPreferredRequested,
         ]);
 
         // Load relationships for response
@@ -1414,6 +1570,8 @@ class AppointmentController extends Controller
                 'payment_method' => $validated['payment_method'],
                 'created_by_staff' => true,
                 'staff_name' => $staffName,
+                'dentist_schedule_id' => $assignedDentistId,
+                'honor_preferred_dentist' => $honorPreferredRequested,
             ]
         );
 

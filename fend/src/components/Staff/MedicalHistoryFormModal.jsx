@@ -1,6 +1,49 @@
 import { useState, useEffect } from "react";
 import api from "../../api/api";
 
+const computeAge = (dateStr) => {
+  if (!dateStr) return "";
+
+  const birthDate = new Date(dateStr);
+  if (Number.isNaN(birthDate.getTime())) {
+    return "";
+  }
+
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    age -= 1;
+  }
+
+  if (age < 0) {
+    return 0;
+  }
+
+  if (age > 150) {
+    return 150;
+  }
+
+  return age;
+};
+
+const sanitizeAge = (value) => {
+  if (value === "" || value === null || value === undefined) {
+    return "";
+  }
+
+  const numeric = Number(value);
+  if (Number.isNaN(numeric)) {
+    return "";
+  }
+
+  const rounded = Math.round(numeric);
+  if (rounded < 0) return 0;
+  if (rounded > 150) return 150;
+  return rounded;
+};
+
 export default function MedicalHistoryFormModal({ visit, onClose, onSuccess }) {
   const [formData, setFormData] = useState({});
   const [loading, setLoading] = useState(true);
@@ -18,7 +61,17 @@ export default function MedicalHistoryFormModal({ visit, onClose, onSuccess }) {
     setError("");
     try {
       const response = await api.get(`/api/visits/${visit.id}/medical-history-form`);
-      setFormData(response.data.form_data || {});
+      const data = response.data.form_data || {};
+      const calculatedAge = computeAge(data.date_of_birth);
+      const resolvedAge =
+        calculatedAge !== ""
+          ? calculatedAge
+          : sanitizeAge(data.age);
+
+      setFormData({
+        ...data,
+        age: resolvedAge,
+      });
       setPreviousHistoryExists(response.data.previous_history_exists || false);
       setPreviousHistoryDate(response.data.previous_history_date || null);
     } catch (err) {
@@ -30,6 +83,24 @@ export default function MedicalHistoryFormModal({ visit, onClose, onSuccess }) {
   };
 
   const handleInputChange = (field, value) => {
+    if (field === "date_of_birth") {
+      const calculatedAge = computeAge(value);
+      setFormData(prev => ({
+        ...prev,
+        date_of_birth: value,
+        age: value ? (calculatedAge === "" ? "" : calculatedAge) : "",
+      }));
+      return;
+    }
+
+    if (field === "age") {
+      setFormData(prev => ({
+        ...prev,
+        age: sanitizeAge(value),
+      }));
+      return;
+    }
+
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
