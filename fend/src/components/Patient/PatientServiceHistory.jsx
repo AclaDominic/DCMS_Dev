@@ -8,6 +8,9 @@ const PatientServiceHistory = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [meta, setMeta] = useState({});
   const [showToothChart, setShowToothChart] = useState(false);
+  const [showNotesModal, setShowNotesModal] = useState(false);
+  const [selectedVisit, setSelectedVisit] = useState(null);
+  const [downloadingReceipt, setDownloadingReceipt] = useState(null);
   
   // Date filter states for service history
   const [startDate, setStartDate] = useState("");
@@ -97,6 +100,42 @@ const PatientServiceHistory = () => {
     if (!teethString) return 0;
     const teethArray = teethString.split(',').map(t => t.trim()).filter(t => t);
     return teethArray.length;
+  };
+
+  const handleOpenNotes = (visit) => {
+    setSelectedVisit(visit);
+    setShowNotesModal(true);
+  };
+
+  const handleCloseNotes = () => {
+    setShowNotesModal(false);
+    setSelectedVisit(null);
+  };
+
+  const handleDownloadReceipt = async (visitId) => {
+    try {
+      setDownloadingReceipt(visitId);
+      const response = await api.get(`/api/receipts/visit/${visitId}`, {
+        responseType: 'blob',
+        skip401Handler: true,
+      });
+
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `visit-receipt-${visitId}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Failed to download receipt", err);
+      const serverMsg = err.response?.data?.message || "Failed to download receipt. Please try again.";
+      alert(serverMsg);
+    } finally {
+      setDownloadingReceipt(null);
+    }
   };
 
   return (
@@ -312,7 +351,8 @@ const PatientServiceHistory = () => {
                 <th>Date</th>
                 <th>Service</th>
                 <th>Teeth Done</th>
-                <th>Details</th>
+                <th>Notes</th>
+                <th>Receipt</th>
               </tr>
             </thead>
             <tbody>
@@ -367,17 +407,32 @@ const PatientServiceHistory = () => {
                       )}
                     </td>
                     <td>
-                      {visit.has_notes ? (
-                        <span className="badge bg-success">
-                          <i className="bi bi-check-circle me-1"></i>
-                          Has Notes
-                        </span>
-                      ) : (
-                        <span className="badge bg-secondary">
-                          <i className="bi bi-dash-circle me-1"></i>
-                          No Notes
-                        </span>
-                      )}
+                      <button
+                        className="btn btn-outline-primary btn-sm"
+                        onClick={() => handleOpenNotes(visit)}
+                      >
+                        <i className="bi bi-journal-text me-1"></i>
+                        View Notes
+                      </button>
+                    </td>
+                    <td>
+                      <button
+                        className="btn btn-success btn-sm"
+                        onClick={() => handleDownloadReceipt(visit.id)}
+                        disabled={!visit.receipt_available || downloadingReceipt === visit.id}
+                      >
+                        {downloadingReceipt === visit.id ? (
+                          <>
+                            <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                            Downloading...
+                          </>
+                        ) : (
+                          <>
+                            <i className="bi bi-receipt me-1"></i>
+                            Receipt
+                          </>
+                        )}
+                      </button>
                     </td>
                   </tr>
                 ))
@@ -412,6 +467,110 @@ const PatientServiceHistory = () => {
               Next
               <i className="bi bi-chevron-right ms-1"></i>
             </button>
+          </div>
+        </div>
+      )}
+      {showNotesModal && (
+        <div
+          className="modal show d-block"
+          style={{
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 1050,
+            overflowY: "auto",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "1rem"
+          }}
+          tabIndex="-1"
+        >
+          <div
+            className="modal-dialog modal-dialog-centered"
+            style={{
+              margin: "0 auto",
+              maxHeight: "calc(100vh - 2rem)",
+              width: "100%",
+              maxWidth: "600px"
+            }}
+          >
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">
+                  <i className="bi bi-journal-text me-2"></i>
+                  Dentist Notes
+                </h5>
+                <button
+                  type="button"
+                  className="btn-close"
+                  onClick={handleCloseNotes}
+                ></button>
+              </div>
+              <div className="modal-body">
+                <div className="mb-3">
+                  <small className="text-muted d-block">Service</small>
+                  <div className="fw-semibold">{selectedVisit?.service_name || 'Not specified'}</div>
+                </div>
+                <div className="mb-3">
+                  <small className="text-muted d-block">Visit Date</small>
+                  <div className="fw-semibold">
+                    {selectedVisit
+                      ? new Date(selectedVisit.visit_date).toLocaleDateString(undefined, {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric',
+                        })
+                      : '—'}
+                  </div>
+                </div>
+
+                <div className="mb-3">
+                  <small className="text-muted text-uppercase d-block fw-semibold mb-1">
+                    Dentist Notes
+                  </small>
+                  <div className="p-3 bg-light border rounded" style={{ whiteSpace: 'pre-wrap', minHeight: '80px' }}>
+                    {selectedVisit?.dentist_notes?.trim()
+                      ? selectedVisit.dentist_notes
+                      : 'No dentist notes recorded for this visit.'}
+                  </div>
+                </div>
+
+                <div className="mb-3">
+                  <small className="text-muted text-uppercase d-block fw-semibold mb-1">
+                    Findings
+                  </small>
+                  <div className="p-3 bg-light border rounded" style={{ whiteSpace: 'pre-wrap', minHeight: '80px' }}>
+                    {selectedVisit?.findings?.trim()
+                      ? selectedVisit.findings
+                      : 'No findings documented for this visit.'}
+                  </div>
+                </div>
+
+                <div>
+                  <small className="text-muted text-uppercase d-block fw-semibold mb-1">
+                    Treatment Plan
+                  </small>
+                  <div className="p-3 bg-light border rounded" style={{ whiteSpace: 'pre-wrap', minHeight: '80px' }}>
+                    {selectedVisit?.treatment_plan?.trim()
+                      ? selectedVisit.treatment_plan
+                      : 'No treatment plan provided for this visit.'}
+                  </div>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={handleCloseNotes}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

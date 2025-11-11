@@ -10,7 +10,6 @@ function PatientAppointments() {
   const [currentPage, setCurrentPage] = useState(1);
   const [meta, setMeta] = useState({});
   const [paying, setPaying] = useState(null); // appointment_id being processed
-  const [generatingReceipt, setGeneratingReceipt] = useState(null); // appointment_id being processed
   const [canceling, setCanceling] = useState(null); // appointment_id being cancelled
   const [rescheduleModal, setRescheduleModal] = useState(null); // appointment being rescheduled
   const [showCancelModal, setShowCancelModal] = useState(false);
@@ -207,36 +206,6 @@ function PatientAppointments() {
       alert(serverMsg);
     } finally {
       setPaying(null);
-    }
-  };
-
-  const handleViewReceipt = async (appointmentId) => {
-    try {
-      setGeneratingReceipt(appointmentId);
-
-      // Generate and download receipt
-      const response = await api.get(`/api/receipts/appointment/${appointmentId}`, {
-        responseType: 'blob',
-        skip401Handler: true
-      });
-
-      // Create blob and download
-      const blob = new Blob([response.data], { type: 'application/pdf' });
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `receipt-${appointmentId}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-
-    } catch (err) {
-      console.error("Failed to generate receipt", err);
-      const serverMsg = err.response?.data?.message || "Failed to generate receipt. Please try again.";
-      alert(serverMsg);
-    } finally {
-      setGeneratingReceipt(null);
     }
   };
 
@@ -607,7 +576,6 @@ function PatientAppointments() {
                               a.payment_status === "awaiting_payment" &&
                               a.status === "approved";
 
-                            const showReceipt = a.status === "completed" && a.payment_status === "paid";
                             const showReschedule = a.payment_method === "maya" && a.payment_status === "paid" && (a.status === "approved" || a.status === "pending");
 
                             return (
@@ -674,27 +642,6 @@ function PatientAppointments() {
                                       </button>
                                     )}
 
-                                    {showReceipt && (
-                                      <button
-                                        className="btn btn-success btn-sm"
-                                        onClick={() => handleViewReceipt(a.id)}
-                                        disabled={generatingReceipt === a.id}
-                                        title="Download Receipt"
-                                      >
-                                        {generatingReceipt === a.id ? (
-                                          <>
-                                            <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
-                                            Generating...
-                                          </>
-                                        ) : (
-                                          <>
-                                            <i className="bi bi-receipt me-1"></i>
-                                            Receipt
-                                          </>
-                                        )}
-                                      </button>
-                                    )}
-
                                     {showReschedule && (
                                       <button
                                         className="btn btn-warning btn-sm"
@@ -715,7 +662,7 @@ function PatientAppointments() {
                                       <button
                                         className="btn btn-outline-danger btn-sm"
                                         onClick={() => handleCancelClick(a.id)}
-                                        disabled={canceling === a.id || paying === a.id || generatingReceipt === a.id}
+                                        disabled={canceling === a.id || paying === a.id}
                                       >
                                         {canceling === a.id ? (
                                           <>
@@ -773,7 +720,6 @@ function PatientAppointments() {
                         a.payment_status === "awaiting_payment" &&
                         a.status === "approved";
 
-                      const showReceipt = a.status === "completed" && a.payment_status === "paid";
                       const showReschedule = a.payment_method === "maya" && a.payment_status === "paid" && (a.status === "approved" || a.status === "pending");
 
                       return (
@@ -859,26 +805,6 @@ function PatientAppointments() {
                             </button>
                           )}
 
-                          {showReceipt && (
-                            <button
-                              className="btn btn-success btn-sm flex-fill"
-                              onClick={() => handleViewReceipt(a.id)}
-                              disabled={generatingReceipt === a.id}
-                            >
-                              {generatingReceipt === a.id ? (
-                                <>
-                                  <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
-                                  Generating...
-                                </>
-                              ) : (
-                                <>
-                                  <i className="bi bi-receipt me-1"></i>
-                                  Receipt
-                                </>
-                              )}
-                            </button>
-                          )}
-
                           {showReschedule && (
                             <button
                               className="btn btn-warning btn-sm flex-fill"
@@ -898,7 +824,7 @@ function PatientAppointments() {
                             <button
                               className="btn btn-outline-danger btn-sm flex-fill"
                               onClick={() => handleCancelClick(a.id)}
-                              disabled={canceling === a.id || paying === a.id || generatingReceipt === a.id}
+                              disabled={canceling === a.id || paying === a.id}
                             >
                               {canceling === a.id ? (
                                 <>

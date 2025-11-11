@@ -56,6 +56,11 @@ class VisitNote extends Model
         return $this->dentist_notes_encrypted;
     }
 
+    public function getFindingsAttribute()
+    {
+        return $this->findings_encrypted;
+    }
+
     public function getTreatmentPlanAttribute()
     {
         return $this->treatment_plan_encrypted;

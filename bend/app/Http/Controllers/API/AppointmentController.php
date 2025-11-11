@@ -396,7 +396,8 @@ class AppointmentController extends Controller
         }
 
         $query = Appointment::with(['service', 'payments', 'refundRequest'])
-            ->where('patient_id', $user->patient->id);
+            ->where('patient_id', $user->patient->id)
+            ->where('status', '!=', 'completed');
 
         // Date filtering
         if ($request->has('start_date')) {
@@ -479,7 +480,10 @@ class AppointmentController extends Controller
                 'is_primary_teeth' => $visit->visitNotes?->is_primary_teeth,
                 'teeth_treated_with_count' => $visit->visitNotes?->teeth_treated_with_count,
                 'created_at' => $visit->created_at,
-                'has_notes' => $visit->visitNotes ? true : false,
+                'dentist_notes' => $visit->visitNotes?->dentist_notes ?? '',
+                'findings' => $visit->visitNotes?->findings ?? '',
+                'treatment_plan' => $visit->visitNotes?->treatment_plan ?? '',
+                'receipt_available' => $visit->status === 'completed',
             ];
         });
 
