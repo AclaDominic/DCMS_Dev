@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import api from "../../api/api";
 import teethChartImage from "../../pages/Dentist/Teeth_Chart.png";
 import primaryTeethChartImage from "../../pages/Dentist/Primary_Teeth_Chart.png";
+import toast from "react-hot-toast";
 
 const PatientServiceHistory = () => {
   const [visits, setVisits] = useState([]);
@@ -134,7 +135,7 @@ const PatientServiceHistory = () => {
     } catch (err) {
       console.error("Failed to download receipt", err);
       const serverMsg = err.response?.data?.message || "Failed to download receipt. Please try again.";
-      alert(serverMsg);
+      toast.error(serverMsg);
     } finally {
       setDownloadingReceipt(null);
     }
