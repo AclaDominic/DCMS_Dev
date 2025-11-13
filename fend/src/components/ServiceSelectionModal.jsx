@@ -238,6 +238,33 @@ function ServiceSelectionModal({
                               </div>
                             </div>
                           )}
+                          {selectedService.has_follow_up_services && selectedService.follow_up_services && selectedService.follow_up_services.length > 0 && (
+                            <div className="mt-4">
+                              <div className="alert alert-warning border-0 shadow-sm" role="alert">
+                                <div className="d-flex align-items-start">
+                                  <i className="bi bi-exclamation-triangle-fill me-3 fs-4 text-warning"></i>
+                                  <div>
+                                    <h6 className="alert-heading text-warning mb-2">
+                                      <strong>Are you sure you want to book this service?</strong>
+                                    </h6>
+                                    <p className="mb-2">
+                                      This service has a follow-up service available. If you've already completed this service before, you might want to book the follow-up service instead:
+                                    </p>
+                                    <ul className="mb-2 ps-3">
+                                      {selectedService.follow_up_services.map((followUp) => (
+                                        <li key={followUp.id}>
+                                          <strong>{followUp.name}</strong>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                    <p className="mb-0">
+                                      <strong>Please confirm:</strong> Do you want to book <strong>{selectedService.name}</strong> (the parent service) or one of the follow-up services listed above?
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          )}
                         </div>
 
                         <div className="d-grid gap-3">

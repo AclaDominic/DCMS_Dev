@@ -247,12 +247,17 @@ class FollowUpServiceAvailabilityTest extends TestCase
         $this->assertSame('promo', $parentEntry['type']);
         $this->assertEquals(1500.0, (float) $parentEntry['original_price']);
         $this->assertEquals(900.0, (float) $parentEntry['promo_price']);
+        $this->assertTrue($parentEntry['has_follow_up_services']);
+        $this->assertNotEmpty($parentEntry['follow_up_services']);
+        $this->assertEquals($followUpService->id, $parentEntry['follow_up_services'][0]['id']);
 
         $followUpEntry = $patientServices->firstWhere('id', $followUpService->id);
         $this->assertNotNull($followUpEntry);
         $this->assertSame('regular', $followUpEntry['type']);
         $this->assertEquals(800.0, (float) $followUpEntry['price']);
         $this->assertArrayNotHasKey('promo_price', $followUpEntry);
+        $this->assertFalse($followUpEntry['has_follow_up_services']);
+        $this->assertEmpty($followUpEntry['follow_up_services']);
 
         $staffUser = User::factory()->create([
             'role' => 'staff',
@@ -271,12 +276,16 @@ class FollowUpServiceAvailabilityTest extends TestCase
         $this->assertNotNull($parentEntryStaff);
         $this->assertSame('promo', $parentEntryStaff['type']);
         $this->assertEquals(900.0, (float) $parentEntryStaff['promo_price']);
+        $this->assertTrue($parentEntryStaff['has_follow_up_services']);
+        $this->assertEquals($followUpService->id, $parentEntryStaff['follow_up_services'][0]['id']);
 
         $followUpEntryStaff = $staffServices->firstWhere('id', $followUpService->id);
         $this->assertNotNull($followUpEntryStaff);
         $this->assertSame('regular', $followUpEntryStaff['type']);
         $this->assertEquals(800.0, (float) $followUpEntryStaff['price']);
         $this->assertArrayNotHasKey('promo_price', $followUpEntryStaff);
+        $this->assertFalse($followUpEntryStaff['has_follow_up_services']);
+        $this->assertEmpty($followUpEntryStaff['follow_up_services']);
     }
 
     public function test_follow_up_discount_does_not_affect_parent_service_pricing(): void
@@ -333,12 +342,16 @@ class FollowUpServiceAvailabilityTest extends TestCase
         $this->assertSame('regular', $parentEntry['type']);
         $this->assertEquals(1500.0, (float) $parentEntry['price']);
         $this->assertArrayNotHasKey('promo_price', $parentEntry);
+        $this->assertTrue($parentEntry['has_follow_up_services']);
+        $this->assertEquals($followUpService->id, $parentEntry['follow_up_services'][0]['id']);
 
         $followUpEntry = $patientServices->firstWhere('id', $followUpService->id);
         $this->assertNotNull($followUpEntry);
         $this->assertSame('promo', $followUpEntry['type']);
         $this->assertEquals(900.0, (float) $followUpEntry['original_price']);
         $this->assertEquals(450.0, (float) $followUpEntry['promo_price']);
+        $this->assertFalse($followUpEntry['has_follow_up_services']);
+        $this->assertEmpty($followUpEntry['follow_up_services']);
 
         $staffUser = User::factory()->create([
             'role' => 'staff',
@@ -357,11 +370,15 @@ class FollowUpServiceAvailabilityTest extends TestCase
         $this->assertNotNull($parentEntryStaff);
         $this->assertSame('regular', $parentEntryStaff['type']);
         $this->assertEquals(1500.0, (float) $parentEntryStaff['price']);
+        $this->assertTrue($parentEntryStaff['has_follow_up_services']);
+        $this->assertEquals($followUpService->id, $parentEntryStaff['follow_up_services'][0]['id']);
 
         $followUpEntryStaff = $staffServices->firstWhere('id', $followUpService->id);
         $this->assertNotNull($followUpEntryStaff);
         $this->assertSame('promo', $followUpEntryStaff['type']);
         $this->assertEquals(450.0, (float) $followUpEntryStaff['promo_price']);
+        $this->assertFalse($followUpEntryStaff['has_follow_up_services']);
+        $this->assertEmpty($followUpEntryStaff['follow_up_services']);
     }
 
     private function assertFollowUpVisibility(User $user, Carbon $targetDate, int $followUpServiceId, bool $shouldBeVisible): void

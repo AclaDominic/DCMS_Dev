@@ -456,6 +456,31 @@ function BookAppointment() {
                               </small>
                             </div>
                           )}
+                          {selectedService.has_follow_up_services && selectedService.follow_up_services && selectedService.follow_up_services.length > 0 && (
+                            <div className="mt-3">
+                              <div className="alert alert-warning border-0 shadow-sm" role="alert">
+                                <div className="d-flex align-items-start">
+                                  <i className="bi bi-exclamation-triangle-fill me-2 text-warning"></i>
+                                  <div>
+                                    <strong className="text-warning">Are you sure you want to book this service?</strong>
+                                    <p className="mb-1 mt-2">
+                                      This service has a follow-up service available. If you've already completed this service before, you might want to book the follow-up service instead:
+                                    </p>
+                                    <ul className="mb-1 ps-3">
+                                      {selectedService.follow_up_services.map((followUp) => (
+                                        <li key={followUp.id}>
+                                          <strong>{followUp.name}</strong>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                    <small className="text-muted">
+                                      Please confirm: Do you want to book <strong>{selectedService.name}</strong> (the parent service) or one of the follow-up services listed above?
+                                    </small>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          )}
                           {isPerTeethService && (
                             <div className="mt-2">
                               <small className="text-info">

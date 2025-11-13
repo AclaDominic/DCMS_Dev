@@ -67,26 +67,35 @@ class AppointmentServiceController extends Controller
                 ? min(round(100 - ($discountPrice / $originalPrice * 100)), 100)
                 : 100;
 
+            $service = $promo->service->load('followUpChildren');
+
             return [
-                'id' => $promo->service->id,
-                'name' => $promo->service->name,
+                'id' => $service->id,
+                'name' => $service->name,
                 'type' => 'promo',
                 'original_price' => $originalPrice,
                 'promo_price' => $discountPrice,
                 'discount_percent' => $percent,
-                'per_teeth_service' => $promo->service->per_teeth_service,
-                'per_tooth_minutes' => $promo->service->per_tooth_minutes,
-                'is_follow_up' => (bool) $promo->service->is_follow_up,
-                'follow_up_parent_service_id' => $promo->service->follow_up_parent_service_id,
-                'follow_up_parent_name' => optional($promo->service->followUpParent)->name,
-                'follow_up_max_gap_weeks' => $promo->service->follow_up_max_gap_weeks,
+                'per_teeth_service' => $service->per_teeth_service,
+                'per_tooth_minutes' => $service->per_tooth_minutes,
+                'is_follow_up' => (bool) $service->is_follow_up,
+                'follow_up_parent_service_id' => $service->follow_up_parent_service_id,
+                'follow_up_parent_name' => optional($service->followUpParent)->name,
+                'follow_up_max_gap_weeks' => $service->follow_up_max_gap_weeks,
+                'has_follow_up_services' => $service->followUpChildren->isNotEmpty(),
+                'follow_up_services' => $service->followUpChildren->map(function ($followUp) {
+                    return [
+                        'id' => $followUp->id,
+                        'name' => $followUp->name,
+                    ];
+                })->values(),
             ];
         })->values();
 
         // 3. Regular services (exclude those with promo)
         $regularServices = Service::where('is_special', false)
             ->whereNotIn('id', $promoServiceIds)
-            ->with('followUpParent')
+            ->with(['followUpParent', 'followUpChildren'])
             ->get()
             ->map(function ($service) {
                 return [
@@ -100,12 +109,19 @@ class AppointmentServiceController extends Controller
                     'follow_up_parent_service_id' => $service->follow_up_parent_service_id,
                     'follow_up_parent_name' => optional($service->followUpParent)->name,
                     'follow_up_max_gap_weeks' => $service->follow_up_max_gap_weeks,
+                    'has_follow_up_services' => $service->followUpChildren->isNotEmpty(),
+                    'follow_up_services' => $service->followUpChildren->map(function ($followUp) {
+                        return [
+                            'id' => $followUp->id,
+                            'name' => $followUp->name,
+                        ];
+                    })->values(),
                 ];
             });
 
         // 4. Special services (permanent or date-limited)
         $specialServices = Service::where('is_special', true)
-            ->with('followUpParent')
+            ->with(['followUpParent', 'followUpChildren'])
             ->get()->filter(function ($service) use ($carbonDate) {
             if (!$service->special_start_date && !$service->special_end_date) {
                 return true;
@@ -127,6 +143,13 @@ class AppointmentServiceController extends Controller
                 'follow_up_parent_service_id' => $service->follow_up_parent_service_id,
                 'follow_up_parent_name' => optional($service->followUpParent)->name,
                 'follow_up_max_gap_weeks' => $service->follow_up_max_gap_weeks,
+                'has_follow_up_services' => $service->followUpChildren->isNotEmpty(),
+                'follow_up_services' => $service->followUpChildren->map(function ($followUp) {
+                    return [
+                        'id' => $followUp->id,
+                        'name' => $followUp->name,
+                    ];
+                })->values(),
             ];
         });
 
