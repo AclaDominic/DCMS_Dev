@@ -224,6 +224,20 @@ function ServiceSelectionModal({
                               )}
                             </div>
                           )}
+                          {selectedService.is_follow_up && (
+                            <div className="mt-4">
+                              <span className="badge bg-primary fs-6 px-3 py-2">Follow-up Service</span>
+                              <div className="mt-3 text-muted">
+                                <strong>Parent Service:</strong>{" "}
+                                {selectedService.follow_up_parent_name || "Assigned parent service"}
+                              </div>
+                              <div className="text-muted">
+                                {selectedService.follow_up_max_gap_weeks === null || selectedService.follow_up_max_gap_weeks === undefined
+                                  ? "No time limit between parent and follow-up visits."
+                                  : `Book within ${selectedService.follow_up_max_gap_weeks} week${selectedService.follow_up_max_gap_weeks === 1 ? '' : 's'} of completing the parent service.`}
+                              </div>
+                            </div>
+                          )}
                         </div>
 
                         <div className="d-grid gap-3">
@@ -382,6 +396,19 @@ function ServiceSelectionModal({
                               {service.type === "regular" && (
                                 <div className="h4 text-dark fw-bold mb-0">
                                   ₱{Number(service.price).toLocaleString()}{service.per_teeth_service ? ' per tooth' : ''}
+                                </div>
+                              )}
+                              {service.is_follow_up && (
+                                <div className="mt-3">
+                                  <span className="badge bg-primary me-2">Follow-up</span>
+                                  <div className="text-muted small mt-1">
+                                    Parent: {service.follow_up_parent_name || 'Assigned parent service'}
+                                  </div>
+                                  <div className="text-muted small">
+                                    {service.follow_up_max_gap_weeks === null || service.follow_up_max_gap_weeks === undefined
+                                      ? 'No time limit between visits'
+                                      : `Book within ${service.follow_up_max_gap_weeks} week${service.follow_up_max_gap_weeks === 1 ? '' : 's'} of completing the parent service`}
+                                  </div>
                                 </div>
                               )}
                             </div>

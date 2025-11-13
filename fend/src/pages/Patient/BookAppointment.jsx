@@ -443,6 +443,19 @@ function BookAppointment() {
                             ₱{Number(selectedService.price || selectedService.promo_price).toLocaleString()}
                             {isPerTeethService ? " per tooth" : ""}
                           </span>
+                          {selectedService.is_follow_up && (
+                            <div className="mt-2">
+                              <span className="badge bg-primary me-2">Follow-up</span>
+                              <small className="text-muted d-block">
+                                Parent: {selectedService.follow_up_parent_name || "Assigned parent service"}
+                              </small>
+                              <small className="text-muted">
+                                {selectedService.follow_up_max_gap_weeks === null || selectedService.follow_up_max_gap_weeks === undefined
+                                  ? "No time limit between visits."
+                                  : `Must be within ${selectedService.follow_up_max_gap_weeks} week${selectedService.follow_up_max_gap_weeks === 1 ? "" : "s"} of the parent service.`}
+                              </small>
+                            </div>
+                          )}
                           {isPerTeethService && (
                             <div className="mt-2">
                               <small className="text-info">
