@@ -743,7 +743,7 @@ function VisitTrackerManager() {
       <div className="flex-grow-1 d-flex flex-column">
         <div className="d-flex justify-content-between align-items-center mb-3">
           <div className="d-flex align-items-center">
-            <h5 className="mb-0">Ongoing Visits ({visits.length} total, {visits.filter(v => v.status === 'pending').length} pending)</h5>
+            <h5 className="mb-0">Ongoing Visits ({visits.filter(v => v.status === 'pending').length} pending)</h5>
             {loading && (
               <div className="d-flex align-items-center text-muted ms-3">
                 <div className="spinner-border spinner-border-sm me-2" role="status">

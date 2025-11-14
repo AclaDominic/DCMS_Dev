@@ -414,12 +414,11 @@ class RealisticVisitFactory
 
     private function getVisitStatus(Carbon $day): string
     {
+        // Restricted to not create pending visits
+        // Only creates: completed, inquiry, or rejected
         $rand = rand(1, 100);
-        if ($rand <= 72) {
-            return 'completed';
-        }
         if ($rand <= 84) {
-            return 'pending';
+            return 'completed';
         }
         if ($rand <= 95) {
             return 'inquiry';
