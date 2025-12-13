@@ -572,6 +572,7 @@ function PatientAppointments() {
                             ) : (
                               appointments.map((a) => {
                             const showPayNow =
+                              import.meta.env.VITE_ENABLE_MAYA_PAYMENTS === 'true' &&
                               a.payment_method === "maya" &&
                               a.payment_status === "awaiting_payment" &&
                               a.status === "approved";
@@ -716,6 +717,7 @@ function PatientAppointments() {
                   ) : (
                     appointments.map((a) => {
                       const showPayNow =
+                        import.meta.env.VITE_ENABLE_MAYA_PAYMENTS === 'true' &&
                         a.payment_method === "maya" &&
                         a.payment_status === "awaiting_payment" &&
                         a.status === "approved";

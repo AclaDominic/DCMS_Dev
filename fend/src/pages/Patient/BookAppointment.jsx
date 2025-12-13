@@ -625,7 +625,9 @@ function BookAppointment() {
                               💵 Cash (on-site payment)
                               {warningStatus?.under_warning && ' - Not available'}
                             </option>
-                            <option value="maya">💳 Maya (online payment)</option>
+                            {import.meta.env.VITE_ENABLE_MAYA_PAYMENTS === 'true' && (
+                              <option value="maya">💳 Maya (online payment)</option>
+                            )}
                             <option value="hmo" disabled={warningStatus?.under_warning}>
                               🏥 HMO (insurance)
                               {warningStatus?.under_warning && ' - Not available'}
@@ -635,7 +637,9 @@ function BookAppointment() {
                             <div className="alert alert-warning mt-3 border-0 shadow-sm">
                               <i className="bi bi-exclamation-triangle me-2"></i>
                               <strong>Payment Restriction:</strong> Your account is under warning due to previous no-shows. 
-                              You can only book appointments using Maya (online payment) at this time.
+                              {import.meta.env.VITE_ENABLE_MAYA_PAYMENTS === 'true' 
+                                ? " You can only book appointments using Maya (online payment) at this time."
+                                : " Please contact the clinic to book an appointment."}
                             </div>
                           )}
                         </div>

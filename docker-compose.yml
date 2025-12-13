@@ -1,0 +1,60 @@
+services:
+  app:
+    build:
+      context: ./bend
+      dockerfile: Dockerfile
+    image: dcms-app
+    container_name: dcms-app
+    restart: unless-stopped
+    working_dir: /var/www
+    volumes:
+      - ./bend:/var/www
+    networks:
+      - dcms-network
+    environment:
+      DB_HOST: db
+      REDIS_HOST: redis
+
+  web:
+    image: nginx:alpine
+    container_name: dcms-web
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./bend:/var/www/backend
+      - ./fend/dist:/var/www/frontend
+      - ./nginx/conf.d:/etc/nginx/conf.d
+    networks:
+      - dcms-network
+    depends_on:
+      - app
+      - db
+
+  db:
+    image: mysql:8.0
+    container_name: dcms-db
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE:-dcms_prod}
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-secret}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-secret}
+      MYSQL_USER: ${DB_USERNAME:-dcms_user}
+    volumes:
+      - db-data:/var/lib/mysql
+    networks:
+      - dcms-network
+
+  redis:
+    image: redis:alpine
+    container_name: dcms-redis
+    restart: unless-stopped
+    networks:
+      - dcms-network
+
+networks:
+  dcms-network:
+    driver: bridge
+
+volumes:
+  db-data:
