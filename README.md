@@ -1,189 +1,111 @@
-# Dental Clinic Management System (DCMS)
+<p align="center">
+  <h1 align="center">🦷 Dental Clinic Management System (DCMS)</h1>
+  <p align="center">
+    A comprehensive, full-stack management system tailored for dental clinics, featuring role-based dashboards, multi-provider appointment scheduling, automated inventory tracking, and integrated patient notifications.
+  </p>
+</p>
 
-A comprehensive management system for dental clinics, featuring a Laravel backend and a modern frontend.
-
-## Prerequisites
-
-Before you begin, ensure you have the following installed on your system:
-
-*   **Docker & Docker Compose** (Recommended for easiest setup)
-*   **PHP** >= 8.1 (For manual backend setup)
-*   **Composer** (For manual backend setup)
-*   **Node.js** & **npm** (For manual frontend setup)
-
----
-
-## Installation & Setup
-
-### Option 1: Docker (Recommended)
-
-The easiest way to get the application running is using Docker Compose.
-
-1.  **Clone the repository:**
-    ```bash
-    git clone <repository-url>
-    cd DCMS_Dev_Deploy
-    ```
-
-2.  **Start the containers:**
-    ```bash
-    docker-compose up -d
-    ```
-    This command will build and start the backend (`app`), web server (`web`), database (`db`), and redis (`redis`) containers.
-
-3.  **Access the application:**
-    *   Frontend/Web: `http://localhost`
-    *   Backend API: `http://localhost/api` (proxied via nginx)
+<p align="center">
+  <img src="https://img.shields.io/badge/React-19.1-61DAFB?style=flat-square&logo=react&logoColor=white" />
+  <img src="https://img.shields.io/badge/Laravel-12-FF2D20?style=flat-square&logo=laravel&logoColor=white" />
+  <img src="https://img.shields.io/badge/Vite-6-646CFF?style=flat-square&logo=vite&logoColor=white" />
+  <img src="https://img.shields.io/badge/Bootstrap-5.3-7952B3?style=flat-square&logo=bootstrap&logoColor=white" />
+  <img src="https://img.shields.io/badge/Sanctum-4-FF2D20?style=flat-square&logo=laravel&logoColor=white" />
+  <img src="https://img.shields.io/badge/PHPUnit-11-3C9CD7?style=flat-square&logo=php&logoColor=white" />
+</p>
 
 ---
 
-### Option 2: Manual Setup
+## 🤖 AI-First Development Workflow
 
-If you prefer to run the services directly on your machine.
+This project was built leveraging an **AI-Assisted Development** approach. I utilized modern AI software engineering tools to radically accelerate the full-stack delivery lifecycle, maintain high code quality, and resolve complex architectural bottlenecks.
 
-#### Backend (Laravel)
-
-1.  **Navigate to the backend directory:**
-    ```bash
-    cd bend
-    ```
-
-2.  **Install PHP dependencies:**
-    ```bash
-    composer install
-    ```
-
-3.  **Environment Configuration:**
-    Copy the example environment file and configure your database settings.
-    ```bash
-    cp .env.example .env
-    ```
-    *Edit `.env` and set your database credentials (`DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`).*
-
-4.  **Generate Application Key:**
-    ```bash
-    php artisan key:generate
-    ```
-
-5.  **Run Database Migrations & Seeders:**
-    ```bash
-    php artisan migrate:refresh --seed
-    ```
-
-6.  **Serve the Backend:**
-    ```bash
-    php artisan serve
-    ```
-    The backend will typically run on `http://localhost:8000`.
-
-#### Frontend
-
-1.  **Navigate to the frontend directory:**
-    ```bash
-    cd ../fend
-    # or cd fend if from root
-    ```
-
-2.  **Install Node dependencies:**
-    ```bash
-    npm install
-    ```
-
-3.  **Build or Serve:**
-    *   **Development:**
-        ```bash
-        npm run dev
-        ```
-    *   **Production Build:**
-        ```bash
-        npm run build
-        ```
+- **Cursor IDE**: Served as my primary development environment. I utilized it extensively for intelligent code completion, rapidly iterating on React components, refactoring complex Laravel controllers, and managing application state efficiently.
+- **ChatGPT Plus**: Extensively utilized during the initial planning and prototyping phases. It acted as an initial pair programmer for designing the relational database schema, brainstorming software architecture patterns, and generating complex Eloquent queries.
+- **AI-Driven Productivity**:
+  - Accelerated the migration of the frontend React application from static mock data to a fully integrated Laravel 12 API.
+  - Profiled and optimized heavy SQL search queries.
+  - Safely drafted system documentation and automated unit/integration tests following best practices.
 
 ---
 
-## Configuration & Credentials
+## 📌 Overview
 
-The application relies on several environment variables for third-party services. Ensure these are set in your `bend/.env` file.
+**DCMS (Dental Clinic Management System)** is a robust web application built to streamline operations for modern dental practices. It acts as a centralized command center serving multiple organizational roles.
 
-### Database
-*   `DB_CONNECTION`: `mysql`
-*   `DB_HOST`: `127.0.0.1` (or `db` if using Docker)
-*   `DB_PORT`: `3306`
-*   `DB_DATABASE`: `Capstone`
-*   `DB_USERNAME`: `root`
-*   `DB_PASSWORD`: (Your database password)
-
-### Mail Configuration
-*   `MAIL_MAILER`: `smtp` (or `mailtrap-sdk` for API)
-*   `MAIL_HOST`: `sandbox.smtp.mailtrap.io` (or your SMTP host)
-*   `MAIL_PORT`: `2525`
-*   `MAIL_USERNAME`: (Your Mailtrap Username)
-*   `MAIL_PASSWORD`: (Your Mailtrap Password)
-*   `MAIL_FROM_ADDRESS`: `no-reply@dentalclinic.test`
-
-### SMS Service (ClickSend)
-*   `SMS_ENABLED`: `true`
-*   `CLICKSEND_USERNAME`: (Your ClickSend Username)
-*   `CLICKSEND_API_KEY`: (Your ClickSend API Key)
-*   `CLICKSEND_FALLBACK_USERNAME`: (Fallback Username)
-*   `CLICKSEND_FALLBACK_API_KEY`: (Fallback API Key)
-
-### AWS (S3 & SNS)
-*   `AWS_ACCESS_KEY_ID`: (Your AWS Access Key)
-*   `AWS_SECRET_ACCESS_KEY`: (Your AWS Secret Key)
-*   `AWS_DEFAULT_REGION`: `ap-southeast-2` (or your region)
-*   `AWS_BUCKET`: (Your S3 Bucket Name)
-
-### Payment Gateway (Maya)
-*   `MAYA_BASE`: `https://pg-sandbox.paymaya.com`
-*   `MAYA_PUBLIC_KEY`: (Your Maya Public Key)
-*   `MAYA_SECRET_KEY`: (Your Maya Secret Key)
+The application is engineered with a **React** Single Page Application (SPA) frontend, consuming a powerful **Laravel 12** REST API backend, providing real-time scheduling functionality, payment integration, and a highly responsive user experience. 
 
 ---
 
-## Scheduled Tasks
+## ✨ Key Features
 
-The system uses Laravel's scheduler for various automated tasks, including:
-*   Marking no-show appointments (every 15 mins)
-*   Updating goal progress (daily at 01:15)
-*   Auto-canceling expired promos (daily at 02:00)
-*   Retrying queued emails (every 5 mins)
-*   Sending appointment reminders (daily at 06:00)
-*   Inventory expiry scanning (daily at 08:00)
-*   Archiving inactive patients (daily at 03:30)
+### 🔐 System Portal & Role Management
+- **Role-Based Dashboards** — Distinct, tailored interfaces and permissions for distinct roles (Admin, Dentist, Patient).
+- **Goal Progress Tracking** — Automated progress monitoring and metric visualization.
 
-### Running the Scheduler Locally
-To run the scheduler locally during development:
+### 📅 Appointment & Scheduling Engine
+- **Multi-Provider Flows** — Book and manage appointments specifically assigned to individual dentists.
+- **Automated Reminders** — Integrated **ClickSend** SMS functionality and Email queues via AWS SES/Mailtrap for daily appointment reminders.
+- **No-Show Automation** — Scheduled tasks that automatically run every 15 minutes to penalize or flag no-show appointments, managing schedule integrity.
+- **Promotional Lifecycle** — Automated systems that expire promotional campaigns dynamically at 02:00 daily.
 
-```bash
-cd bend
-php artisan schedule:work
+### 📦 Clinical Inventory Management
+- **Stock Tracking** — Granular management of clinical supplies with dynamic check-in and check-out logs.
+- **Expiry Expiration Scans** — Background cron tasks running daily at 08:00 to alert administrators of soon-to-expire clinical assets.
+
+### 💳 Billing & Integrations
+- **Maya Payment Gateway** — Integrated secure payment links or validations directly within the platform.
+- **Cloud Document Storage** — Configured integrations with **AWS S3** for secure retention of patient records or large system assets.
+
+---
+
+## 🛠️ Tech Stack
+
+| Layer | Technologies |
+|-------|-------------|
+| **Frontend** | React 19, React Router 7, Vite 6, Bootstrap 5, Chart.js, React-Datepicker |
+| **Backend** | Laravel 12, PHP 8.2+, Laravel Sanctum (Token Auth) |
+| **Database** | MySQL, Eloquent ORM, Automated Seeding & Factorization |
+| **Messaging & Storage** | AWS S3, AWS SNS, ClickSend SMS, Mailtrap |
+| **Testing** | PHPUnit 11 (Feature/Unit Test Suites) |
+| **Data Viz & PDF** | Chart.js, Laravel DomPDF |
+| **Tooling & Environments** | Docker Compose, ESLint, Composer |
+
+---
+
+## 🏗️ Architecture (High Level)
+
+The robust split architecture guarantees tight security and fast rendering.
+
+```
+DCMS_Capstone_Project/
+├── fend/                       # React SPA (Vite)
+│   └── src/
+│       ├── components/         # Reusable highly stateful React components
+│       ├── pages/              # Routing layers
+│       └── ...
+│
+├── bend/                       # Laravel 12 API
+│   ├── app/
+│   │   ├── Http/Controllers/   # API Business logic
+│   │   ├── Console/Commands/   # Extensive scheduled command tasks
+│   │   └── Models/             # Robust Eloquent architecture
+│   ├── routes/api.php          # 100+ RESTful API endpoints securely routed
+│   └── tests/                  # Integration and Feature assessments
+│
+└── docker-compose.yml          # Container configuration (App, Web Server, DB, Redis)
 ```
 
-### Production Setup
-In a production environment, you should add the following Cron entry to your server:
+---
 
-```bash
-* * * * * cd /path-to-your-project/bend && php artisan schedule:run >> /dev/null 2>&1
-```
+## 🚀 Getting Started
 
+The detailed installation and configuration protocols—covering Docker setup, Laravel artisan commands, environment variables, scheduler cron tracking, and NPM installation—have been documented in a dedicated installation manifesto.
 
-## Additional Notes
+👉 **[View the Installation Guide (INSTALL.md)](./INSTALL.md)**
 
-### Ngrok (Optional)
-If you need to expose your local environment to the internet (e.g., for testing webhooks or showing a client), you can use ngrok.
+---
 
-```bash
-ngrok http 8000
-```
-*Note: You may need to update your `.env` file or frontend API base URL to match the ngrok URL.*
+## 💼 Project Purpose
 
-### Troubleshooting
-*   **Permissions:** If you encounter permission errors with storage logs, ensure the `storage` and `bootstrap/cache` directories are writable.
-    ```bash
-    chmod -R 775 storage bootstrap/cache
-    ```
-*   **Cache:** If configuration changes aren't reflecting, try clearing the cache:
-    ```bash
-    php artisan optimize:clear
-    ```
+This system was developed as a Capstone release. The goal was twofold: to provide a highly secure, comprehensive software system for dental operations, and to demonstrate proficiency as an **AI-First Full-Stack Developer**. From database optimization tracking to deep platform integrations (AWS, Maya, ClickSend), I engineered all components prioritizing code maintainability, security, and the intelligent use of AI development assistant tools.
