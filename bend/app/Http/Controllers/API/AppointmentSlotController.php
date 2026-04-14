@@ -39,19 +39,6 @@ class AppointmentSlotController extends Controller
             return response()->json(['slots' => []]);
         }
 
-        // Build 30-min grid from open/close (strings like "08:00" .. "17:00")
-        $blocks = ClinicDateResolverService::buildBlocks($snap['open_time'], $snap['close_time']);
-        $usage  = Appointment::slotUsageForDate($date->toDateString(), $blocks);
-
-        $cap = (int) $snap['effective_capacity'];
-
-        // Determine how many blocks the requested service needs (default 1 if none)
-        $requiredBlocks = 1;
-        if (!empty($data['service_id'])) {
-            $service = Service::findOrFail($data['service_id']);
-            $requiredBlocks = max(1, (int) ceil(($service->estimated_minutes ?? 30) / 30));
-        }
-
         $patientBlockedSlots = [];
         $preferredDentist = null;
         $preferredDentistId = null;
@@ -73,6 +60,63 @@ class AppointmentSlotController extends Controller
             : false;
 
         $effectiveHonorPreferred = $requestedHonorPreferred && $preferredDentistId && $preferredDentistActive;
+
+        // Determine time range for building blocks
+        // If honoring preferred dentist and they have custom hours, use those; otherwise use clinic hours
+        $openTime = $snap['open_time'];
+        $closeTime = $snap['close_time'];
+        
+        if ($effectiveHonorPreferred && $preferredDentist) {
+            // Reload dentist to ensure all attributes including custom hours are loaded
+            $preferredDentist = \App\Models\DentistSchedule::find($preferredDentist->id);
+            $weekday = strtolower($date->format('D')); // 'mon', 'tue', etc.
+            try {
+                $dentistHours = $preferredDentist->getHoursForDay($weekday);
+                if ($dentistHours && isset($dentistHours['start']) && isset($dentistHours['end']) 
+                    && !empty($dentistHours['start']) && !empty($dentistHours['end'])) {
+                    // Use dentist's custom schedule hours
+                    $openTime = $dentistHours['start'];
+                    $closeTime = $dentistHours['end'];
+                }
+            } catch (\Exception $e) {
+                // If there's an error getting dentist hours, fallback to clinic hours
+                // Log the error for debugging but continue with clinic hours
+                \Log::warning('Error getting preferred dentist hours', [
+                    'dentist_id' => $preferredDentist->id,
+                    'weekday' => $weekday,
+                    'error' => $e->getMessage()
+                ]);
+            }
+        }
+        
+        // Ensure we have valid times before building blocks
+        if (empty($openTime) || empty($closeTime)) {
+            return response()->json(['slots' => []]);
+        }
+
+        // Build 30-min grid from open/close (strings like "08:00" .. "17:00")
+        // This will use either clinic hours or preferred dentist's custom hours
+        try {
+            $blocks = ClinicDateResolverService::buildBlocks($openTime, $closeTime);
+        } catch (\Exception $e) {
+            \Log::error('Error building blocks in AppointmentSlotController', [
+                'open_time' => $openTime,
+                'close_time' => $closeTime,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return response()->json(['error' => 'Error generating time slots: ' . $e->getMessage()], 500);
+        }
+        $usage  = Appointment::slotUsageForDate($date->toDateString(), $blocks);
+
+        $cap = (int) $snap['effective_capacity'];
+
+        // Determine how many blocks the requested service needs (default 1 if none)
+        $requiredBlocks = 1;
+        if (!empty($data['service_id'])) {
+            $service = Service::findOrFail($data['service_id']);
+            $requiredBlocks = max(1, (int) ceil(($service->estimated_minutes ?? 30) / 30));
+        }
 
         $dentistUsage = Appointment::dentistSlotUsageForDate($date->toDateString());
 
@@ -129,6 +173,52 @@ class AppointmentSlotController extends Controller
             if ($ok) {
                 $valid[] = $start; // "HH:MM"
             }
+        }
+
+        // Filter out past time slots if the requested date is today
+        try {
+            $today = now()->startOfDay();
+            $requestedDateStr = $date->format('Y-m-d');
+            $todayDateStr = $today->format('Y-m-d');
+            
+            if ($requestedDateStr === $todayDateStr) {
+                $now = now();
+                // Calculate the next 30-minute block from current time
+                // Always move to the next available block (e.g., 10:00 → 10:30, 1:16 → 1:30)
+                // Strategy: add 30 minutes, then round down to nearest 30-minute boundary
+                $currentHour = (int)$now->format('H');
+                $currentMinute = (int)$now->format('i');
+                $currentMinutes = $currentHour * 60 + $currentMinute;
+                $nextBlockMinutes = floor(($currentMinutes + 30) / 30) * 30;
+                
+                // Handle overflow (e.g., if we're past 23:30, next block would be tomorrow)
+                if ($nextBlockMinutes >= 1440) {
+                    // No slots available today, show empty list
+                    $valid = [];
+                } else {
+                    // Calculate hours and minutes for the next block
+                    $nextBlockHour = (int)floor($nextBlockMinutes / 60);
+                    $nextBlockMinute = (int)($nextBlockMinutes % 60);
+                    
+                    // Format as HH:MM string directly
+                    $minAllowedTimeString = sprintf('%02d:%02d', $nextBlockHour, $nextBlockMinute);
+                    
+                    // Filter out slots before the minimum allowed time
+                    $valid = array_filter($valid, function($slot) use ($minAllowedTimeString) {
+                        return $slot >= $minAllowedTimeString;
+                    });
+                    
+                    // Re-index the array to remove gaps
+                    $valid = array_values($valid);
+                }
+            }
+        } catch (\Exception $e) {
+            // Log error but don't fail the entire request - continue with unfiltered slots
+            \Log::error('Error filtering same-day time slots', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'date' => $date->format('Y-m-d') ?? 'unknown'
+            ]);
         }
 
         return response()->json([

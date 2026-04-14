@@ -20,6 +20,7 @@ use App\Http\Controllers\API\NotificationController;
 use App\Http\Controllers\Auth\NewPasswordController;
 use App\Http\Controllers\API\InventoryItemController;
 use App\Http\Controllers\Admin\StaffAccountController;
+use App\Http\Controllers\Admin\ArchivedPatientController;
 use App\Http\Controllers\API\ClinicCalendarController;
 use App\Http\Controllers\Staff\PatientVisitController;
 use App\Http\Controllers\API\AppointmentSlotController;
@@ -35,11 +36,13 @@ use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\API\ClinicWeeklyScheduleController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Admin\SystemLogController;
+use App\Http\Controllers\Admin\BackupRestoreController;
 use App\Http\Controllers\Admin\PaymentRecordController;
 use App\Http\Controllers\Admin\QueuedEmailsController;
 use App\Http\Controllers\Admin\RefundRequestController;
 use App\Http\Controllers\Admin\RefundSettingsController;
 use App\Http\Controllers\Admin\PolicySettingsController;
+use App\Http\Controllers\Admin\PatientRecordController;
 use App\Http\Controllers\API\ReportController;
 use App\Http\Controllers\API\GoalController;
 use App\Http\Controllers\API\DentistUserController;
@@ -48,6 +51,7 @@ use App\Http\Controllers\API\ReceiptController;
 use App\Http\Middleware\DentistAuthMiddleware;
 use App\Http\Middleware\DentistPasswordChangeMiddleware;
 use App\Http\Controllers\API\PolicyConsentController;
+use App\Http\Controllers\API\PatientFeedbackController;
 
 // ------------------------
 // Public auth routes
@@ -102,6 +106,14 @@ Route::middleware(['auth:sanctum', 'check.account.status', AdminOnly::class])->g
         Route::post('/{id}/reset-no-shows', [\App\Http\Controllers\Admin\PatientManagerController::class, 'resetNoShowCount']);
     });
 
+    // Patient records (search + visit history)
+    Route::prefix('admin/patient-records')->group(function () {
+        Route::get('/search', [PatientRecordController::class, 'search']);
+        Route::get('/visits/{visit}', [PatientRecordController::class, 'visitDetail'])->whereNumber('visit');
+        Route::get('/{patient}/visits', [PatientRecordController::class, 'visits'])->whereNumber('patient');
+        Route::get('/{patient}', [PatientRecordController::class, 'show'])->whereNumber('patient');
+    });
+
     // Patient-User Binding
     Route::prefix('admin/patient-binding')->group(function () {
         Route::get('/unlinked-patients', [PatientController::class, 'searchUnlinkedPatients']);
@@ -133,6 +145,10 @@ Route::middleware(['auth:sanctum', 'check.account.status', AdminOnly::class])->g
     Route::post('/services', [ServiceController::class, 'store']);
     Route::put('/services/{service}', [ServiceController::class, 'update']);
     Route::delete('/services/{service}', [ServiceController::class, 'destroy']);
+
+    // Archived patients
+    Route::get('/admin/archived-patients', [ArchivedPatientController::class, 'index']);
+    Route::post('/admin/archived-patients/{patient}/reactivate', [ArchivedPatientController::class, 'reactivate'])->whereNumber('patient');
 
     // Service category management
     Route::get('/service-categories', [ServiceCategoryController::class, 'index']);
@@ -192,6 +208,17 @@ Route::middleware(['auth:sanctum', 'check.account.status', AdminOnly::class])->g
         Route::get('/{systemLog}', [SystemLogController::class, 'show']);
     });
 
+    // Backup & Restore
+    Route::prefix('admin/backup-restore')->group(function () {
+        Route::get('/', [BackupRestoreController::class, 'index']);
+        Route::post('/create', [BackupRestoreController::class, 'create']);
+        Route::get('/download/{filename}', [BackupRestoreController::class, 'download']);
+        Route::post('/upload', [BackupRestoreController::class, 'upload']);
+        Route::post('/check-integrity', [BackupRestoreController::class, 'checkIntegrity']);
+        Route::post('/restore', [BackupRestoreController::class, 'restore']);
+        Route::delete('/{filename}', [BackupRestoreController::class, 'delete']);
+    });
+
     // SMS testing
     Route::post('/admin/test-sms', [NotificationController::class, 'testSms']);
 
@@ -207,6 +234,7 @@ Route::middleware(['auth:sanctum', 'check.account.status', AdminOnly::class])->g
     Route::get('/analytics/trend', [ReportController::class, 'analyticsTrend']);
     Route::get('/analytics/promotion-opportunities', [ReportController::class, 'promotionOpportunities']);
     Route::get('/analytics/test-insights', [ReportController::class, 'testInsights']);
+    Route::get('/admin/dentists/{dentist}/feedback', [PatientFeedbackController::class, 'dentistFeedback']);
 
     // Performance goals
     Route::prefix('goals')->group(function () {
@@ -326,6 +354,12 @@ Route::middleware(['auth:sanctum', 'check.account.status'])->group(function () {
         // Patient's own appointments
         Route::get('/user-appointments', [AppointmentController::class, 'userAppointments']);
         Route::get('/user-visit-history', [AppointmentController::class, 'userVisitHistory']);
+        Route::prefix('patient-feedback')->group(function () {
+            Route::get('/', [PatientFeedbackController::class, 'index']);
+            Route::get('/visit/{visit}', [PatientFeedbackController::class, 'showByVisit'])->whereNumber('visit');
+            Route::post('/', [PatientFeedbackController::class, 'store']);
+            Route::put('/{feedback}', [PatientFeedbackController::class, 'update'])->whereNumber('feedback');
+        });
         Route::prefix('refunds')->group(function () {
             Route::get('/pending-claims', [\App\Http\Controllers\API\PatientRefundController::class, 'pendingClaims']);
             Route::post('/{id}/confirm', [\App\Http\Controllers\API\PatientRefundController::class, 'confirm']);

@@ -111,6 +111,14 @@ function AdminLayout() {
               <span className="label">Dentists</span>
             </NavLink>
           </li>
+          <li className="nav-item">
+            <NavLink to="/admin/dentist-performance" className={({ isActive }) => "nav-link" + (isActive ? " active" : "")}>
+              <svg className="icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M3 17h2v-7H3v7zm4 0h2V7H7v10zm4 0h2v-4h-2v4zm4 0h2V4h-2v13zm4 0h2v-9h-2v9z"/>
+              </svg>
+              <span className="label">Dentist Performance</span>
+            </NavLink>
+          </li>
 
           <li className="nav-item">
             <NavLink to="/admin/schedule" className={({ isActive }) => "nav-link" + (isActive ? " active" : "")}>
@@ -144,6 +152,22 @@ function AdminLayout() {
                 <path d="M16 4c0-1.11.89-2 2-2s2 .89 2 2-.89 2-2 2-2-.89-2-2zM4 18v-4h3v-2.5c0-.83.67-1.5 1.5-1.5h2c.83 0 1.5.67 1.5 1.5V16h3v2H4zM12.5 11.5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5-.67 1.5-1.5 1.5-1.5-.67-1.5-1.5zM24 16v2h-3v3h-2v-3h-3v-2h3v-3h2v3h3z"/>
               </svg>
               <span className="label">Patient Manager</span>
+            </NavLink>
+          </li>
+          <li className="nav-item">
+            <NavLink to="/admin/patient-records" className={({ isActive }) => "nav-link" + (isActive ? " active" : "")}>
+              <svg className="icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2a5 5 0 0 1 5 5v2h1a2 2 0 0 1 2 2v11H4V11a2 2 0 0 1 2-2h1V7a5 5 0 0 1 5-5zm0 2a3 3 0 0 0-3 3v2h6V7a3 3 0 0 0-3-3zm7 9H5v7h14v-7z"/>
+              </svg>
+              <span className="label">Patient Records</span>
+            </NavLink>
+          </li>
+          <li className="nav-item">
+            <NavLink to="/admin/archived-patients" className={({ isActive }) => "nav-link" + (isActive ? " active" : "")}>
+              <svg className="icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M6 2a2 2 0 0 0-2 2v3H3a1 1 0 0 0-1 1v11c0 1.1.9 2 2 2h16a2 2 0 0 0 2-2V8a1 1 0 0 0-1-1h-1V4a2 2 0 0 0-2-2H6zm0 2h12v3H6V4zm-1 5h14v9H5V9zm4 2v5h6v-5H9z"/>
+              </svg>
+              <span className="label">Archived Patients</span>
             </NavLink>
           </li>
 
@@ -238,6 +262,14 @@ function AdminLayout() {
                 <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/>
               </svg>
               <span className="label">Analytics</span>
+            </NavLink>
+          </li>
+          <li className="nav-item">
+            <NavLink to="/admin/backup-restore" className={({ isActive }) => "nav-link" + (isActive ? " active" : "")}>
+              <svg className="icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M19 12h-2v3h-3v2h5v-5zM7 9H4V7h5v5H7V9zm14-6H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM3 19V5h18v14H3z"/>
+              </svg>
+              <span className="label">Backup & Restore</span>
             </NavLink>
           </li>
           <li className="nav-item">

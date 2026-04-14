@@ -47,7 +47,6 @@ class Service extends Model
             ->where('start_date', '<=', $date)
             ->where('end_date', '>=', $date)
             ->where('status', 'launched')
-            ->whereDate('activated_at', '<=', now()->subDay()->toDateString()) // must be activated for at least 1 day
             ->first();
 
         return $discount ? $discount->discounted_price : $this->price;
@@ -66,6 +65,11 @@ class Service extends Model
     public function bundleItems()
     {
         return $this->hasMany(ServiceBundleItem::class, 'parent_service_id');
+    }
+
+    public function patientFeedback()
+    {
+        return $this->hasMany(PatientFeedback::class);
     }
 
     public function bundledServices()

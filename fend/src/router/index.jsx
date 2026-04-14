@@ -36,14 +36,18 @@ import ClinicCalendarManager from "../pages/Admin/ClinicCalendarManager";
 import AdminMonthlyReport from "../pages/Admin/AdminMonthlyReport";
 import AdminGoalsPage from "../pages/Admin/AdminGoalsPage";
 import SystemLogsPage from "../pages/Admin/SystemLogsPage";
+import BackupRestorePage from "../pages/Admin/BackupRestorePage";
 import AdminAnalyticsDashboard from "../pages/Admin/AdminAnalyticsDashboard";
+import AdminDentistPerformance from "../pages/Admin/AdminDentistPerformance";
 import PatientManager from "../pages/Admin/PatientManager";
+import PatientRecordsPage from "../pages/Admin/PatientRecords/PatientRecordsPage";
 import TimeBlockUtilizationDashboard from "../pages/Admin/TimeBlockUtilizationDashboard";
 import PaymentRecords from "../pages/Admin/PaymentRecords";
 import AdminPatientUserBindingPage from "../pages/Admin/PatientUserBindingPage";
 import RefundRequestManager from "../pages/Admin/RefundRequestManager";
 import RefundSettings from "../pages/Admin/RefundSettings";
 import PolicySettings from "../pages/Admin/PolicySettings";
+import ArchivedPatients from "../pages/Admin/ArchivedPatients";
 const DentistScheduleManager = lazy(() =>
   import("../pages/Admin/DentistScheduleManager")
 ); // Lazy load dentist schedule manager
@@ -80,9 +84,7 @@ import DentistScheduleView from "../pages/Dentist/DentistScheduleView";
 
 //
 import NotificationsPage from "../pages/NotificationsPage";
-import PaySuccess from "../pages/payments/PaySuccess";
-import PayFailure from "../pages/payments/PayFailure";
-import PayCancel from "../pages/payments/PayCancel";
+import PaymentRedirect from "../components/PaymentRedirect";
 //
 
 
@@ -131,6 +133,7 @@ export default function AppRouter() {
               </Suspense>
             }
           />
+          <Route path="dentist-performance" element={<AdminDentistPerformance />} />
           <Route
             path="inventory"
             element={
@@ -143,8 +146,12 @@ export default function AppRouter() {
           <Route path="appointments" element={<AdminAppointmentManager />} />
           {/* Patient Manager */}
           <Route path="patient-manager" element={<PatientManager />} />
+          {/* Patient Records */}
+          <Route path="patient-records" element={<PatientRecordsPage />} />
           {/* Payment Records */}
           <Route path="payment-records" element={<PaymentRecords />} />
+          {/* Backup & Restore */}
+          <Route path="backup-restore" element={<BackupRestorePage />} />
           {/* System Logs */}
           <Route path="system-logs" element={<SystemLogsPage />} />
           {/* Time Block Utilization Dashboard */}
@@ -156,6 +163,8 @@ export default function AppRouter() {
           <Route path="refund-settings" element={<RefundSettings />} />
           {/* Policy Settings */}
           <Route path="policy-settings" element={<PolicySettings />} />
+          {/* Archived Patients */}
+          <Route path="archived-patients" element={<ArchivedPatients />} />
           {/* Add more admin routes as needed */}
         </Route>
 
@@ -244,9 +253,9 @@ export default function AppRouter() {
           <Route path="schedule-view" element={<DentistScheduleView />} />
         </Route>
         {/* Payment Result Routes */}
-        <Route path="/pay/success" element={<PaySuccess />} />
-        <Route path="/pay/failure" element={<PayFailure />} />
-        <Route path="/pay/cancel" element={<PayCancel />} />
+        <Route path="/pay/success" element={<PaymentRedirect to="/patient" />} />
+        <Route path="/pay/failure" element={<PaymentRedirect to="/patient" />} />
+        <Route path="/pay/cancel" element={<PaymentRedirect to="/patient" />} />
         {/* Catch-all for 404 */}
         <Route path="*" element={<NotFound />} />
       </Routes>

@@ -6,6 +6,7 @@ use App\Models\Appointment;
 use App\Models\Patient;
 use App\Models\PatientMedicalHistory;
 use App\Models\PatientVisit;
+use App\Models\PatientFeedback;
 use App\Models\Payment;
 use App\Models\PerformanceGoal;
 use App\Models\GoalProgressSnapshot;
@@ -25,6 +26,7 @@ use Database\Seeders\Support\RealisticVisitFactory;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
+use Database\Seeders\PatientFeedbackSeeder;
 
 class AnalyticsSeeder extends Seeder
 {
@@ -72,8 +74,9 @@ class AnalyticsSeeder extends Seeder
 
         $current = $startDate->copy();
         while ($current->lte($endDate)) {
-            $this->generateMonthData($current, $patients, $services, $visitFactory);
-            $this->generateInventoryLoss($current, $adminUser);
+            $monthPointer = $current->copy();
+            $this->generateMonthData($monthPointer, $patients, $services, $visitFactory);
+            $this->generateInventoryLoss($monthPointer, $adminUser);
             $current->addMonth();
         }
 
@@ -90,6 +93,7 @@ class AnalyticsSeeder extends Seeder
         
         DB::statement('SET FOREIGN_KEY_CHECKS=0;');
         VisitAdditionalCharge::truncate();
+        DB::table('patient_feedbacks')->truncate();
         InventoryMovement::truncate();
         InventoryBatch::truncate();
         InventoryItem::truncate();
@@ -111,18 +115,26 @@ class AnalyticsSeeder extends Seeder
         if ($patients->count() < 50) {
             $this->command->info('Generating additional patients for analytics...');
             
-            $faker = \Faker\Factory::create();
+            $faker = null;
+            if (class_exists(\Faker\Factory::class)) {
+                $faker = \Faker\Factory::create();
+            }
+            
             $newPatients = [];
             
             for ($i = 0; $i < 50; $i++) {
                 $newPatients[] = [
-                    'first_name' => $faker->firstName(),
-                    'last_name' => $faker->lastName(),
-                    'middle_name' => $faker->optional(0.7)->firstName(),
-                    'birthdate' => $faker->dateTimeBetween('-80 years', '-18 years')->format('Y-m-d'),
-                    'sex' => $faker->randomElement(['male', 'female']),
-                    'contact_number' => '09' . $faker->numerify('########'),
-                    'address' => $faker->city() . ', ' . $faker->state(),
+                    'first_name' => $faker ? $faker->firstName() : $this->getFirstName(),
+                    'last_name' => $faker ? $faker->lastName() : $this->getLastName(),
+                    'middle_name' => (rand(1, 100) <= 70) ? ($faker ? $faker->firstName() : $this->getFirstName()) : null,
+                    'birthdate' => $faker 
+                        ? $faker->dateTimeBetween('-80 years', '-18 years')->format('Y-m-d')
+                        : Carbon::now()->subYears(rand(18, 80))->format('Y-m-d'),
+                    'sex' => $this->randomElement(['male', 'female']),
+                    'contact_number' => '09' . str_pad((string)rand(10000000, 99999999), 8, '0', STR_PAD_LEFT),
+                    'address' => $faker 
+                        ? ($faker->city() . ', ' . $faker->state())
+                        : ($this->getCity() . ', ' . $this->getProvince()),
                     'is_linked' => false,
                     'created_at' => now(),
                     'updated_at' => now(),
@@ -357,6 +369,7 @@ class AnalyticsSeeder extends Seeder
 
                 $createdToday++;
                 $visitCount++;
+                PatientFeedbackSeeder::seedForVisit($result['visit']);
                 if ($result['appointment']) {
                     $appointmentCount++;
                 }
@@ -420,7 +433,7 @@ class AnalyticsSeeder extends Seeder
                     'updated_at' => now(),
                 ]);
             }
-            
+
             $current->addMonth();
         }
     }
@@ -675,5 +688,37 @@ class AnalyticsSeeder extends Seeder
         }
 
         return DentistSchedule::activeOnDate($day)->get();
+    }
+
+    /**
+     * Helper methods to provide fallback values when Faker is not available
+     */
+    private function getFirstName(): string
+    {
+        $names = ['John', 'Jane', 'Michael', 'Sarah', 'David', 'Emily', 'Robert', 'Maria', 'James', 'Mary', 'William', 'Patricia', 'Richard', 'Jennifer', 'Joseph', 'Linda'];
+        return $names[array_rand($names)];
+    }
+
+    private function getLastName(): string
+    {
+        $names = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis', 'Rodriguez', 'Martinez', 'Hernandez', 'Lopez', 'Wilson', 'Anderson', 'Thomas', 'Taylor'];
+        return $names[array_rand($names)];
+    }
+
+    private function getCity(): string
+    {
+        $cities = ['Manila', 'Quezon City', 'Makati', 'Pasig', 'Taguig', 'Mandaluyong', 'San Juan', 'Marikina', 'Caloocan', 'Las Piñas'];
+        return $cities[array_rand($cities)];
+    }
+
+    private function getProvince(): string
+    {
+        $provinces = ['Metro Manila', 'Cavite', 'Laguna', 'Rizal', 'Bulacan', 'Pampanga', 'Batangas'];
+        return $provinces[array_rand($provinces)];
+    }
+
+    private function randomElement(array $array): string
+    {
+        return $array[array_rand($array)];
     }
 }
