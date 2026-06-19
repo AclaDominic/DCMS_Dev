@@ -98,6 +98,24 @@ DCMS_Capstone_Project/
 
 ---
 
+## 📸 Showcase
+
+### Patient-User Account Binding
+<p align="center">
+  <img src="docs/images/PatientRecord-to-UserAccount_Binding.png" alt="Patient-User Account Binding" width="800" />
+</p>
+
+A guided, multi-step interface that allows administrators to link existing patient records to their corresponding user accounts. The workflow searches for unlinked patients and unlinked users independently, then binds them together—ensuring data integrity across the system.
+
+### Time Block Utilization Dashboard
+<p align="center">
+  <img src="docs/images/Time Blocks.png" alt="Time Block Utilization Dashboard" width="800" />
+</p>
+
+A weekly heatmap-style dashboard that visualizes appointment capacity and time block usage across all clinic operating hours. Color-coded utilization levels (Empty, Low, Medium, High, Very High) give administrators an at-a-glance view of scheduling density, helping optimize dentist availability and reduce booking gaps.
+
+---
+
 ## 🚀 Getting Started
 
 The detailed installation and configuration protocols—covering Docker setup, Laravel artisan commands, environment variables, scheduler cron tracking, and NPM installation—have been documented in a dedicated installation manifesto.
